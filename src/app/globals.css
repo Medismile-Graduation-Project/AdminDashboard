@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+@import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap");
+
+/* ⚙️ أساسيات فقط */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Tajawal", "Segoe UI", system-ui, -apple-system, sans-serif;
+  background-color: rgb(240 249 255); /* sky-50 */
+  color: rgb(15 23 42); /* slate-900 */
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Dark Mode - دعم شامل ومحترف */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: rgb(15 23 42); /* slate-900 */
+  color: rgb(226 232 240); /* slate-200 */
+}
+
+/* جميع العناوين في الوضع الليلي تكون بيضاء */
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+  color: rgb(255 255 255) !important;
+}
+
+/* Sidebar في الوضع الليلي - slate-900 مع نص أبيض */
+html.dark .sidebar-main {
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+  background-image: none !important; /* إزالة التدرج */
+}
+
+html.dark .sidebar-main * {
+  color: rgb(255 255 255) !important; /* نص أبيض */
+}
+
+html.dark .sidebar-main h1,
+html.dark .sidebar-main h2,
+html.dark .sidebar-main h3,
+html.dark .sidebar-main h4,
+html.dark .sidebar-main h5,
+html.dark .sidebar-main h6 {
+  color: rgb(255 255 255) !important;
+}
+
+html.dark .sidebar-main a {
+  color: rgb(226 232 240) !important; /* slate-200 */
+}
+
+html.dark .sidebar-main a:hover {
+  color: rgb(255 255 255) !important;
+}
+
+/* Navbar في الوضع الليلي - slate-900 مع نص أبيض */
+html.dark .navbar-main {
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+  background-image: none !important; /* إزالة التدرج */
+}
+
+html.dark .navbar-main * {
+  color: rgb(255 255 255) !important; /* نص أبيض */
+}
+
+html.dark .navbar-main span,
+html.dark .navbar-main p,
+html.dark .navbar-main div {
+  color: rgb(255 255 255) !important;
+}
+
+html.dark .navbar-main input {
+  background-color: rgb(30 41 59) !important; /* slate-800 */
+  color: rgb(255 255 255) !important;
+  border-color: rgb(51 65 85) !important; /* slate-700 */
+}
+
+html.dark .navbar-main input::placeholder {
+  color: rgb(148 163 184) !important; /* slate-400 */
+}
+
+/* Sidebar Mobile في الوضع الليلي */
+html.dark .sidebar-mobile-menu {
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+  background-image: none !important;
+}
+
+html.dark .sidebar-mobile-menu * {
+  color: rgb(255 255 255) !important;
+}
+
+html.dark .sidebar-mobile-header {
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+  background-image: none !important;
+}
+
+html.dark .sidebar-mobile-header * {
+  color: rgb(255 255 255) !important;
+}
+
+/* Navbar Mobile في الوضع الليلي */
+html.dark .navbar-mobile {
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+  background-image: none !important;
+}
+
+html.dark .navbar-mobile * {
+  color: rgb(255 255 255) !important;
+}
+
+/* Navbar Drawer في الوضع الليلي */
+html.dark .navbar-drawer {
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+}
+
+html.dark .navbar-drawer * {
+  color: rgb(255 255 255) !important;
+}
+
+html.dark .navbar-drawer input {
+  background-color: rgb(30 41 59) !important; /* slate-800 */
+  color: rgb(255 255 255) !important;
+  border-color: rgb(51 65 85) !important; /* slate-700 */
+}
+
+html.dark .navbar-drawer input::placeholder {
+  color: rgb(148 163 184) !important; /* slate-400 */
+}
+
+/* Smooth transitions for theme switching */
+@media (prefers-reduced-motion: no-preference) {
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+}
+
+/* تحسين Responsive للأحجام المختلفة */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 1025px) {
+  html {
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,787 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { PlusCircle, Pencil, Trash2, X, Save, Loader2, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  fetchCases,
+  createCase,
+  updateCase,
+  deleteCase,
+  fetchCaseById,
+  fetchAssignmentRequestsAsync,
+  createAssignmentRequestAsync,
+  supervisorCaseActionAsync,
+  setSelectedCase,
+  clearSelectedCase,
+  clearError,
+} from "../../redux/features/clinicalCases/clinicalCasesSlice";
+import { fetchPatients } from "../../redux/features/patients/patientsSlice";
+import { fetchStudentsAsync } from "../../redux/features/students/studentsSlice";
+import AnimatedWrapper from "@/components/AnimatedWrapper";
+import toast from "react-hot-toast";
+
+export default function ClinicalCasesPage() {
+  const { t, i18n } = useTranslation();
+  const dispatch = useDispatch();
+  const { cases, loading, error, selectedCase, assignmentRequests } = useSelector((state) => state.clinicalCases);
+  const { patients } = useSelector((state) => state.patients);
+  const { students } = useSelector((state) => state.students);
+  
+  // جلب معلومات المستخدم الحالي
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    setUser(storedUser);
+  }, []);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // جلب الحالات والبيانات المساعدة عند تحميل الصفحة
+  useEffect(() => {
+    dispatch(fetchCases());
+    dispatch(fetchPatients());
+    dispatch(fetchStudentsAsync());
+  }, [dispatch]);
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingCase, setEditingCase] = useState(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    patient_id: "",
+    student_id: "", // لا يرسل في create، يستخدم للإسناد اللاحق
+    priority: "medium",
+    is_public: false,
+    status: "open",
+  });
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showDetails, setShowDetails] = useState(false);
+  const [showAssignmentRequest, setShowAssignmentRequest] = useState(false);
+  const [assignmentMessage, setAssignmentMessage] = useState("");
+
+  const handleAddCase = () => {
+    setEditingCase(null);
+    setFormData({
+      title: "",
+      description: "",
+      patient_id: "",
+       student_id: "",
+      priority: "medium",
+      is_public: false,
+      status: "open",
+    });
+    setShowForm(true);
+  };
+
+  const handleEditCase = (c) => {
+    setEditingCase(c);
+    setFormData({
+      title: c.title || "",
+      description: c.description || "",
+      patient_id: c.patient_id || "",
+      student_id: c.student_id || "",
+      priority: c.priority || "medium",
+      is_public: c.is_public || false,
+      status: c.status || "open",
+    });
+    setShowForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingCase(null);
+    setSubmitLoading(false);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (type === "checkbox") {
+      setFormData({ ...formData, [name]: checked });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitLoading(true);
+    try {
+      if (editingCase) {
+        await dispatch(updateCase({ caseId: editingCase.id, ...formData })).unwrap();
+        handleCloseForm();
+        // إعادة جلب الحالات بعد التحديث
+        dispatch(fetchCases());
+      } else {
+        // إنشاء الحالة
+        const createdCase = await dispatch(createCase(formData)).unwrap();
+
+        // إذا كان المشرف اختار طالباً، أنشئ طلب إسناد ثم قبوله
+        if (user?.role === "supervisor" && formData.student_id && createdCase?.id) {
+          try {
+            // إنشاء طلب الإسناد
+            const assignmentRequest = await dispatch(
+              createAssignmentRequestAsync({
+                caseId: createdCase.id,
+                message: "",
+                studentId: formData.student_id,
+              })
+            ).unwrap();
+
+            // قبول الطلب تلقائياً
+            await dispatch(
+              supervisorCaseActionAsync({
+                caseId: createdCase.id,
+                action: "accept",
+                studentId: formData.student_id,
+                message: "",
+                userId: user?.id || user?.user_id,
+              })
+            ).unwrap();
+          } catch (assignErr) {
+            // إذا فشل الإسناد، لا نمنع إنشاء الحالة
+            console.error("Error assigning student after create:", assignErr);
+            // عرض رسالة تحذيرية للمستخدم
+            const errorMsg = typeof assignErr === "string" 
+              ? assignErr 
+              : assignErr?.response?.data?.message || assignErr?.message || "تم إنشاء الحالة لكن فشل إسناد الطالب";
+            toast.error(errorMsg);
+          }
+        }
+        
+        handleCloseForm();
+        // إعادة جلب الحالات بعد التحديث
+        dispatch(fetchCases());
+      }
+    } catch (error) {
+      console.error("Error saving case:", error);
+      // عرض رسالة الخطأ للمستخدم
+      const errorMsg = typeof error === "string" 
+        ? error 
+        : error?.response?.data?.message || error?.message || error?.toString() || "حدث خطأ أثناء حفظ الحالة";
+      toast.error(errorMsg);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm(t("ClinicalCases.confirmDelete"))) {
+      try {
+        await dispatch(deleteCase(id)).unwrap();
+        // إعادة جلب الحالات بعد الحذف
+        dispatch(fetchCases());
+      } catch (error) {
+        console.error("Error deleting case:", error);
+      }
+    }
+  };
+
+  // عرض تفاصيل الحالة
+  const handleViewDetails = async (caseItem) => {
+    try {
+      await dispatch(fetchCaseById(caseItem.id)).unwrap();
+      await dispatch(fetchAssignmentRequestsAsync(caseItem.id)).unwrap();
+      dispatch(setSelectedCase(caseItem));
+      setShowDetails(true);
+    } catch (error) {
+      console.error("Error fetching case details:", error);
+    }
+  };
+
+  // طلب إسناد (للطلاب)
+  const handleRequestAssignment = async (caseId) => {
+    try {
+      await dispatch(createAssignmentRequestAsync({ caseId, message: assignmentMessage })).unwrap();
+      setShowAssignmentRequest(false);
+      setAssignmentMessage("");
+      // إعادة جلب التفاصيل
+      await dispatch(fetchCaseById(caseId)).unwrap();
+      await dispatch(fetchAssignmentRequestsAsync(caseId)).unwrap();
+    } catch (error) {
+      console.error("Error requesting assignment:", error);
+    }
+  };
+
+  // إجراء المشرف (قبول/رفض)
+  const handleSupervisorAction = async (caseId, action, studentId) => {
+    try {
+      await dispatch(supervisorCaseActionAsync({
+        caseId,
+        action,
+        studentId,
+        userId: user?.id || user?.user_id,
+      })).unwrap();
+      // إعادة جلب التفاصيل
+      await dispatch(fetchCaseById(caseId)).unwrap();
+      await dispatch(fetchAssignmentRequestsAsync(caseId)).unwrap();
+    } catch (error) {
+      console.error("Error performing supervisor action:", error);
+    }
+  };
+
+  const filteredCases = (cases || []).filter((c) => {
+    if (!c) return false;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (c.title || "").toLowerCase().includes(searchLower) ||
+      (c.description || "").toLowerCase().includes(searchLower) ||
+      (c.patient_name || "").toLowerCase().includes(searchLower) ||
+      (c.student_name || "").toLowerCase().includes(searchLower) ||
+      (c.supervisor_name || "").toLowerCase().includes(searchLower) ||
+      (c.status || "").toLowerCase().includes(searchLower) ||
+      (c.priority || "").toLowerCase().includes(searchLower) ||
+      String(c.id || "").toLowerCase().includes(searchLower)
+    );
+  });
+
+  if (!mounted) return <div className="p-4 sm:p-6 min-h-screen bg-sky-50"></div>;
+
+  const isRtl = i18n?.language === "ar";
+
+  return (
+    <AnimatedWrapper>
+    <div className={`p-4 sm:p-6 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
+      <div className="max-w-[1300px] mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-900 dark:text-white">{t("ClinicalCases.title")}</h1>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <input
+              type="text"
+              placeholder={t("ClinicalCases.searchPlaceholder")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl w-full sm:w-64 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+            />
+            <button
+              onClick={handleAddCase}
+              className="flex items-center justify-center p-2 sm:p-3 rounded-xl shadow bg-blue-500 hover:bg-blue-600 text-white transition"
+              aria-label={t("ClinicalCases.addNew")}
+            >
+              <PlusCircle size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-600 rounded-xl text-red-600">
+            <div className="flex justify-between items-center">
+              <span>{typeof error === "string" ? error : t("ClinicalCases.error")}</span>
+              <button
+                onClick={() => dispatch(clearError())}
+                className="text-red-600 hover:text-red-500"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+            {t("ClinicalCases.loading")}
+          </div>
+        )}
+
+        {/* Table for large screens */}
+        {!loading && (
+        <div className="hidden lg:block overflow-x-auto rounded-2xl border border-sky-200 dark:border-slate-700 shadow-lg">
+          <table className="w-full text-sm text-slate-900 dark:text-slate-200 min-w-[1000px]">
+            <thead className="bg-gradient-to-r from-blue-900 to-blue-600 dark:from-slate-800 dark:to-slate-700 text-white">
+                <tr>
+                  <th className="px-4 py-3">{t("ClinicalCases.table.title")}</th>
+                  <th className="px-4 py-3">{t("ClinicalCases.table.patient")}</th>
+                  <th className="px-4 py-3">{t("ClinicalCases.table.student")}</th>
+                  <th className="px-4 py-3">{t("ClinicalCases.table.supervisor")}</th>
+                  <th className="px-4 py-3">{t("ClinicalCases.table.status")}</th>
+                  <th className="px-4 py-3">{t("ClinicalCases.table.priority")}</th>
+                  <th className="px-4 py-3">{t("ClinicalCases.table.isPublic")}</th>
+                  <th className="px-4 py-3 text-center">{t("ClinicalCases.table.actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCases.length > 0 ? filteredCases.map((c, idx) => (
+                  <tr key={c.id} className={`${idx % 2 === 0 ? "bg-sky-50 dark:bg-slate-800/50" : "bg-white dark:bg-slate-800"} border-b hover:bg-gradient-to-r hover:from-sky-200/30 hover:to-blue-600/30 dark:hover:from-slate-700/50 dark:hover:to-slate-600/50`}>
+                    <td className="px-4 py-3 font-semibold">{c.title || "-"}</td>
+                    <td className="px-4 py-3">{c.patient_name || "-"}</td>
+                    <td className="px-4 py-3">{c.student_name || "-"}</td>
+                    <td className="px-4 py-3">{c.supervisor_name || "-"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        c.status === "completed" ? "bg-green-100 text-green-600" :
+                        c.status === "cancelled" ? "bg-red-100 text-red-600" :
+                        c.status === "in_progress" ? "bg-blue-100 text-blue-600" :
+                        "bg-blue-100 text-blue-500"
+                      }`}>
+                        {t(`ClinicalCases.status.${c.status}`) || c.status || "-"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        c.priority === "urgent" ? "bg-red-100 text-red-600" :
+                        c.priority === "high" ? "bg-blue-100 text-blue-600" :
+                        c.priority === "low" ? "bg-blue-100 text-blue-500" :
+                        "bg-green-100 text-green-600"
+                      }`}>
+                        {t(`ClinicalCases.priority.${c.priority}`) || c.priority || "-"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {c.is_public ? t("ClinicalCases.yes") : t("ClinicalCases.no")}
+                    </td>
+                    <td className="px-4 py-3 flex justify-center gap-2">
+                      <button onClick={() => handleViewDetails(c)} className="p-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition" title={t("ClinicalCases.viewDetails") || "عرض التفاصيل"}><Eye size={16} /></button>
+                      <button onClick={() => handleEditCase(c)} className="p-2 rounded-lg bg-blue-600 hover:bg-blue-900 text-white transition" title={t("ClinicalCases.edit") || "تعديل"}><Pencil size={16} /></button>
+                      <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition" title={t("ClinicalCases.delete") || "حذف"}><Trash2 size={16} /></button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="8" className="text-center py-6 text-slate-500">
+                      {cases.length === 0
+                        ? t("ClinicalCases.noCases")
+                        : t("ClinicalCases.noResults")}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Cards for small/medium screens */}
+        {!loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
+            {filteredCases.length > 0 ? filteredCases.map((c) => (
+              <article key={c.id} className="bg-white dark:bg-slate-800 shadow-md rounded-2xl p-4 border border-sky-200 dark:border-slate-700">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{c.title || "-"}</h3>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">{c.description || "-"}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEditCase(c)} className="p-2 rounded-lg bg-blue-600 hover:bg-blue-900 text-white transition"><Pencil size={16} /></button>
+                    <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+                <div className="mt-3 text-sm space-y-1">
+                  <div><strong>{t("ClinicalCases.table.patient")}:</strong> {c.patient_name || "-"}</div>
+                  <div><strong>{t("ClinicalCases.table.student")}:</strong> {c.student_name || "-"}</div>
+                  <div><strong>{t("ClinicalCases.table.supervisor")}:</strong> {c.supervisor_name || "-"}</div>
+                  <div className="flex gap-2 items-center">
+                    <strong>{t("ClinicalCases.table.status")}:</strong>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      c.status === "completed" ? "bg-green-100 text-green-600" :
+                      c.status === "cancelled" ? "bg-red-100 text-red-600" :
+                      c.status === "in_progress" ? "bg-blue-100 text-blue-600" :
+                      "bg-blue-100 text-blue-500"
+                    }`}>
+                      {t(`ClinicalCases.status.${c.status}`) || c.status || "-"}
+                    </span>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <strong>{t("ClinicalCases.table.priority")}:</strong>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      c.priority === "urgent" ? "bg-red-100 text-red-600" :
+                      c.priority === "high" ? "bg-blue-100 text-blue-600" :
+                      c.priority === "low" ? "bg-blue-100 text-blue-500" :
+                      "bg-green-100 text-green-600"
+                    }`}>
+                      {t(`ClinicalCases.priority.${c.priority}`) || c.priority || "-"}
+                    </span>
+                  </div>
+                  <div><strong>{t("ClinicalCases.table.isPublic")}:</strong> {c.is_public ? t("ClinicalCases.yes") : t("ClinicalCases.no")}</div>
+                </div>
+              </article>
+            )) : (
+              <div className="col-span-2 text-center py-10 text-slate-500">
+                {cases.length === 0
+                  ? t("ClinicalCases.noCases")
+                  : t("ClinicalCases.noResults")}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modal Form */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden">
+              <div className="flex justify-between items-center p-3 sm:p-4 bg-gradient-to-r from-sky-200 to-blue-900 dark:from-slate-700 dark:to-slate-900 text-white">
+                <h2 className="text-lg sm:text-xl font-bold">{editingCase ? t("ClinicalCases.form.editTitle") : t("ClinicalCases.form.addTitle")}</h2>
+                <button onClick={handleCloseForm} className="p-1 rounded-full hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-white transition-colors"><X size={20} /></button>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+                {/* Title */}
+                <div className="flex flex-col">
+                  <label className="font-semibold mb-1 text-slate-900 dark:text-white">
+                    {t("ClinicalCases.form.title")} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    className="p-2 border border-sky-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="flex flex-col">
+                  <label className="font-semibold mb-1 text-slate-900 dark:text-white">
+                    {t("ClinicalCases.form.description")} <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    className="p-2 border border-sky-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                    rows={4}
+                    required
+                  />
+                </div>
+
+                {/* Patient - مطلوب عند الإنشاء فقط */}
+                {!editingCase && (
+                  <div className="flex flex-col">
+                    <label className="font-semibold mb-1 text-slate-900 dark:text-white">
+                      {t("ClinicalCases.table.patient")} <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="patient_id"
+                      value={formData.patient_id}
+                      onChange={handleInputChange}
+                      className="p-2 border border-sky-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                      required
+                    >
+                      <option value="">{t("placeholders.selectPatient") || "اختر المريض"}</option>
+                      {(patients || []).map((patient) => (
+                        <option key={patient.id || patient.user_id} value={patient.id || patient.user_id}>
+                          {patient.name || `${patient.first_name || ""} ${patient.last_name || ""}`.trim() || patient.username || patient.email || "-"}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {t("ClinicalCases.form.patientNote") || "ملاحظة: لا يمكن إضافة طالب أو مشرف مباشرة عند الإنشاء. يتم الإسناد لاحقاً عبر طلبات الإسناد."}
+                    </p>
+                  </div>
+                )}
+
+                {/* Student (اختياري - يظهر للمشرف) */}
+                {user?.role === "supervisor" && (
+                  <div className="flex flex-col">
+                    <label className="font-semibold mb-1 text-slate-900 dark:text-white">
+                      {t("ClinicalCases.table.student")} {editingCase ? "" : <span className="text-slate-400 text-xs">({t("ClinicalCases.details.requestAssignment") || "اختياري للإسناد"})</span>}
+                    </label>
+                    <select
+                      name="student_id"
+                      value={formData.student_id}
+                      onChange={handleInputChange}
+                      className="p-2 border border-sky-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                    >
+                      <option value="">{t("placeholders.selectStudent") || "اختر الطالب"}</option>
+                      {(students || []).map((student) => (
+                        <option key={student.id || student.user_id} value={student.id || student.user_id}>
+                          {student.name || `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.username || student.email || "-"}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {t("ClinicalCases.details.requestAssignment") || "يمكنك تعيين الطالب مباشرة بعد إنشاء الحالة، سننشئ طلب إسناد ونقبله تلقائياً."}
+                    </p>
+                  </div>
+                )}
+
+                {/* Status and Priority */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Status */}
+                  <div className="flex flex-col">
+                    <label className="font-semibold mb-1 text-slate-900 dark:text-white">
+                      {t("ClinicalCases.form.status")}
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="p-2 border border-sky-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                    >
+                      <option value="open">{t("ClinicalCases.status.open")}</option>
+                      <option value="assigned">{t("ClinicalCases.status.assigned")}</option>
+                      <option value="in_progress">{t("ClinicalCases.status.in_progress")}</option>
+                      <option value="completed">{t("ClinicalCases.status.completed")}</option>
+                      <option value="cancelled">{t("ClinicalCases.status.cancelled")}</option>
+                    </select>
+                  </div>
+
+                  {/* Priority */}
+                  <div className="flex flex-col">
+                    <label className="font-semibold mb-1 text-slate-900 dark:text-white">
+                      {t("ClinicalCases.form.priority")}
+                    </label>
+                    <select
+                      name="priority"
+                      value={formData.priority}
+                      onChange={handleInputChange}
+                      className="p-2 border border-sky-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                    >
+                      <option value="low">{t("ClinicalCases.priority.low")}</option>
+                      <option value="medium">{t("ClinicalCases.priority.medium")}</option>
+                      <option value="high">{t("ClinicalCases.priority.high")}</option>
+                      <option value="urgent">{t("ClinicalCases.priority.urgent")}</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Is Public */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="is_public"
+                    checked={formData.is_public}
+                    onChange={handleInputChange}
+                    className="w-5 h-5 rounded border-sky-200 text-blue-500 focus:ring-2 focus:ring-blue-500"
+                  />
+                  <label className="font-semibold text-slate-900">
+                    {t("ClinicalCases.form.isPublic")}
+                  </label>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex justify-end gap-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleCloseForm}
+                    disabled={submitLoading}
+                    className="p-2 sm:p-3 bg-red-600 text-white rounded-xl hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 transition disabled:opacity-50"
+                  >
+                    {t("ClinicalCases.form.cancel")}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitLoading}
+                    className="p-2 sm:p-3 bg-green-600 text-white rounded-xl flex items-center gap-2 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 transition disabled:opacity-50"
+                  >
+                    {submitLoading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Save size={16} />
+                    )}
+                    {editingCase
+                      ? t("ClinicalCases.form.update")
+                      : t("ClinicalCases.form.save")}
+                  </button>
+                </div>
+              </form>
+
+
+            </div>
+          </div>
+        )}
+
+        {/* Modal Details - عرض التفاصيل مع History و Assignment Requests */}
+        {showDetails && selectedCase && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-auto">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center p-4 bg-gradient-to-r from-sky-200 to-blue-900 dark:from-slate-700 dark:to-slate-900 text-white sticky top-0 z-10">
+                <h2 className="text-xl font-bold">{selectedCase.title || t("ClinicalCases.details.title")}</h2>
+                <button onClick={() => { setShowDetails(false); dispatch(clearSelectedCase()); }} className="p-1 rounded-full hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-white transition-colors"><X size={20} /></button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* معلومات الحالة */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">{t("ClinicalCases.table.patient")}</h3>
+                    <p className="text-slate-900 dark:text-white">{selectedCase.patient_name || "-"}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">{t("ClinicalCases.table.student")}</h3>
+                    <p className="text-slate-900 dark:text-white">{selectedCase.student_name || "-"}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">{t("ClinicalCases.table.supervisor")}</h3>
+                    <p className="text-slate-900 dark:text-white">{selectedCase.supervisor_name || "-"}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">{t("ClinicalCases.table.status")}</h3>
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      selectedCase.status === "completed" ? "bg-green-100 text-green-600" :
+                      selectedCase.status === "cancelled" ? "bg-red-100 text-red-600" :
+                      selectedCase.status === "in_progress" ? "bg-blue-100 text-blue-600" :
+                      "bg-blue-100 text-blue-500"
+                    }`}>
+                      {t(`ClinicalCases.status.${selectedCase.status}`) || selectedCase.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* الوصف */}
+                <div>
+                  <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-2">{t("ClinicalCases.form.description")}</h3>
+                  <p className="text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">{selectedCase.description || "-"}</p>
+                </div>
+
+                {/* طلبات الإسناد */}
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t("ClinicalCases.details.assignmentRequests") || "طلبات الإسناد"}</h3>
+                    {user?.role === "student" && selectedCase.status === "open" && (
+                      <button
+                        onClick={() => setShowAssignmentRequest(true)}
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition"
+                      >
+                        {t("ClinicalCases.details.requestAssignment") || "طلب إسناد"}
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {(selectedCase.assignment_requests || assignmentRequests[selectedCase.id] || []).length > 0 ? (
+                      (selectedCase.assignment_requests || assignmentRequests[selectedCase.id] || []).map((request) => (
+                        <div key={request.id} className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="font-semibold text-slate-900 dark:text-white">
+                                {request.student?.first_name && request.student?.last_name
+                                  ? `${request.student.first_name} ${request.student.last_name}`
+                                  : request.student?.username || request.student?.email || "-"}
+                              </p>
+                              {request.message && (
+                                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{request.message}</p>
+                              )}
+                              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                                {request.created_at ? new Date(request.created_at).toLocaleString("ar-SA") : "-"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                request.status === "accepted" ? "bg-green-100 text-green-600" :
+                                request.status === "rejected" ? "bg-red-100 text-red-600" :
+                                "bg-yellow-100 text-yellow-600"
+                              }`}>
+                                {request.status === "accepted" ? t("ClinicalCases.requestStatus.accepted") || "مقبول" :
+                                 request.status === "rejected" ? t("ClinicalCases.requestStatus.rejected") || "مرفوض" :
+                                 t("ClinicalCases.requestStatus.pending") || "قيد الانتظار"}
+                              </span>
+                              {user?.role === "supervisor" && request.status === "pending" && (
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => handleSupervisorAction(selectedCase.id, "accept", request.student?.id || request.student)}
+                                    className="p-1 bg-green-600 hover:bg-green-700 text-white rounded transition"
+                                    title={t("ClinicalCases.accept") || "قبول"}
+                                  >
+                                    <CheckCircle size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleSupervisorAction(selectedCase.id, "reject", request.student?.id || request.student)}
+                                    className="p-1 bg-red-600 hover:bg-red-700 text-white rounded transition"
+                                    title={t("ClinicalCases.reject") || "رفض"}
+                                  >
+                                    <XCircle size={16} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-slate-500 dark:text-slate-400 text-center py-4">{t("ClinicalCases.details.noAssignmentRequests") || "لا توجد طلبات إسناد"}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* سجل الحالة (History) */}
+                <div>
+                  <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-3">{t("ClinicalCases.details.history") || "سجل الحالة"}</h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {(selectedCase.history || []).length > 0 ? (
+                      selectedCase.history.map((historyItem, idx) => (
+                        <div key={idx} className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg border-r-4 border-blue-500">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="font-semibold text-slate-900 dark:text-white">
+                                {t(`ClinicalCases.history.${historyItem.action}`) || historyItem.action}
+                              </p>
+                              {historyItem.description && (
+                                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{historyItem.description}</p>
+                              )}
+                              {historyItem.performed_by && (
+                                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                                  {t("ClinicalCases.details.performedBy") || "من قبل:"} {
+                                    typeof historyItem.performed_by === "object"
+                                      ? historyItem.performed_by.username || historyItem.performed_by.email || "-"
+                                      : historyItem.performed_by
+                                  }
+                                </p>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-500">
+                              {historyItem.created_at ? new Date(historyItem.created_at).toLocaleString("ar-SA") : "-"}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-slate-500 dark:text-slate-400 text-center py-4">{t("ClinicalCases.details.noHistory") || "لا يوجد سجل"}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal طلب الإسناد */}
+        {showAssignmentRequest && selectedCase && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md">
+              <div className="flex justify-between items-center p-4 bg-gradient-to-r from-sky-200 to-blue-900 dark:from-slate-700 dark:to-slate-900 text-white">
+                <h2 className="text-lg font-bold">{t("ClinicalCases.details.requestAssignment") || "طلب إسناد"}</h2>
+                <button onClick={() => { setShowAssignmentRequest(false); setAssignmentMessage(""); }} className="p-1 rounded-full hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-white transition-colors"><X size={20} /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block font-semibold mb-2 text-slate-900 dark:text-white">
+                    {t("ClinicalCases.details.message") || "الرسالة (اختياري)"}
+                  </label>
+                  <textarea
+                    value={assignmentMessage}
+                    onChange={(e) => setAssignmentMessage(e.target.value)}
+                    className="w-full p-2 border border-sky-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                    rows={4}
+                    placeholder={t("ClinicalCases.details.messagePlaceholder") || "اكتب رسالتك هنا..."}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => { setShowAssignmentRequest(false); setAssignmentMessage(""); }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition"
+                  >
+                    {t("ClinicalCases.form.cancel")}
+                  </button>
+                  <button
+                    onClick={() => handleRequestAssignment(selectedCase.id)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition"
+                  >
+                    {t("ClinicalCases.details.submitRequest") || "إرسال الطلب"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+    </AnimatedWrapper>
+  );
+}
