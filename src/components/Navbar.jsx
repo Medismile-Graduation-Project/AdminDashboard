@@ -287,7 +287,7 @@ export default function Navbar() {
       {/* === Navbar Mobile === */}
       <div
         dir={isRtl ? "rtl" : "ltr"}
-        className="navbar-mobile lg:hidden fixed top-0 start-0 w-full bg-white dark:bg-dark px-4 py-3 flex justify-between items-center border-b border-slate-200 dark:border-dark-lighter z-50"
+        className="navbar-mobile lg:hidden fixed top-0 start-0 w-full bg-white dark:bg-dark px-4 py-3 flex justify-between items-center border-b border-slate-200 dark:border-dark-lighter z-[60]"
       >
         {/* Logo */}
         <div

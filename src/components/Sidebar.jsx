@@ -156,7 +156,7 @@ const Sidebar = () => {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
             dir={isRtl ? "rtl" : "ltr"}
-            className="sidebar-mobile-menu fixed top-12 start-0 w-full h-[calc(100vh-3rem)] overflow-y-auto bg-white dark:bg-dark border-t border-slate-200 dark:border-dark-lighter z-40 p-4"
+            className="sidebar-mobile-menu fixed top-28 start-0 w-full h-[calc(100vh-7rem)] overflow-y-auto bg-white dark:bg-dark border-t border-slate-200 dark:border-dark-lighter z-40 p-4"
           >
             {renderMenu()}
           </motion.div>
@@ -167,7 +167,7 @@ const Sidebar = () => {
       {isMobile && (
         <div
           dir={isRtl ? "rtl" : "ltr"}
-          className="sidebar-mobile-header fixed top-0 start-0 w-full z-50 flex items-center justify-between px-4 py-3 bg-white dark:bg-dark border-b border-slate-200 dark:border-dark-lighter"
+          className="sidebar-mobile-header fixed top-14 start-0 w-full z-[55] flex items-center justify-between px-4 py-3 bg-white dark:bg-dark border-b border-slate-200 dark:border-dark-lighter"
         >
           <button
             className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-light text-slate-700 dark:text-slate-300 transition-colors"

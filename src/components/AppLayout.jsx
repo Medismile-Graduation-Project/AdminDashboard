@@ -179,7 +179,7 @@ export default function AppLayout({ children }) {
       >
         <main
           className={`flex-1 px-4 md:px-6 pb-4 md:pb-6
-            ${!hideLayout ? "pt-14 lg:pt-16" : "pt-0"}`}
+            ${!hideLayout ? "pt-28 lg:pt-16" : "pt-0"}`}
         >
           {!hideLayout && <Navbar />}
           <AnimatedWrapper>{children}</AnimatedWrapper>
