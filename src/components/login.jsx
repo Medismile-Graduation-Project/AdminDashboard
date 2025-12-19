@@ -3,8 +3,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import { loginAsync } from "../redux/features/auth/authSlice";
+import toast from "react-hot-toast";
 
 const EnvelopeIcon = dynamic(() =>
   import("@heroicons/react/24/outline").then((mod) => mod.EnvelopeIcon),
@@ -17,48 +20,57 @@ const LockClosedIcon = dynamic(() =>
 
 export default function LoginPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const { loading, error: authError } = useSelector((state) => state.auth);
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    if (currentUser) {
+    const accessToken = localStorage.getItem("access_token");
+    
+    if (currentUser && accessToken) {
       router.push("/");
     } else {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, [router]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const user = users.find(
-      (u) => u.email === email && u.password === password
-    );
+    setError("");
 
-    if (!user) {
-      setError("البريد أو كلمة المرور غير صحيحة");
+    if (!email || !password) {
+      setError("يرجى إدخال البريد الإلكتروني وكلمة المرور");
       return;
     }
 
-    // حفظ المستخدم في localStorage بنفس المفتاح المستخدم بالSidebar
-    localStorage.setItem("user", JSON.stringify(user));
-
-    window.dispatchEvent(new Event("user-login"));
-
-    // التوجيه حسب الدور
-    if (user.role === "supervisor") {
-      router.push("/ClinicalCases");
-    } else if (user.role === "college_admin") {
-      router.push("/patients");
-    } else {
-      router.push("/"); // افتراضي
+    try {
+      const result = await dispatch(loginAsync({ email, password })).unwrap();
+      
+      if (result?.user) {
+        toast.success("تم تسجيل الدخول بنجاح");
+        
+        // التوجيه حسب الدور
+        if (result.user.role === "supervisor") {
+          router.push("/ClinicalCases");
+        } else if (result.user.role === "college_admin" || result.user.role === "university_admin") {
+          router.push("/patients");
+        } else {
+          router.push("/");
+        }
+      }
+    } catch (err) {
+      const errorMessage = err || "البريد أو كلمة المرور غير صحيحة";
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
-  if (loading) return null;
+  if (isLoading) return null;
 
   return (
     <div dir="rtl">
@@ -82,7 +94,11 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {error && <p className="text-red-600 text-sm mb-3 text-center">{error}</p>}
+          {(error || authError) && (
+            <p className="text-red-600 text-sm mb-3 text-center">
+              {error || authError}
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
@@ -113,10 +129,11 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-blue-500 hover:bg-blue-600 
+              disabled={loading}
+              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed
                          text-white font-semibold py-2 rounded-lg transition-all duration-200"
             >
-              تسجيل الدخول
+              {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
             </button>
 
             <button

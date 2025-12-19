@@ -1,8 +1,31 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Tajawal", "Segoe UI", system-ui, -apple-system, sans-serif;
+  
+  /* نظام الألوان: سماوي فاتح، سماوي غامق، أسود، أبيض */
+  --color-sky-50: #f0f9ff;
+  --color-sky-100: #e0f2fe;
+  --color-sky-200: #bae6fd;
+  --color-sky-300: #7dd3fc;
+  --color-sky-400: #38bdf8;
+  --color-sky-500: #0ea5e9;
+  --color-sky-600: #0284c7;
+  --color-sky-700: #0369a1;
+  --color-sky-800: #075985;
+  --color-sky-900: #0c4a6e;
+  
+  --color-dark: #0f172a;
+  --color-dark-light: #1e293b;
+  --color-dark-lighter: #334155;
+  
+  --color-light: #ffffff;
+  --color-light-gray: #f8fafc;
+}
+
 @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap");
 
-/* ⚙️ أساسيات فقط */
+/* ⚙️ أساسيات التصميم - منظمة باستخدام Tailwind */
 * {
   box-sizing: border-box;
 }
@@ -11,134 +34,145 @@ html {
   scroll-behavior: smooth;
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  font-family: "Tajawal", "Segoe UI", system-ui, -apple-system, sans-serif;
-  background-color: rgb(240 249 255); /* sky-50 */
-  color: rgb(15 23 42); /* slate-900 */
-  transition: background-color 0.2s ease, color 0.2s ease;
+/* أساس body - استخدام قيم Tailwind */
+@layer base {
+  body {
+    @apply m-0 min-h-screen font-sans;
+    background-color: rgb(240 249 255); /* sky-50 */
+    color: rgb(15 23 42); /* dark */
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
 }
 
 /* Dark Mode - دعم شامل ومحترف */
-html.dark {
-  color-scheme: dark;
-}
+@layer base {
+  html.dark {
+    color-scheme: dark;
+  }
 
-html.dark body {
-  background-color: rgb(15 23 42); /* slate-900 */
-  color: rgb(226 232 240); /* slate-200 */
+  html.dark body {
+    background-color: rgb(15 23 42); /* dark */
+    color: rgb(224 242 254); /* sky-100 */
+  }
 }
 
 /* جميع العناوين في الوضع الليلي تكون بيضاء */
-html.dark h1,
-html.dark h2,
-html.dark h3,
-html.dark h4,
-html.dark h5,
-html.dark h6 {
-  color: rgb(255 255 255) !important;
+@layer base {
+  html.dark h1,
+  html.dark h2,
+  html.dark h3,
+  html.dark h4,
+  html.dark h5,
+  html.dark h6 {
+    @apply text-white;
+  }
 }
 
 /* Sidebar في الوضع الليلي - slate-900 مع نص أبيض */
-html.dark .sidebar-main {
-  background-color: rgb(15 23 42) !important; /* slate-900 */
-  background-image: none !important; /* إزالة التدرج */
-}
+@layer components {
+  html.dark .sidebar-main {
+    background-color: rgb(15 23 42) !important; /* dark */
+    background-image: none !important; /* إزالة التدرج */
+  }
 
-html.dark .sidebar-main * {
-  color: rgb(255 255 255) !important; /* نص أبيض */
-}
+  html.dark .sidebar-main * {
+    @apply text-white;
+  }
 
-html.dark .sidebar-main h1,
-html.dark .sidebar-main h2,
-html.dark .sidebar-main h3,
-html.dark .sidebar-main h4,
-html.dark .sidebar-main h5,
-html.dark .sidebar-main h6 {
-  color: rgb(255 255 255) !important;
-}
+  html.dark .sidebar-main h1,
+  html.dark .sidebar-main h2,
+  html.dark .sidebar-main h3,
+  html.dark .sidebar-main h4,
+  html.dark .sidebar-main h5,
+  html.dark .sidebar-main h6 {
+    @apply text-white;
+  }
 
-html.dark .sidebar-main a {
-  color: rgb(226 232 240) !important; /* slate-200 */
-}
+  html.dark .sidebar-main a {
+    color: rgb(186 230 253) !important; /* sky-200 */
+  }
 
-html.dark .sidebar-main a:hover {
-  color: rgb(255 255 255) !important;
+  html.dark .sidebar-main a:hover {
+    @apply text-white;
+  }
 }
 
 /* Navbar في الوضع الليلي - slate-900 مع نص أبيض */
-html.dark .navbar-main {
-  background-color: rgb(15 23 42) !important; /* slate-900 */
-  background-image: none !important; /* إزالة التدرج */
-}
+@layer components {
+  html.dark .navbar-main {
+    background-color: rgb(15 23 42) !important; /* dark */
+    background-image: none !important; /* إزالة التدرج */
+  }
 
-html.dark .navbar-main * {
-  color: rgb(255 255 255) !important; /* نص أبيض */
-}
+  html.dark .navbar-main * {
+    @apply text-white;
+  }
 
-html.dark .navbar-main span,
-html.dark .navbar-main p,
-html.dark .navbar-main div {
-  color: rgb(255 255 255) !important;
-}
+  html.dark .navbar-main span,
+  html.dark .navbar-main p,
+  html.dark .navbar-main div {
+    @apply text-white;
+  }
 
-html.dark .navbar-main input {
-  background-color: rgb(30 41 59) !important; /* slate-800 */
-  color: rgb(255 255 255) !important;
-  border-color: rgb(51 65 85) !important; /* slate-700 */
-}
+  html.dark .navbar-main input {
+    background-color: rgb(30 41 59) !important; /* dark-light */
+    color: rgb(255 255 255) !important;
+    border-color: rgb(30 41 59) !important;
+  }
 
-html.dark .navbar-main input::placeholder {
-  color: rgb(148 163 184) !important; /* slate-400 */
+  html.dark .navbar-main input::placeholder {
+    color: rgb(56 189 248) !important; /* sky-400 */
+  }
 }
 
 /* Sidebar Mobile في الوضع الليلي */
-html.dark .sidebar-mobile-menu {
-  background-color: rgb(15 23 42) !important; /* slate-900 */
-  background-image: none !important;
-}
+@layer components {
+  html.dark .sidebar-mobile-menu {
+    background-color: rgb(15 23 42) !important; /* dark */
+    background-image: none !important;
+  }
 
-html.dark .sidebar-mobile-menu * {
-  color: rgb(255 255 255) !important;
-}
+  html.dark .sidebar-mobile-menu * {
+    @apply text-white;
+  }
 
-html.dark .sidebar-mobile-header {
-  background-color: rgb(15 23 42) !important; /* slate-900 */
-  background-image: none !important;
-}
+  html.dark .sidebar-mobile-header {
+    background-color: rgb(15 23 42) !important; /* dark */
+    background-image: none !important;
+  }
 
-html.dark .sidebar-mobile-header * {
-  color: rgb(255 255 255) !important;
-}
+  html.dark .sidebar-mobile-header * {
+    @apply text-white;
+  }
 
-/* Navbar Mobile في الوضع الليلي */
-html.dark .navbar-mobile {
-  background-color: rgb(15 23 42) !important; /* slate-900 */
-  background-image: none !important;
-}
+  /* Navbar Mobile في الوضع الليلي */
+  html.dark .navbar-mobile {
+    background-color: rgb(15 23 42) !important; /* dark */
+    background-image: none !important;
+  }
 
-html.dark .navbar-mobile * {
-  color: rgb(255 255 255) !important;
-}
+  html.dark .navbar-mobile * {
+    @apply text-white;
+  }
 
-/* Navbar Drawer في الوضع الليلي */
-html.dark .navbar-drawer {
-  background-color: rgb(15 23 42) !important; /* slate-900 */
-}
+  /* Navbar Drawer في الوضع الليلي */
+  html.dark .navbar-drawer {
+    background-color: rgb(15 23 42) !important; /* dark */
+  }
 
-html.dark .navbar-drawer * {
-  color: rgb(255 255 255) !important;
-}
+  html.dark .navbar-drawer * {
+    @apply text-white;
+  }
 
-html.dark .navbar-drawer input {
-  background-color: rgb(30 41 59) !important; /* slate-800 */
-  color: rgb(255 255 255) !important;
-  border-color: rgb(51 65 85) !important; /* slate-700 */
-}
+  html.dark .navbar-drawer input {
+    background-color: rgb(30 41 59) !important; /* dark-light */
+    color: rgb(255 255 255) !important;
+    border-color: rgb(30 41 59) !important;
+  }
 
-html.dark .navbar-drawer input::placeholder {
-  color: rgb(148 163 184) !important; /* slate-400 */
+  html.dark .navbar-drawer input::placeholder {
+    color: rgb(56 189 248) !important; /* sky-400 */
+  }
 }
 
 /* Smooth transitions for theme switching */
@@ -152,21 +186,4 @@ html.dark .navbar-drawer input::placeholder {
   }
 }
 
-/* تحسين Responsive للأحجام المختلفة */
-@media (max-width: 640px) {
-  html {
-    font-size: 14px;
-  }
-}
-
-@media (min-width: 641px) and (max-width: 1024px) {
-  html {
-    font-size: 15px;
-  }
-}
-
-@media (min-width: 1025px) {
-  html {
-    font-size: 16px;
-  }
-}
+/* تم إزالة media queries للأحجام - نعتمد على Tailwind فقط */

@@ -19,12 +19,14 @@ export default function PageLoader({ loading, hasSidebar }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ نحسب موضع اللودر بشكل متجاوب
-  const positionStyle = hasSidebar && !isMobile
-    ? isRtl
-      ? { right: "16rem", left: 0 } // RTL: السايدبار يمين
-      : { left: "16rem", right: 0 } // LTR: السايدبار يسار
-    : { left: 0, right: 0 }; // شاشة صغيرة أو بدون سايدبار
+  // ✅ نحسب موضع اللودر بالنسبة للـ Sidebar باستخدام فئات Tailwind فقط
+  // على الشاشات الكبيرة: إذا كان هناك Sidebar لا نغطيه (نترك 18rem = 72)
+  const sidebarOffsetClass =
+    hasSidebar && !isMobile
+      ? isRtl
+        ? "lg:right-64" // RTL: السايدبار يمين → نترك مسافة من اليمين (16rem = w-64)
+        : "lg:left-64" // LTR: السايدبار يسار → نترك مسافة من اليسار (16rem = w-64)
+      : "";
 
   return (
     <AnimatePresence>
@@ -32,10 +34,9 @@ export default function PageLoader({ loading, hasSidebar }) {
         <motion.div
           key="loader"
           dir={isRtl ? "rtl" : "ltr"}
-          style={positionStyle}
-          className="fixed top-0 bottom-0 flex flex-col items-center justify-center
+          className={`fixed inset-y-0 left-0 right-0 flex flex-col items-center justify-center
                      z-[9999] bg-gradient-to-br from-blue-900/45 via-blue-700/40 to-indigo-900/45 
-                     backdrop-blur-[6px]"
+                     backdrop-blur-[6px] ${sidebarOffsetClass}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useDispatch, useSelector } from "react-redux";
 import { Mail, Phone, MessageCircle, Send, HelpCircle, FileText, Clock, CheckCircle } from "lucide-react";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import { motion } from "framer-motion";
+import { createTicketAsync, clearError } from "@/redux/features/support/supportSlice";
+import toast from "react-hot-toast";
 
 export default function SupportPage() {
   const { t, i18n } = useTranslation();
+  const dispatch = useDispatch();
+  const { loading, error: supportError } = useSelector((state) => state.support);
+  
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
@@ -17,7 +23,7 @@ export default function SupportPage() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => setMounted(true), []);
 
@@ -26,26 +32,53 @@ export default function SupportPage() {
     setUser(storedUser);
   }, []);
 
+  useEffect(() => {
+    if (supportError) {
+      setError(supportError);
+      dispatch(clearError());
+    }
+  }, [supportError, dispatch]);
+
   const isRtl = i18n.language === "ar";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setError("");
 
-    // محاكاة إرسال الطلب (يمكن ربطه بـ API لاحقاً)
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
-      setFormData({
-        subject: "",
-        category: "technical",
-        priority: "medium",
-        message: "",
-      });
-      
-      // إخفاء رسالة النجاح بعد 5 ثوان
-      setTimeout(() => setSubmitted(false), 5000);
-    }, 1500);
+    // التحقق من الحقول المطلوبة
+    if (!formData.subject || !formData.message) {
+      setError("يرجى ملء جميع الحقول المطلوبة");
+      return;
+    }
+
+    try {
+      const result = await dispatch(
+        createTicketAsync({
+          category: formData.category,
+          subject: formData.subject,
+          message: formData.message,
+          priority: formData.priority,
+        })
+      ).unwrap();
+
+      if (result) {
+        toast.success("تم إرسال طلبك بنجاح! سنتواصل معك قريباً.");
+        setSubmitted(true);
+        setFormData({
+          subject: "",
+          category: "technical",
+          priority: "medium",
+          message: "",
+        });
+        
+        // إخفاء رسالة النجاح بعد 5 ثوان
+        setTimeout(() => setSubmitted(false), 5000);
+      }
+    } catch (err) {
+      const errorMessage = err || "فشل إرسال الطلب";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    }
   };
 
   const supportChannels = [
@@ -100,14 +133,14 @@ export default function SupportPage() {
 
   return (
     <AnimatedWrapper>
-      <div className={`p-4 sm:p-6 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
-        <div className="max-w-6xl mx-auto space-y-6">
+      <div className={`p-4 sm:p-6 lg:p-8 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
+        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
           {/* العنوان الرئيسي */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-blue-900 dark:text-white mb-2">
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent mb-2">
               {t("support.title") || "الدعم التقني"}
             </h1>
-            <p className="text-slate-600 dark:text-slate-400">
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
               {t("support.subtitle") || "نحن هنا لمساعدتك في أي وقت"}
             </p>
           </div>
@@ -136,10 +169,10 @@ export default function SupportPage() {
           </div>
 
           {/* نموذج طلب الدعم */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-sky-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-dark-light rounded-2xl shadow-lg p-5 sm:p-6 border-2 border-sky-200/50 dark:border-dark-lighter">
             <div className="flex items-center gap-3 mb-6">
-              <HelpCircle className="text-blue-600 dark:text-blue-400" size={28} />
-              <h2 className="text-2xl font-bold text-blue-900 dark:text-white">
+              <HelpCircle className="text-sky-600 dark:text-sky-400" size={28} />
+              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
                 {t("support.formTitle") || "إرسال طلب دعم"}
               </h2>
             </div>
@@ -153,6 +186,18 @@ export default function SupportPage() {
                 <CheckCircle className="text-green-600 dark:text-green-400" size={24} />
                 <p className="text-green-700 dark:text-green-400 font-medium">
                   {t("support.successMessage") || "تم إرسال طلبك بنجاح! سنتواصل معك قريباً."}
+                </p>
+              </motion.div>
+            )}
+
+            {(error || supportError) && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+              >
+                <p className="text-red-700 dark:text-red-400 font-medium text-sm">
+                  {error || supportError}
                 </p>
               </motion.div>
             )}

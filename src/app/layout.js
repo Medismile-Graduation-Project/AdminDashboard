@@ -1,17 +1,11 @@
 import "./globals.css";
 import AppLayout from "../components/AppLayout";
-import { Cairo } from "next/font/google";
 import ReduxProvider from "../components/ReduxProvider";
-import { Toaster } from "react-hot-toast"; 
-
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "700"],
-});
+import { Toaster } from "react-hot-toast";
 
 export const metadata = {
-  title: "My App",
-  description: "Next.js with Sidebar",
+  title: "MediSmile - لوحة التحكم",
+  description: "نظام إدارة الحالات السريرية والطلاب",
 };
 
 export default function RootLayout({ children }) {
@@ -36,7 +30,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body
-        className={`${cairo.className} min-h-screen transition-colors`}
+        className="font-sans min-h-screen transition-colors"
         suppressHydrationWarning
       >
         <ReduxProvider>

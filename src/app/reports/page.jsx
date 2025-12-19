@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { Download, FileText, RefreshCw } from "lucide-react";
+import { motion } from "framer-motion";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -41,7 +42,8 @@ export default function ReportsPage() {
           dispatch(fetchStudentReportsAsync(studentId));
         }
       } else if (user.role === "supervisor") {
-        // المشرف يرى تقارير طلابه
+        // المشرف يرى تقارير طلابه من نفس الجامعة
+        // TODO: قد نحتاج فلترة إضافية حسب university_id للطلاب
         dispatch(fetchReportsAsync(params));
       } else if (user.role === "college_admin" || user.role === "university_admin" || user.role === "tech_support") {
         // الإداريون يرون جميع التقارير
@@ -184,36 +186,48 @@ export default function ReportsPage() {
 
   return (
     <AnimatedWrapper>
-      <div className={`p-6 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
-        <div className="max-w-[1200px] mx-auto">
+      <div className={`p-4 sm:p-6 lg:p-8 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
+        <div className="max-w-[1400px] mx-auto">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-900 dark:text-white">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
               {t("reports.mainTitle") || "التقارير"}
             </h1>
-            <div className="flex gap-2 flex-wrap">
-              <button
+            <div className="flex gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleRefresh}
                 disabled={loading}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white transition disabled:opacity-50"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-green-600 to-green-700 
+                  hover:from-green-700 hover:to-green-800 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 
+                  text-white transition-all duration-300 disabled:opacity-50 font-semibold shadow-lg hover:shadow-xl"
               >
-                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                {t("actions.refresh") || "تحديث"}
-              </button>
+                <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+                <span className="hidden sm:inline">{t("actions.refresh") || "تحديث"}</span>
+              </motion.button>
               {displayedReports.length > 0 && (
                 <>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={exportReportsToExcel}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition"
+                    className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-sky-600 to-sky-700 
+                      hover:from-sky-700 hover:to-sky-800 dark:from-sky-500 dark:to-sky-600 dark:hover:from-sky-600 dark:hover:to-sky-700 
+                      text-white transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
                   >
-                    <Download size={16} /> Excel
-                  </button>
-                  <button
+                    <Download size={18} /> <span className="hidden sm:inline">Excel</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={exportReportsToPDF}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white transition"
+                    className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-dark-light to-dark-lighter 
+                      hover:from-dark-lighter hover:to-dark-light dark:from-dark-lighter dark:to-dark-light dark:hover:from-dark-light dark:hover:to-dark-lighter 
+                      text-white transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
                   >
-                    <FileText size={16} /> PDF
-                  </button>
+                    <FileText size={18} /> <span className="hidden sm:inline">PDF</span>
+                  </motion.button>
                 </>
               )}
             </div>
@@ -221,25 +235,25 @@ export default function ReportsPage() {
 
           {/* رسالة الخطأ */}
           {error && (
-            <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+            <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-2 border-red-500/50 dark:border-red-500/50 text-red-700 dark:text-red-400 shadow-lg">
               {error}
             </div>
           )}
 
           {/* حالة التحميل */}
           {loading && (
-            <div className="mb-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 text-center">
+            <div className="mb-4 p-4 rounded-xl bg-sky-50 dark:bg-sky-900/20 border-2 border-sky-200/50 dark:border-sky-800/50 text-sky-700 dark:text-sky-400 text-center shadow-lg">
               {t("loading") || "جاري تحميل التقارير..."}
             </div>
           )}
 
           {/* رسالة عدم وجود تقارير */}
           {!loading && displayedReports.length === 0 && (
-            <div className="mb-4 p-8 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-center">
-              <p className="text-slate-600 dark:text-slate-400 text-lg">
+            <div className="mb-4 p-8 rounded-2xl bg-sky-50/50 dark:bg-dark-light/30 border-2 border-sky-200/50 dark:border-dark-lighter text-center shadow-lg">
+              <p className="text-sky-600 dark:text-sky-400 text-lg font-semibold">
                 {t("reports.noReports") || "لا توجد تقارير متاحة"}
               </p>
-              <p className="text-slate-500 dark:text-slate-500 text-sm mt-2">
+              <p className="text-sky-500 dark:text-sky-500 text-sm mt-2">
                 {t("reports.noReportsDescription") || "لم يتم العثور على أي تقارير. يرجى المحاولة لاحقاً."}
               </p>
             </div>
@@ -247,14 +261,17 @@ export default function ReportsPage() {
 
           {/* عرض التقارير من API */}
           {displayedReports.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {displayedReports.map((report) => (
-                <div
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {displayedReports.map((report, idx) => (
+                <motion.div
                   key={report.id}
-                  className="p-4 rounded-xl bg-white dark:bg-slate-800 shadow border border-sky-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  className="p-5 rounded-2xl bg-white dark:bg-dark-light shadow-lg border-2 border-sky-200/50 dark:border-dark-lighter hover:shadow-xl transition-all duration-300"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-semibold text-lg text-blue-900 dark:text-white flex-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="font-bold text-lg sm:text-xl bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent flex-1">
                       {report.title || t("reports.report") || "تقرير"} #{report.id?.slice(0, 8) || "N/A"}
                     </h3>
                     {report.is_active && (
@@ -331,7 +348,7 @@ export default function ReportsPage() {
                       {t("actions.download") || "تحميل التقرير"}
                     </a>
                   )}
-                </div>
+                </motion.div>
               ))}
             </div>
           )}

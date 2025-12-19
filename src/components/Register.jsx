@@ -3,8 +3,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import {
+  registerSupervisorAsync,
+  registerCollegeAdminAsync,
+} from "../redux/features/auth/authSlice";
+import toast from "react-hot-toast";
 
 const UserIcon = dynamic(() =>
   import("@heroicons/react/24/outline").then((mod) => mod.UserIcon),
@@ -21,58 +27,112 @@ const LockClosedIcon = dynamic(() =>
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [fullName, setFullName] = useState("");
+  const dispatch = useDispatch();
+  const { loading, error: authError } = useSelector((state) => state.auth);
+
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("supervisor"); // الدور الافتراضي
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [role, setRole] = useState("supervisor");
+  
+  // حقول إضافية للمشرف
+  const [universityId, setUniversityId] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
+  const [specialization, setSpecialization] = useState("");
+  
+  // حقول إضافية لإدارة الكلية
+  const [collegeUniversityId, setCollegeUniversityId] = useState("");
+
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => setLoading(false), []);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!fullName || !email || !password || !role) {
-      setError("يرجى ملء جميع الحقول");
-      return;
-    }
-
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-
-    // تحقق إذا كان الإيميل مستخدم من قبل
-    const exists = users.find((u) => u.email === email);
-    if (exists) {
-      setError("هذا البريد مستخدم بالفعل");
-      return;
-    }
-
-    // إنشاء مستخدم جديد مع الدور
-    const newUser = {
-      name: fullName,
-      email,
-      password,
-      role, // الدور (مشرف / إدارة كلية)
-      image: null,
-    };
-
-    users.push(newUser);
-    localStorage.setItem("users", JSON.stringify(users));
-    localStorage.setItem("user", JSON.stringify(newUser));
-
-    // إخطار باقي الواجهات
-    window.dispatchEvent(new Event("user-login"));
-
-    // التوجيه حسب الدور
-    if (role === "supervisor") {
-      router.push("/ClinicalCases");
-    } else if (role === "college_admin") {
-      router.push("/patients");
-    } else {
+  useEffect(() => {
+    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    const accessToken = localStorage.getItem("access_token");
+    
+    if (currentUser && accessToken) {
       router.push("/");
+    } else {
+      setIsLoading(false);
+    }
+  }, [router]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    // التحقق من الحقول المطلوبة
+    if (!username || !email || !password || !passwordConfirm || !firstName || !lastName) {
+      setError("يرجى ملء جميع الحقول المطلوبة");
+      return;
+    }
+
+    if (password !== passwordConfirm) {
+      setError("كلمات المرور غير متطابقة");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
+      return;
+    }
+
+    try {
+      let result;
+      
+      if (role === "supervisor") {
+        // تسجيل مشرف
+        const registerData = {
+          username,
+          email,
+          password,
+          password_confirm: passwordConfirm,
+          first_name: firstName,
+          last_name: lastName,
+          ...(universityId && { university_id: universityId }),
+          ...(licenseNumber && { license_number: licenseNumber }),
+          ...(specialization && { specialization }),
+        };
+        
+        console.log("Register data:", registerData);
+        
+        result = await dispatch(
+          registerSupervisorAsync(registerData)
+        ).unwrap();
+      } else if (role === "college_admin") {
+        // تسجيل إدارة كلية (يتطلب مصادقة - سنتعامل معه لاحقاً)
+        setError("إنشاء حساب إدارة الكلية يتطلب صلاحيات خاصة. يرجى التواصل مع المسؤول.");
+        return;
+      }
+
+      if (result) {
+        toast.success("تم إنشاء الحساب بنجاح! يرجى تسجيل الدخول.");
+        router.push("/login");
+      }
+    } catch (err) {
+      // عرض رسالة الخطأ بشكل أفضل
+      let errorMessage = "فشل إنشاء الحساب";
+      
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else if (err) {
+        errorMessage = String(err);
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
+      
+      // طباعة الخطأ في console للمساعدة في التطوير
+      console.error("Register error:", err);
     }
   };
 
-  if (loading) return null;
+  if (isLoading) return null;
 
   return (
     <div dir="rtl">
@@ -98,23 +158,55 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {error && (
+          {(error || authError) && (
             <p className="text-[var(--color-error)] text-sm mb-3 text-center">
-              {error}
+              {error || authError}
             </p>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* اسم المستخدم */}
             <div className="relative">
               <UserIcon className="h-5 w-5 absolute top-3 right-3 text-[var(--color-blue)]" />
               <input
                 type="text"
-                placeholder="الاسم الكامل"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                placeholder="اسم المستخدم"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full pr-10 px-4 py-2 border border-[var(--color-border)] rounded-lg 
                            focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] 
                            bg-[var(--color-bg-lightest)] text-[var(--color-bg-dark)] transition"
+                required
+              />
+            </div>
+
+            {/* الاسم الأول */}
+            <div className="relative">
+              <UserIcon className="h-5 w-5 absolute top-3 right-3 text-[var(--color-blue)]" />
+              <input
+                type="text"
+                placeholder="الاسم الأول"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full pr-10 px-4 py-2 border border-[var(--color-border)] rounded-lg 
+                           focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] 
+                           bg-[var(--color-bg-lightest)] text-[var(--color-bg-dark)] transition"
+                required
+              />
+            </div>
+
+            {/* الاسم الأخير */}
+            <div className="relative">
+              <UserIcon className="h-5 w-5 absolute top-3 right-3 text-[var(--color-blue)]" />
+              <input
+                type="text"
+                placeholder="الاسم الأخير"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full pr-10 px-4 py-2 border border-[var(--color-border)] rounded-lg 
+                           focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] 
+                           bg-[var(--color-bg-lightest)] text-[var(--color-bg-dark)] transition"
+                required
               />
             </div>
 
@@ -141,6 +233,23 @@ export default function RegisterPage() {
                 className="w-full pr-10 px-4 py-2 border border-[var(--color-border)] rounded-lg 
                            focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] 
                            bg-[var(--color-bg-lightest)] text-[var(--color-bg-dark)] transition"
+                required
+                minLength={8}
+              />
+            </div>
+
+            <div className="relative">
+              <LockClosedIcon className="h-5 w-5 absolute top-3 right-3 text-[var(--color-blue)]" />
+              <input
+                type="password"
+                placeholder="تأكيد كلمة المرور"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                className="w-full pr-10 px-4 py-2 border border-[var(--color-border)] rounded-lg 
+                           focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] 
+                           bg-[var(--color-bg-lightest)] text-[var(--color-bg-dark)] transition"
+                required
+                minLength={8}
               />
             </div>
 
@@ -155,16 +264,56 @@ export default function RegisterPage() {
                            focus:ring-2 focus:ring-[var(--color-accent)] transition"
               >
                 <option value="supervisor">مشرف</option>
-                <option value="college_admin">إدارة الكلية</option>
+                <option value="college_admin" disabled>إدارة الكلية (يتطلب صلاحيات)</option>
               </select>
             </div>
 
+            {/* حقول إضافية للمشرف */}
+            {role === "supervisor" && (
+              <>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="رقم الرخصة (اختياري)"
+                    value={licenseNumber}
+                    onChange={(e) => setLicenseNumber(e.target.value)}
+                    className="w-full px-4 py-2 border border-[var(--color-border)] rounded-lg 
+                               focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] 
+                               bg-[var(--color-bg-lightest)] text-[var(--color-bg-dark)] transition"
+                  />
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="التخصص (اختياري)"
+                    value={specialization}
+                    onChange={(e) => setSpecialization(e.target.value)}
+                    className="w-full px-4 py-2 border border-[var(--color-border)] rounded-lg 
+                               focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] 
+                               bg-[var(--color-bg-lightest)] text-[var(--color-bg-dark)] transition"
+                  />
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="معرف الجامعة (اختياري)"
+                    value={universityId}
+                    onChange={(e) => setUniversityId(e.target.value)}
+                    className="w-full px-4 py-2 border border-[var(--color-border)] rounded-lg 
+                               focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] 
+                               bg-[var(--color-bg-lightest)] text-[var(--color-bg-dark)] transition"
+                  />
+                </div>
+              </>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-[var(--color-blue)] hover:bg-[var(--color-accent)] 
+              disabled={loading}
+              className="w-full bg-[var(--color-blue)] hover:bg-[var(--color-accent)] disabled:bg-blue-300 disabled:cursor-not-allowed
                          text-[var(--color-text-light)] font-semibold py-2 rounded-lg transition-all duration-200"
             >
-              إنشاء حساب جديد
+              {loading ? "جاري إنشاء الحساب..." : "إنشاء حساب جديد"}
             </button>
 
             <button

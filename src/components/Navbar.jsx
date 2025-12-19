@@ -9,6 +9,8 @@ import { Menu, X, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ToggleTheme from "./ToggleTheme";
 import { fetchNotificationsAsync, toggleNotificationReadAsync, fetchUnreadCountAsync } from "../redux/features/notifications/notificationsSlice";
+import { logoutAsync } from "../redux/features/auth/authSlice";
+import toast from "react-hot-toast";
 
 // دالة إرسال إشعار
 export function sendNotification(notification) {
@@ -89,10 +91,25 @@ export default function Navbar() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    setCurrentUser(null);
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      // محاولة تسجيل الخروج (حتى لو فشل API، سيتم التنظيف المحلي في logoutAsync)
+      const result = await dispatch(logoutAsync());
+      
+      // سواء نجح أو فشل API، التنظيف المحلي تم بالفعل
+      setCurrentUser(null);
+      toast.success("تم تسجيل الخروج بنجاح");
+      router.push("/login");
+    } catch (error) {
+      // كإجراء احتياطي إضافي - تنظيف محلي
+      console.warn("Logout error (performing local cleanup):", error);
+      localStorage.removeItem("user");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      setCurrentUser(null);
+      toast.success("تم تسجيل الخروج بنجاح");
+      router.push("/login");
+    }
   };
 
   if (!mounted) return null;
@@ -101,93 +118,82 @@ export default function Navbar() {
   const fallbackInitial =
     currentUser?.name?.[0]?.toUpperCase() || currentUser?.email?.[0]?.toUpperCase();
 
-  // --- Framer Variants ---
-  const fadeIn = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { duration: 0.1 } },
-  };
-
-  const menuItem = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { duration: 0.1 } },
-  };
 
   return (
     <>
       {/* === Navbar Desktop === */}
-      <motion.nav
+      <nav
         dir={isRtl ? "rtl" : "ltr"}
-        variants={fadeIn}
-        initial="hidden"
-        animate="show"
-        className="navbar-main hidden xl:flex w-full shadow-md px-4 sm:px-6 py-2 sm:py-3 items-center justify-between flex-wrap gap-2 sm:gap-4 -mt-4 sm:-mt-5
-        bg-gradient-to-r from-sky-50 via-sky-200 to-blue-900 dark:bg-slate-900 backdrop-blur-sm border-b border-sky-200 dark:border-slate-700 transition-colors duration-200"
+        className="navbar-main hidden lg:flex fixed top-0 start-0 end-0 lg:start-64 px-6 py-4 items-center justify-between gap-4
+        bg-white dark:bg-dark border-b border-slate-200 dark:border-dark-lighter z-[60]"
       >
         {/* Logo */}
         <div
-          className="flex items-center gap-2 cursor-pointer flex-shrink-0 min-w-[140px]"
+          className={`flex items-center gap-3 cursor-pointer flex-shrink-0 ${isRtl ? "flex-row-reverse" : "flex-row"}`}
           onClick={() => router.push("/")}
         >
-          <div>
-            <Image
-              src="/Screenshot_٢٠٢٥٠٩٠٨-١٢٣٢٥٥.jpg"
-              alt={t("Navbar.logoAlt")}
-              width={45}
-              height={45}
-              className="rounded-full border shadow bg-white"
+          <div className="relative rounded-full">
+              <Image
+                src="/Screenshot_٢٠٢٥٠٩٠٨-١٢٣٢٥٥.jpg"
+                alt={t("Navbar.logoAlt")}
+              width={32}
+              height={32}
+              className="rounded-full"
             />
           </div>
-          <span className="font-extrabold text-lg sm:text-xl text-blue-900 dark:text-slate-50 tracking-wide">
+          <span className="font-semibold text-base text-slate-900 dark:text-white">
             MediSmile
           </span>
         </div>
 
         {currentUser && (
-          <motion.div
-            variants={fadeIn}
-            className="flex items-center gap-4 flex-wrap flex-shrink-0 min-w-[260px]"
-          >
+          <div className={`flex items-center gap-4 flex-shrink-0 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
             {/* Search */}
-            <motion.input
-              whileFocus={{ scale: 1.03 }}
-              transition={{ duration: 0.3 }}
-              type="text"
-              placeholder={t("Navbar.searchPlaceholder")}
-                    className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-sky-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70
-                         placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-slate-100 focus:outline-none 
-                         focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 w-[140px] sm:w-[160px] md:w-[200px] lg:w-[240px] text-sm sm:text-base
-                         ${isRtl ? "text-right" : "text-left"} transition`}
-            />
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={t("Navbar.searchPlaceholder")}
+                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-dark-lighter
+                     bg-white dark:bg-dark-light
+                     placeholder-slate-400 dark:placeholder-slate-500 text-slate-900 dark:text-white focus:outline-none 
+                     focus:border-sky-500 dark:focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 
+                     w-[220px] text-sm transition-colors text-start"
+              />
+            </div>
 
             {/* تبديل الوضع الليلي/النهاري */}
-            <motion.div variants={menuItem}>
-              <ToggleTheme />
-            </motion.div>
+            <div className="p-1.5 rounded-lg">
+                <ToggleTheme />
+              </div>
 
             {/* إشعارات */}
-            <motion.div variants={menuItem} className="relative">
-              <motion.button
+            <div className="relative">
+              <button
                 onClick={() => router.push("/notifications")}
-                className="relative p-2 rounded-full hover:bg-sky-200/50 dark:hover:bg-slate-800 text-blue-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition"
+                className="relative p-2 rounded-lg bg-white dark:bg-dark-light border border-slate-200 dark:border-dark-lighter
+                  hover:bg-slate-50 dark:hover:bg-dark-lighter text-slate-700 dark:text-slate-300 
+                  focus:outline-none focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 
+                  transition-colors"
               >
-                <Bell size={20} />
+                <Bell size={18} />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs w-4 h-4 flex items-center justify-center">
-                    {unreadCount}
+                  <span className="absolute -top-1 -end-1 bg-red-500 text-white rounded-full 
+                    text-[10px] font-bold w-5 h-5 flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
-              </motion.button>
-            </motion.div>
+              </button>
+            </div>
 
             {/* Profile */}
-            <motion.div
+            <div
               ref={menuRef}
-              whileHover={{ scale: 1.05 }}
               className="relative flex items-center"
             >
-              <div
-                className="h-10 w-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center
-                           text-white font-bold cursor-pointer shadow overflow-hidden transition-colors"
+              <button
+                className="h-10 w-10 rounded-full bg-sky-600 dark:bg-sky-700 
+                         flex items-center justify-center text-white font-semibold cursor-pointer 
+                         overflow-hidden transition-colors hover:bg-sky-700 dark:hover:bg-sky-600"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
                 {currentUser.image ? (
@@ -199,20 +205,20 @@ export default function Navbar() {
                     className="w-full h-full object-cover rounded-full"
                   />
                 ) : (
-                  fallbackInitial
+                  <span className="text-sm">{fallbackInitial}</span>
                 )}
-              </div>
+              </button>
 
               <AnimatePresence>
                 {menuOpen && (
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.1 }}
-                    className={`absolute top-12 ${isRtl ? "left-0" : "right-0"} w-48 
-                               bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-sky-200 dark:border-slate-700 z-50
-                               flex flex-col py-1`}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-12 end-0 w-56 
+                               bg-white dark:bg-dark-light rounded-lg border border-slate-200 dark:border-dark-lighter z-50
+                               flex flex-col py-2 overflow-hidden"
                   >
                     {currentUser.role === "supervisor" && (
                       <button
@@ -220,7 +226,8 @@ export default function Navbar() {
                           router.push("/ClinicalCases");
                           setMenuOpen(false);
                         }}
-                        className="px-4 py-2 hover:bg-sky-200 dark:hover:bg-slate-800 transition-colors text-gray-700 dark:text-slate-200 text-sm text-start"
+                        className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-dark-lighter 
+                                 transition-colors text-slate-700 dark:text-slate-300 text-sm font-medium text-start"
                       >
                         لوحة المشرف
                       </button>
@@ -231,7 +238,8 @@ export default function Navbar() {
                           router.push("/patients");
                           setMenuOpen(false);
                         }}
-                        className="px-4 py-2 hover:bg-sky-200 dark:hover:bg-slate-800 transition-colors text-gray-700 dark:text-slate-200 text-sm text-start"
+                        className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-dark-lighter 
+                                 transition-colors text-slate-700 dark:text-slate-300 text-sm font-medium text-start"
                       >
                         لوحة إدارة الكلية
                       </button>
@@ -241,7 +249,8 @@ export default function Navbar() {
                         router.push("/profile");
                         setMenuOpen(false);
                       }}
-                      className="px-4 py-2 hover:bg-sky-200 dark:hover:bg-slate-800 transition-colors text-gray-700 dark:text-slate-200 text-sm text-start"
+                      className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-dark-lighter 
+                               transition-colors text-slate-700 dark:text-slate-300 text-sm font-medium text-start"
                     >
                       {t("Navbar.profile")}
                     </button>
@@ -250,55 +259,84 @@ export default function Navbar() {
                         router.push("/settings");
                         setMenuOpen(false);
                       }}
-                      className="px-4 py-2 hover:bg-sky-200 dark:hover:bg-slate-800 transition-colors text-gray-700 dark:text-slate-200 text-sm text-start"
+                      className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-dark-lighter 
+                               transition-colors text-slate-700 dark:text-slate-300 text-sm font-medium text-start"
                     >
                       {t("Navbar.settings")}
                     </button>
+                    <div className="border-t border-slate-200 dark:border-dark-lighter my-2"></div>
                     <button
                       onClick={() => {
                         handleLogout();
                         setMenuOpen(false);
                       }}
-                      className="px-4 py-2 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400 text-sm text-start"
+                      className={`px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 
+                               transition-colors text-red-600 dark:text-red-400 text-sm font-medium
+                               ${isRtl ? "text-right" : "text-left"}`}
                     >
                       {t("Navbar.logout")}
                     </button>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </motion.nav>
+      </nav>
 
       {/* === Navbar Mobile === */}
-      <motion.div
-        variants={fadeIn}
-        initial="hidden"
-        animate="show"
-        className="navbar-mobile xl:hidden w-full bg-gradient-to-r from-sky-50 via-sky-200 to-blue-900 dark:bg-slate-900 shadow px-3 sm:px-4 py-2 sm:py-3 flex justify-between items-center border-b border-sky-200 dark:border-slate-700 transition-colors duration-200 -mt-4 sm:-mt-5"
+      <div
+        dir={isRtl ? "rtl" : "ltr"}
+        className="navbar-mobile lg:hidden fixed top-0 start-0 w-full bg-white dark:bg-dark px-4 py-3 flex justify-between items-center border-b border-slate-200 dark:border-dark-lighter z-50"
       >
+        {/* Logo */}
         <div
-          className="flex items-center gap-2 cursor-pointer"
+          className={`flex items-center gap-2 cursor-pointer ${isRtl ? "flex-row-reverse" : "flex-row"}`}
           onClick={() => router.push("/")}
         >
-          <Image
-            src="/Screenshot_٢٠٢٥٠٩٠٨-١٢٣٢٥٥.jpg"
-            alt={t("Navbar.logoAlt")}
-            width={35}
-            height={35}
-            className="rounded-full border shadow bg-white"
-          />
-          <span className="font-bold text-base sm:text-lg text-blue-900 dark:text-slate-50">MediSmile</span>
+          <div className="relative rounded-full">
+            <Image
+              src="/Screenshot_٢٠٢٥٠٩٠٨-١٢٣٢٥٥.jpg"
+              alt={t("Navbar.logoAlt")}
+              width={28}
+              height={28}
+              className="rounded-full"
+            />
+          </div>
+          <span className="font-semibold text-sm text-slate-900 dark:text-white">
+            MediSmile
+          </span>
         </div>
 
-        <button
-          onClick={() => setMobileMenu(!mobileMenu)}
-          className="p-2 rounded-md hover:bg-white/20 dark:hover:bg-slate-800 text-blue-900 dark:text-slate-50 transition"
-        >
-          {mobileMenu ? <X size={28} /> : <Menu size={28} />}
-        </button>
-      </motion.div>
+        {/* Right side: notifications + menu */}
+        <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
+          {currentUser && (
+            <button
+              onClick={() => router.push("/notifications")}
+              className="relative p-2 rounded-lg bg-white dark:bg-dark-light border border-slate-200 dark:border-dark-lighter
+                hover:bg-slate-50 dark:hover:bg-dark-lighter text-slate-700 dark:text-slate-300 
+                transition-colors"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full 
+                  text-[10px] font-bold w-5 h-5 flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          <button
+            onClick={() => setMobileMenu(!mobileMenu)}
+            className="p-2 rounded-lg bg-white dark:bg-dark-light border border-slate-200 dark:border-dark-lighter
+              hover:bg-slate-50 dark:hover:bg-dark-lighter text-slate-700 dark:text-slate-300 
+              transition-colors"
+          >
+            {mobileMenu ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </div>
 
       {/* === Drawer Mobile Menu === */}
       <AnimatePresence>
@@ -307,17 +345,20 @@ export default function Navbar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.1 }}
-            className={`navbar-drawer fixed top-0 ${isRtl ? "left-0" : "right-0"} h-full w-64 sm:w-72 bg-white dark:bg-slate-900 shadow-lg 
-            transform z-50 border-l border-sky-200 dark:border-slate-700 overflow-y-auto`}
+            transition={{ duration: 0.2 }}
+            dir={isRtl ? "rtl" : "ltr"}
+            className="navbar-drawer fixed top-0 end-0 h-full w-80 bg-white dark:bg-dark z-50 border-s border-slate-200 dark:border-dark-lighter overflow-y-auto"
           >
-            <div className="p-3 sm:p-4">
-              <button
-                className="mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-50 transition"
-                onClick={() => setMobileMenu(false)}
-              >
-                <X size={20} /> {t("إغلاق") || "إغلاق"}
-              </button>
+            <div className="p-6">
+              <div className={`flex items-center justify-between mb-6 pb-4 border-b border-slate-200 dark:border-dark-lighter ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">القائمة</h2>
+                <button
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter text-slate-700 dark:text-slate-300 transition-colors"
+                  onClick={() => setMobileMenu(false)}
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
               {currentUser && (
                 <>
@@ -325,15 +366,15 @@ export default function Navbar() {
                   <input
                     type="text"
                     placeholder={t("Navbar.searchPlaceholder")}
-                    className={`w-full mb-3 px-3 py-2 rounded-lg border border-sky-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 ${
-                      isRtl ? "text-right" : "text-left"
-                    } transition`}
+                    className="w-full mb-4 px-4 py-2 rounded-lg border border-slate-200 dark:border-dark-lighter bg-white dark:bg-dark-light 
+                      text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none 
+                      focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 text-start transition-colors"
                   />
 
                   {/* تبديل الوضع الليلي/النهاري */}
-                  <div className="flex items-center gap-2 py-2 w-full px-2 rounded-lg hover:bg-sky-50 dark:hover:bg-slate-900 transition">
+                  <div className={`flex items-center gap-3 py-2 mb-2 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter transition-colors ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
                     <ToggleTheme />
-                    <span className="text-slate-700 dark:text-slate-200">تبديل المظهر</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">تبديل المظهر</span>
                   </div>
 
                   {/* إشعارات */}
@@ -342,71 +383,72 @@ export default function Navbar() {
                       router.push("/notifications");
                       setMobileMenu(false);
                     }}
-                    className="flex items-center gap-2 py-2 w-full text-left hover:bg-sky-50 dark:hover:bg-slate-900 rounded transition text-slate-700 dark:text-slate-200 relative"
+                    className="flex items-center gap-3 py-2 w-full rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter transition-colors text-slate-700 dark:text-slate-300 relative mb-2 font-medium text-start"
                   >
-                    <Bell size={20} /> إشعارات {unreadCount > 0 && `(${unreadCount})`}
+                    <Bell size={20} />
+                    <span className="flex-1">إشعارات</span>
                     {unreadCount > 0 && (
-                      <span className="absolute right-2 top-2 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                        {unreadCount}
+                      <span className="bg-red-500 text-white rounded-full text-xs font-bold px-2 py-0.5">
+                        {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
                   </button>
 
+                  <div className="border-t border-slate-200 dark:border-dark-lighter my-2"></div>
+                  
                   {/* روابط حسب الدور */}
                   {currentUser.role === "supervisor" && (
-                    <motion.button
-                      whileHover={{ scale: 1.03 }}
+                    <button
                       onClick={() => {
                         router.push("/ClinicalCases");
                         setMobileMenu(false);
                       }}
-                      className="block w-full text-left py-2 hover:bg-sky-50 dark:hover:bg-slate-900 rounded transition text-slate-700 dark:text-slate-200"
+                      className="block w-full py-2 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter transition-colors text-slate-700 dark:text-slate-300 font-medium mb-1 text-start"
                     >
                       لوحة المشرف
-                    </motion.button>
+                    </button>
                   )}
                   {currentUser.role === "college_admin" && (
-                    <motion.button
-                      whileHover={{ scale: 1.03 }}
+                    <button
                       onClick={() => {
                         router.push("/patients");
                         setMobileMenu(false);
                       }}
-                      className="block w-full text-left py-2 hover:bg-sky-50 dark:hover:bg-slate-900 rounded transition text-slate-700 dark:text-slate-200"
+                      className="block w-full py-2 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter transition-colors text-slate-700 dark:text-slate-300 font-medium mb-1 text-start"
                     >
                       لوحة إدارة الكلية
-                    </motion.button>
+                    </button>
                   )}
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
+                  <button
                     onClick={() => {
                       router.push("/profile");
                       setMobileMenu(false);
                     }}
-                    className="block w-full text-left py-2 hover:bg-sky-50 dark:hover:bg-slate-900 rounded transition text-slate-700 dark:text-slate-200"
+                    className={`block w-full py-2 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter transition-colors text-slate-700 dark:text-slate-300 font-medium mb-1 ${isRtl ? "text-right" : "text-left"}`}
                   >
                     {t("Navbar.profile")}
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
+                  </button>
+                  <button
                     onClick={() => {
                       router.push("/settings");
                       setMobileMenu(false);
                     }}
-                    className="block w-full text-left py-2 hover:bg-sky-50 dark:hover:bg-slate-900 rounded transition text-slate-700 dark:text-slate-200"
+                    className={`block w-full py-2 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter transition-colors text-slate-700 dark:text-slate-300 font-medium mb-1 ${isRtl ? "text-right" : "text-left"}`}
                   >
                     {t("Navbar.settings")}
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
+                  </button>
+                  
+                  <div className="border-t border-slate-200 dark:border-dark-lighter my-2"></div>
+                  
+                  <button
                     onClick={() => {
                       handleLogout();
                       setMobileMenu(false);
                     }}
-                    className="block w-full text-left py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition"
+                    className="block w-full py-2 px-4 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400 font-medium text-start"
                   >
                     {t("Navbar.logout")}
-                  </motion.button>
+                  </button>
                 </>
               )}
             </div>

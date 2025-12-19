@@ -11,11 +11,14 @@ import mediContentReducer from "./features/mediContent/mediContentSlice";
 import reportsReducer from "./features/reports/reportsSlice";
 import notificationsReducer from "./features/notifications/notificationsSlice";
 import themeReducer from "./features/theme/themeSlice";
+import authReducer from "./features/auth/authSlice";
+import supportReducer from "./features/support/supportSlice";
 
 
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     students: studentsReducer,
     clinicalCases: clinicalCasesReducer,
     supervisor: supervisorReducer,
@@ -28,6 +31,7 @@ export const store = configureStore({
     reports: reportsReducer,
     notifications: notificationsReducer,
     theme: themeReducer,
+    support: supportReducer,
   },
 });
 

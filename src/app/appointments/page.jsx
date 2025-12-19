@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { RefreshCw } from "lucide-react";
+import { motion } from "framer-motion";
 import { fetchAppointmentsAsync, clearError } from "../../redux/features/appointments/appointmentsSlice";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 
@@ -19,15 +20,47 @@ export default function AppointmentsPage() {
   const error = appointmentsState?.error || null;
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [user, setUser] = useState(null);
+
+  // جلب معلومات المستخدم
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    setUser(storedUser);
+  }, []);
 
   // جلب المواعيد عند تحميل الصفحة
   useEffect(() => {
-    dispatch(fetchAppointmentsAsync());
-  }, [dispatch]);
+    if (user) {
+      const params = {};
+      
+      // المشرف: يجلب مواعيد الحالات المرتبطة به فقط
+      if (user.role === "supervisor" && user.id) {
+        // نحتاج أن نجلب حالات المشرف أولاً، ثم نجلب مواعيدها
+        // لكن API قد يدعم supervisor_id مباشرة، دعنا نستخدم user_id
+        params.user_id = user.id;
+        // أو يمكن استخدام supervisor_id إذا كان API يدعمه
+        // params.supervisor_id = user.id;
+      }
+      // مسؤول الجامعة: يرى جميع المواعيد (لا فلترة)
+      // الطالب/المريض: يمكن إضافة فلترة هنا لاحقاً
+      
+      dispatch(fetchAppointmentsAsync(params));
+    } else {
+      dispatch(fetchAppointmentsAsync());
+    }
+  }, [dispatch, user]);
 
   // دالة إعادة جلب المواعيد
   const handleRefresh = () => {
-    dispatch(fetchAppointmentsAsync());
+    if (user) {
+      const params = {};
+      if (user.role === "supervisor" && user.id) {
+        params.user_id = user.id;
+      }
+      dispatch(fetchAppointmentsAsync(params));
+    } else {
+      dispatch(fetchAppointmentsAsync());
+    }
   };
 
   // دالة لتنسيق التاريخ والوقت
@@ -154,30 +187,36 @@ export default function AppointmentsPage() {
 
   return (
     <AnimatedWrapper>
-      <div className={`p-4 sm:p-6 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
+      <div className={`p-4 sm:p-6 lg:p-8 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
         <div className="max-w-[1300px] mx-auto">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-900 dark:text-white">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
               {t("Appointments.title")}
             </h1>
 
-            <div className="flex gap-2 w-full sm:w-auto">
+            <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
               <input
                 type="text"
                 placeholder={t("Appointments.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl w-full sm:w-64 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400"
+                className="px-4 py-2.5 sm:py-3 border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl w-full sm:w-64 
+                  focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 
+                  transition-all duration-300 bg-white dark:bg-dark-light text-dark dark:text-white placeholder-sky-500 dark:placeholder-sky-400 shadow-sm hover:shadow-md"
               />
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleRefresh}
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 sm:py-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-xl transition disabled:opacity-50"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 
+                  dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 text-white rounded-xl 
+                  transition-all duration-300 disabled:opacity-50 font-semibold shadow-lg hover:shadow-xl"
               >
                 <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
                 <span className="hidden sm:inline">{t("actions.refresh") || "تحديث"}</span>
-              </button>
+              </motion.button>
             </div>
           </div>
 
@@ -206,7 +245,7 @@ export default function AppointmentsPage() {
 
           {/* Debug Info - يمكن إزالته لاحقاً */}
           {process.env.NODE_ENV === "development" && appointments.length > 0 && (
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+            <div className="mb-4 p-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg text-xs text-sky-700 dark:text-sky-300">
               <strong>عدد المواعيد:</strong> {appointments.length} | 
               <strong> عدد النتائج بعد البحث:</strong> {filteredAppointments.length}
             </div>
@@ -214,19 +253,24 @@ export default function AppointmentsPage() {
 
           {/* Table */}
           {!loading && (
-            <div className="hidden lg:block overflow-x-auto rounded-2xl border border-sky-200 dark:border-slate-700 shadow-lg">
-              <table className="w-full text-sm text-slate-900 dark:text-slate-200 min-w-[900px]">
-                <thead className="bg-gradient-to-r from-blue-900 to-blue-600 dark:from-slate-800 dark:to-slate-700 text-white">
+            <div className="hidden lg:block overflow-x-auto rounded-2xl border-2 border-sky-200/50 dark:border-dark-lighter shadow-2xl">
+              <table
+                className={`w-full text-sm text-dark dark:text-sky-200 min-w-[900px] ${
+                  isRtl ? "text-right" : "text-left"
+                }`}
+                dir={isRtl ? "rtl" : "ltr"}
+              >
+                <thead className="bg-gradient-to-r from-sky-700 via-sky-600 to-sky-700 dark:from-dark-lighter dark:via-dark-light dark:to-dark-lighter text-white">
                   <tr>
-                    <th className="px-4 py-3">{t("Appointments.title") || "العنوان"}</th>
-                    <th className="px-4 py-3">{t("Appointments.patient")}</th>
-                    <th className="px-4 py-3">{t("Appointments.student") || "الطالب"}</th>
-                    <th className="px-4 py-3">{t("Appointments.case") || "الحالة السريرية"}</th>
-                    <th className="px-4 py-3">{t("Appointments.date")}</th>
-                    <th className="px-4 py-3">{t("Appointments.time")}</th>
-                    <th className="px-4 py-3">{t("Appointments.type") || "النوع"}</th>
-                    <th className="px-4 py-3">{t("Appointments.status")}</th>
-                    <th className="px-4 py-3">{t("Appointments.location") || "الموقع"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.title") || "العنوان"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.patient")}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.student") || "الطالب"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.case") || "الحالة السريرية"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.date")}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.time")}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.type") || "النوع"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.status")}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.location") || "الموقع"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -236,48 +280,51 @@ export default function AppointmentsPage() {
                       if (!formatted) return null;
                       
                       return (
-                        <tr
+                        <motion.tr
                           key={formatted.id || idx}
-                          className={`border-b transition ${
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: idx * 0.02 }}
+                          className={`border-b border-sky-200/50 dark:border-dark-lighter transition-all duration-300 ${
                             idx % 2 === 0
-                              ? "bg-sky-50 dark:bg-slate-800/50"
-                              : "bg-white dark:bg-slate-800"
-                          } hover:bg-gradient-to-r hover:from-sky-200/30 hover:to-blue-600/30 dark:hover:from-slate-700/50 dark:hover:to-slate-600/50`}
+                              ? "bg-sky-50/50 dark:bg-dark-light/30"
+                              : "bg-white dark:bg-dark-light"
+                          } hover:bg-gradient-to-r hover:from-sky-100/50 hover:to-sky-200/50 dark:hover:from-dark-lighter dark:hover:to-dark-lighter`}
                         >
-                          <td className="px-4 py-3 font-medium">{formatted.title}</td>
-                          <td className="px-4 py-3">{formatted.patient}</td>
-                          <td className="px-4 py-3">{formatted.student}</td>
-                          <td className="px-4 py-3">{formatted.case}</td>
-                          <td className="px-4 py-3">{formatted.date}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-6 py-4 font-medium">{formatted.title}</td>
+                          <td className="px-6 py-4">{formatted.patient}</td>
+                          <td className="px-6 py-4">{formatted.student}</td>
+                          <td className="px-6 py-4">{formatted.case}</td>
+                          <td className="px-6 py-4">{formatted.date}</td>
+                          <td className="px-6 py-4">
                             {formatted.startTime !== "-" && formatted.endTime !== "-" 
                               ? `${formatted.startTime} - ${formatted.endTime}` 
                               : formatted.startTime !== "-" 
                                 ? formatted.startTime 
                                 : "-"}
                           </td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                          <td className="px-6 py-4">
+                            <span className="px-3 py-1 rounded-lg text-xs font-medium bg-gradient-to-r from-sky-100 to-sky-200 dark:from-sky-900/30 dark:to-sky-800/30 text-sky-700 dark:text-sky-300 shadow-sm">
                               {formatted.appointment_type}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-6 py-4">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs ${
+                              className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                 formatted.status === "confirmed" || formatted.status === "completed"
-                                  ? "bg-green-600/20 text-green-600"
+                                  ? "bg-gradient-to-r from-green-500/20 to-green-600/20 text-green-700 dark:text-green-400"
                                   : formatted.status === "cancelled" || formatted.status === "no_show"
-                                  ? "bg-red-600/20 text-red-600"
+                                  ? "bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-700 dark:text-red-400"
                                   : formatted.status === "in_progress"
-                                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300"
-                                  : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300"
+                                  ? "bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-700 dark:text-blue-400"
+                                  : "bg-gradient-to-r from-sky-500/20 to-sky-600/20 text-sky-700 dark:text-sky-400"
                               }`}
                             >
                               {formatted.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3">{formatted.location}</td>
-                        </tr>
+                          <td className="px-6 py-4">{formatted.location}</td>
+                        </motion.tr>
                       );
                     }).filter(Boolean)
                   ) : (
@@ -306,9 +353,12 @@ export default function AppointmentsPage() {
                   if (!formatted) return null;
                   
                   return (
-                    <article
+                    <motion.article
                       key={formatted.id || idx}
-                      className="bg-white dark:bg-slate-800 shadow-md rounded-2xl p-4 border border-sky-200 dark:border-slate-700"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: idx * 0.05 }}
+                      className="bg-white dark:bg-dark-light shadow-lg rounded-2xl p-5 border-2 border-sky-200/50 dark:border-dark-lighter hover:shadow-xl transition-all duration-300"
                     >
                       <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-white">{formatted.title}</h3>
                       
@@ -360,22 +410,22 @@ export default function AppointmentsPage() {
                         )}
                       </div>
                       
-                      <div className="mt-3">
+                      <div className="mt-4 pt-3 border-t border-sky-200 dark:border-dark-lighter">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs ${
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
                             formatted.status === "confirmed" || formatted.status === "completed"
-                              ? "bg-green-600/20 text-green-600"
+                              ? "bg-gradient-to-r from-green-500/20 to-green-600/20 text-green-700 dark:text-green-400"
                               : formatted.status === "cancelled" || formatted.status === "no_show"
-                              ? "bg-red-600/20 text-red-600"
+                              ? "bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-700 dark:text-red-400"
                               : formatted.status === "in_progress"
-                              ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300"
-                              : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300"
+                              ? "bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-700 dark:text-blue-400"
+                              : "bg-gradient-to-r from-sky-500/20 to-sky-600/20 text-sky-700 dark:text-sky-400"
                           }`}
                         >
                           {formatted.status}
                         </span>
                       </div>
-                    </article>
+                    </motion.article>
                   );
                 }).filter(Boolean)
               ) : (

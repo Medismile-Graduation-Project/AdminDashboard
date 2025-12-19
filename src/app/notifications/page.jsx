@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
+import { motion } from "framer-motion";
 import {
   RefreshCw,
   PlusCircle,
@@ -375,52 +376,64 @@ export default function NotificationsPage() {
   };
 
   if (!mounted) {
-    return <div className="p-4 min-h-screen bg-sky-50 dark:bg-slate-900"></div>;
+    return <div className="p-4 min-h-screen bg-sky-50 dark:bg-dark"></div>;
   }
 
   const isRtl = i18n?.language === "ar";
 
   return (
     <AnimatedWrapper>
-      <div className={`p-4 sm:p-6 min-h-screen bg-sky-50 dark:bg-slate-900 ${isRtl ? "text-right" : "text-left"}`}>
-        <div className="max-w-[1300px] mx-auto">
+      <div className={`p-4 sm:p-6 lg:p-8 min-h-screen bg-sky-50 dark:bg-dark ${isRtl ? "text-right" : "text-left"}`}>
+        <div className="max-w-[1400px] mx-auto">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-900 dark:text-white">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
                 {t("Notifications.title")}
               </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
+              <p className="text-sm sm:text-base text-sky-600 dark:text-sky-400 mt-1">
                 {t("Notifications.description")}
               </p>
             </div>
 
-            <div className="flex gap-2 w-full sm:w-auto flex-wrap">
-              <button
+            <div className="flex gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleAdd}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-xl transition"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-sky-600 to-sky-700 
+                  hover:from-sky-700 hover:to-sky-800 dark:from-sky-500 dark:to-sky-600 dark:hover:from-sky-600 dark:hover:to-sky-700 
+                  text-white rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
               >
                 <PlusCircle size={18} />
                 <span className="hidden sm:inline">{t("Notifications.createNotification")}</span>
-              </button>
+              </motion.button>
               {unreadCount > 0 && (
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={handleMarkAllAsRead}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white rounded-xl transition"
+                  className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 to-purple-700 
+                    hover:from-purple-700 hover:to-purple-800 dark:from-purple-500 dark:to-purple-600 dark:hover:from-purple-600 dark:hover:to-purple-700 
+                    text-white rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
                 >
                   <CheckCircle size={18} />
                   <span className="hidden sm:inline">{t("Notifications.markAllAsRead") || "تعليم الكل كمقروء"}</span>
-                  <span className="bg-white/20 px-2 py-0.5 rounded text-xs">{unreadCount}</span>
-                </button>
+                  <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-bold">{unreadCount}</span>
+                </motion.button>
               )}
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleRefresh}
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-xl transition disabled:opacity-50"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-green-700 
+                  hover:from-green-700 hover:to-green-800 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 
+                  text-white rounded-xl transition-all duration-300 disabled:opacity-50 font-semibold shadow-lg hover:shadow-xl"
               >
                 <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
                 <span className="hidden sm:inline">{t("Notifications.refresh")}</span>
-              </button>
+              </motion.button>
             </div>
           </div>
 
@@ -523,7 +536,7 @@ export default function NotificationsPage() {
               {filteredNotifications.length === 0 ? (
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-sky-200 dark:border-slate-700">
                   <Bell size={48} className="mx-auto text-slate-400 dark:text-slate-500 mb-4" />
-                  <p className="text-slate-600 dark:text-slate-400 text-lg">
+                  <p className="text-sky-600 dark:text-sky-400 text-lg">
                     {t("Notifications.noNotifications")}
                   </p>
                 </div>
@@ -550,7 +563,7 @@ export default function NotificationsPage() {
                               </h3>
                               {getStatusBadge(notification.status)}
                             </div>
-                            <p className="text-slate-600 dark:text-slate-400 mb-2">
+                            <p className="text-sky-600 dark:text-sky-400 mb-2">
                               {notification.message || "-"}
                             </p>
                             <div className="flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">

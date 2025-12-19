@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setTheme, updateThemeFromSystem } from "../redux/features/theme/themeSlice";
+import { setUser } from "../redux/features/auth/authSlice";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -22,6 +23,22 @@ export default function AppLayout({ children }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  // التحقق من المصادقة عند التحميل
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      const accessToken = localStorage.getItem("access_token");
+      
+      if (user && accessToken) {
+        // تحديث Redux state بالمستخدم
+        dispatch(setUser(user));
+      } else if (!hideLayout) {
+        // إذا لم يكن هناك user أو token وكان في صفحة محمية، نوجه للـ login
+        router.push("/login");
+      }
+    }
+  }, [dispatch, router, pathname]);
 
   const hideLayout = ["/login", "/register"].some((p) =>
     pathname.startsWith(p)
@@ -146,24 +163,23 @@ export default function AppLayout({ children }) {
   if (!mounted) return null;
 
   return (
-    <div className="flex flex-col min-h-screen relative">
-     <PageLoader loading={loading} hasSidebar={!hideLayout} />
+    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-dark">
+      <PageLoader loading={loading} hasSidebar={!hideLayout} />
 
       {!hideLayout && <Sidebar />}
       <div
-        className={`flex-1 flex flex-col transition-[margin] duration-300 min-h-screen
+        dir={isRtl ? "rtl" : "ltr"}
+        className={`flex-1 flex flex-col min-h-screen transition-all duration-200
           ${hideLayout ? "w-full" : ""}
           ${
             !hideLayout
-              ? isRtl
-                ? "lg:mr-64 mr-0"
-                : "lg:ml-64 ml-0"
+              ? "lg:ms-64 ms-0"
               : ""
           }`}
       >
         <main
-          className={`flex-1 px-4 sm:px-6 pb-4 sm:pb-6 pt-0 sm:pt-1
-            ${!hideLayout ? "max-lg:pt-12 sm:pt-14" : ""}`}
+          className={`flex-1 px-4 md:px-6 pb-4 md:pb-6
+            ${!hideLayout ? "pt-14 lg:pt-16" : "pt-0"}`}
         >
           {!hideLayout && <Navbar />}
           <AnimatedWrapper>{children}</AnimatedWrapper>

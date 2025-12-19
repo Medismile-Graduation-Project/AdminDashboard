@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { PlusCircle, Pencil, Trash2, X, Save, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
+import { motion } from "framer-motion";
 import {
   fetchPatients,
   createPatient,
@@ -194,38 +195,44 @@ export default function PatientsPage() {
 
   return (
     <AnimatedWrapper>
-    <div className={`p-4 sm:p-6 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
-      <div className="max-w-[1300px] mx-auto">
+    <div className={`p-4 sm:p-6 lg:p-8 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
+      <div className="max-w-[1400px] mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
           <h1
             suppressHydrationWarning
-            className="text-2xl sm:text-3xl font-extrabold text-blue-900 dark:text-white"
+            className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent"
           >
             {t("Patients.title")}
           </h1>
 
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <input
               type="text"
               placeholder={t("Patients.searchPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-                className="p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                className="px-4 py-2.5 sm:py-3 border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl w-full sm:w-64 
+                  focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 
+                  bg-white dark:bg-dark-light text-dark dark:text-white transition-all duration-300 shadow-sm hover:shadow-md"
             />
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={handleAdd}
-                className="flex items-center justify-center p-2 sm:p-3 rounded-xl shadow bg-blue-500 hover:bg-blue-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
+                className="flex items-center justify-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-sky-600 to-sky-700 
+                  hover:from-sky-700 hover:to-sky-800 dark:from-sky-500 dark:to-sky-600 dark:hover:from-sky-600 dark:hover:to-sky-700 
+                  text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all duration-300 shadow-lg hover:shadow-xl font-semibold"
               aria-label={t("Patients.addButton")}
             >
               <PlusCircle size={20} />
-            </button>
+            </motion.button>
           </div>
         </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-600 dark:border-red-500 rounded-xl text-red-600 dark:text-red-400">
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-500/50 dark:border-red-500/50 rounded-xl text-red-600 dark:text-red-400 shadow-lg">
               <div className="flex justify-between items-start gap-2">
                 <div className="flex-1">
                   <strong className="block mb-1">خطأ:</strong>
@@ -260,19 +267,23 @@ export default function PatientsPage() {
 
         {/* Table */}
           {!loading && (
-        <div className="hidden lg:block overflow-x-auto rounded-2xl border border-sky-200 dark:border-slate-700 shadow-lg">
-          <table className="w-full text-sm text-slate-900 dark:text-slate-200 min-w-[900px]">
-            <thead className="bg-gradient-to-r from-blue-900 to-blue-600 dark:from-slate-800 dark:to-slate-700 text-white">
+        <div className="hidden lg:block overflow-x-auto rounded-2xl border-2 border-sky-200/50 dark:border-dark-lighter shadow-2xl">
+          <table
+            className={`w-full text-sm text-slate-900 dark:text-slate-200 min-w-[900px] ${
+              isRtl ? "text-right" : "text-left"
+            }`}
+            dir={isRtl ? "rtl" : "ltr"}
+          >
+            <thead className="bg-gradient-to-r from-sky-700 via-sky-600 to-sky-700 dark:from-dark-lighter dark:via-dark-light dark:to-dark-lighter text-white">
               <tr>
-                <th className="px-4 py-3">{t("Patients.image")}</th>
-                <th className="px-4 py-3">{t("Patients.name")}</th>
-                <th className="px-4 py-3">{t("Patients.age")}</th>
-                <th className="px-4 py-3">{t("Patients.dateOfBirth") || "تاريخ الميلاد"}</th>
-                <th className="px-4 py-3">{t("Patients.dateOfBirth") || "تاريخ الميلاد"}</th>
-                <th className="px-4 py-3">{t("Patients.gender")}</th>
-                <th className="px-4 py-3">{t("Patients.phone")}</th>
-                <th className="px-4 py-3">{t("Patients.condition")}</th>
-                <th className="px-4 py-3 text-center">{t("Patients.actions")}</th>
+                <th className="px-6 py-4 font-semibold">{t("Patients.image")}</th>
+                <th className="px-6 py-4 font-semibold">{t("Patients.name")}</th>
+                <th className="px-6 py-4 font-semibold">{t("Patients.age")}</th>
+                <th className="px-6 py-4 font-semibold">{t("Patients.dateOfBirth") || "تاريخ الميلاد"}</th>
+                <th className="px-6 py-4 font-semibold">{t("Patients.gender")}</th>
+                <th className="px-6 py-4 font-semibold">{t("Patients.phone")}</th>
+                <th className="px-6 py-4 font-semibold">{t("Patients.condition")}</th>
+                <th className="px-6 py-4 font-semibold text-center">{t("Patients.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -281,15 +292,18 @@ export default function PatientsPage() {
                       if (!p) return null;
                       const patientId = p.id || p.user_id || `patient-${idx}`;
                       return (
-                      <tr
+                      <motion.tr
                         key={patientId}
-                        className={`border-b transition ${
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: idx * 0.02 }}
+                        className={`border-b border-sky-200/50 dark:border-dark-lighter transition-all duration-300 ${
                           idx % 2 === 0
-                            ? "bg-sky-50 dark:bg-slate-800/50"
-                            : "bg-white dark:bg-slate-800"
-                    } hover:bg-gradient-to-r hover:from-sky-200/30 hover:to-blue-600/30 dark:hover:from-slate-700/50 dark:hover:to-slate-600/50`}
+                            ? "bg-sky-50/50 dark:bg-dark-light/30"
+                            : "bg-white dark:bg-dark-light"
+                    } hover:bg-gradient-to-r hover:from-sky-100/50 hover:to-sky-200/50 dark:hover:from-dark-lighter dark:hover:to-dark-lighter`}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">
                     {p.image ? (
                             <img
                               src={p.image}
@@ -302,47 +316,50 @@ export default function PatientsPage() {
                             </span>
                     )}
                   </td>
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4 font-medium">
                           {p.name || `${p.first_name || ""} ${p.last_name || ""}`.trim() || p.username || "-"}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4">
                           {p.age ||
                             (p.date_of_birth
                               ? new Date().getFullYear() - new Date(p.date_of_birth).getFullYear()
                               : "-")}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4">
                           {p.date_of_birth 
                             ? new Date(p.date_of_birth).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
                             : "-"}
                         </td>
-                        <td className="px-4 py-3">
-                          {p.date_of_birth
-                            ? new Date(p.date_of_birth).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" })
-                            : "-"}
-                        </td>
-                        <td className="px-4 py-3">{p.gender || "-"}</td>
-                        <td className="px-4 py-3">{p.phone || p.phone_number || "-"}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4">{p.gender || "-"}</td>
+                        <td className="px-6 py-4">{p.phone || p.phone_number || "-"}</td>
+                        <td className="px-6 py-4">
                           {p.condition || p.medical_history || "-"}
                         </td>
-                  <td className="px-4 py-3 flex justify-center gap-2">
-                    <button
-                      onClick={() => handleEdit(p)}
-                      className="p-2 rounded-lg bg-blue-600 hover:bg-blue-900 text-white transition"
-                      aria-label={t("Patients.edit")}
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
+                  <td className="px-6 py-4">
+                    <div className="flex justify-center gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleEdit(p)}
+                        className="p-2 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 
+                          dark:from-sky-600 dark:to-sky-700 dark:hover:from-sky-700 dark:hover:to-sky-800 text-white transition-all duration-300 shadow-md hover:shadow-lg"
+                        aria-label={t("Patients.edit")}
+                      >
+                        <Pencil size={16} />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                             onClick={() => handleDelete(p.user_id || p.id)}
-                      className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition"
-                      aria-label={t("Patients.delete")}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                        className="p-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 
+                          dark:from-red-600 dark:to-red-700 dark:hover:from-red-700 dark:hover:to-red-800 text-white transition-all duration-300 shadow-md hover:shadow-lg"
+                        aria-label={t("Patients.delete")}
+                      >
+                        <Trash2 size={16} />
+                      </motion.button>
+                    </div>
                   </td>
-                      </tr>
+                </motion.tr>
                       );
                     }).filter(Boolean) // إزالة null values
                   ) : (

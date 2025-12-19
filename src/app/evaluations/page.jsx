@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Star, Loader2, PlusCircle, X, Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
+import { motion } from "framer-motion";
 import {
   fetchEvaluationsAsync,
   createEvaluationAsync,
@@ -34,30 +35,69 @@ export default function PatientReviews() {
   // State للنموذج
   const [showForm, setShowForm] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  
+  // تحديد evaluator_type حسب دور المستخدم
+  const getDefaultEvaluatorType = () => {
+    if (user?.role === "supervisor") return "supervisor";
+    if (user?.role === "university_admin") return "university";
+    return "supervisor"; // افتراضي
+  };
+  
   const [formData, setFormData] = useState({
-    evaluator_type: "supervisor", // افتراضي للمشرف
+    evaluator_type: getDefaultEvaluatorType(),
     student_id: "",
     appointment_id: "",
     rating: 5,
     comment: "",
   });
+  
+  // تحديث evaluator_type عند تغيير المستخدم
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        evaluator_type: getDefaultEvaluatorType()
+      }));
+    }
+  }, [user]);
 
   // جلب الطلاب
   const studentsState = useSelector((state) => state.students);
   const students = studentsState?.students || [];
 
+  // جلب معلومات المستخدم
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    setUser(storedUser);
+  }, []);
+
   // جلب التقييمات عند تحميل الصفحة
   useEffect(() => {
-    // بناء معاملات البحث
-    const params = {};
-    
-    if (evaluatorTypeFilter !== "all") {
-      params.evaluator_type = evaluatorTypeFilter;
+    if (user) {
+      // بناء معاملات البحث
+      const params = {};
+      
+      // المشرف: يعرض التقييمات التي قام بها فقط (evaluator_type: supervisor)
+      if (user.role === "supervisor") {
+        params.evaluator_type = "supervisor";
+      }
+      // مسؤول الجامعة: يعرض جميع التقييمات أو تقييماته (evaluator_type: university)
+      else if (user.role === "university_admin") {
+        // يمكن عرض جميع التقييمات أو فلترة حسب evaluator_type
+        if (evaluatorTypeFilter !== "all") {
+          params.evaluator_type = evaluatorTypeFilter;
+        }
+      }
+      // للمستخدمين الآخرين
+      else if (evaluatorTypeFilter !== "all") {
+        params.evaluator_type = evaluatorTypeFilter;
+      }
+      
+      dispatch(fetchEvaluationsAsync(params));
+      dispatch(fetchStudentsAsync()); // جلب الطلاب للنموذج
     }
-    
-    dispatch(fetchEvaluationsAsync(params));
-    dispatch(fetchStudentsAsync()); // جلب الطلاب للنموذج
-  }, [dispatch, evaluatorTypeFilter]);
+  }, [dispatch, evaluatorTypeFilter, user]);
 
   // عرض رسائل الخطأ
   useEffect(() => {
@@ -105,8 +145,9 @@ export default function PatientReviews() {
         return;
       }
 
-      if (formData.evaluator_type === "supervisor" && !formData.student_id) {
-        toast.error("يجب اختيار طالب عند تقييم المشرف");
+      // التحقق من student_id للمشرف ومسؤول الجامعة
+      if ((formData.evaluator_type === "supervisor" || formData.evaluator_type === "university") && !formData.student_id) {
+        toast.error("يجب اختيار طالب عند التقييم");
         setSubmitLoading(false);
         return;
       }
@@ -134,7 +175,7 @@ export default function PatientReviews() {
       
       // إعادة تعيين النموذج
       setFormData({
-        evaluator_type: "supervisor",
+        evaluator_type: getDefaultEvaluatorType(),
         student_id: "",
         appointment_id: "",
         rating: 5,
@@ -143,7 +184,11 @@ export default function PatientReviews() {
 
       // إعادة جلب التقييمات
       const params = {};
-      if (evaluatorTypeFilter !== "all") {
+      if (user?.role === "supervisor") {
+        params.evaluator_type = "supervisor";
+      } else if (user?.role === "university_admin" && evaluatorTypeFilter !== "all") {
+        params.evaluator_type = evaluatorTypeFilter;
+      } else if (evaluatorTypeFilter !== "all") {
         params.evaluator_type = evaluatorTypeFilter;
       }
       dispatch(fetchEvaluationsAsync(params));
@@ -164,66 +209,93 @@ export default function PatientReviews() {
   return (
     <AnimatedWrapper>
       <div
-        className={`p-4 sm:p-6 min-h-screen ${
+        className={`p-4 sm:p-6 lg:p-8 min-h-screen ${
           isRtl ? "text-right" : "text-left"
         }`}
       >
         <div className="max-w-[1400px] mx-auto">
           {/* العنوان */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-blue-900 dark:text-white">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
               {t("reviews.title") || "تقييمات المرضى"}
             </h1>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowForm(true)}
-              className="flex items-center justify-center gap-2 p-2 sm:p-3 rounded-xl shadow bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white transition"
+              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-sky-600 to-sky-700 
+                hover:from-sky-700 hover:to-sky-800 dark:from-sky-600 dark:to-sky-700 dark:hover:from-sky-700 dark:hover:to-sky-800 
+                text-white transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
             >
               <PlusCircle size={20} />
               <span>{t("reviews.addEvaluation") || "إضافة تقييم"}</span>
-            </button>
+            </motion.button>
           </div>
 
           {/* الإحصائيات */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 shadow rounded-2xl p-4 text-center">
-              <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-5 text-center hover:shadow-xl transition-all duration-300"
+            >
+              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-sky-600 to-sky-700 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
                 {reviews.length}
               </p>
-              <p className="text-slate-700 dark:text-slate-300">{t("reviews.total") || "المجموع"}</p>
-            </div>
-            <div className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 shadow rounded-2xl p-4 text-center">
-              <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{averageRating}</p>
-              <p className="text-slate-700 dark:text-slate-300">{t("reviews.average") || "المتوسط"}</p>
-            </div>
-            <div className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 shadow rounded-2xl p-4 text-center">
-              <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+              <p className="text-sm sm:text-base text-sky-700 dark:text-sky-300 mt-1">{t("reviews.total") || "المجموع"}</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-5 text-center hover:shadow-xl transition-all duration-300"
+            >
+              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-sky-600 to-sky-700 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">{averageRating}</p>
+              <p className="text-sm sm:text-base text-sky-700 dark:text-sky-300 mt-1">{t("reviews.average") || "المتوسط"}</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-5 text-center hover:shadow-xl transition-all duration-300"
+            >
+              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-sky-600 to-sky-700 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
                 {reviews.filter((r) => r.status === "new").length}
               </p>
-              <p className="text-slate-700 dark:text-slate-300">{t("reviews.new") || "جديدة"}</p>
-            </div>
-            <div className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 shadow rounded-2xl p-4 text-center">
-              <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+              <p className="text-sm sm:text-base text-sky-700 dark:text-sky-300 mt-1">{t("reviews.new") || "جديدة"}</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+              className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-5 text-center hover:shadow-xl transition-all duration-300"
+            >
+              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-sky-600 to-sky-700 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
                 {reviews.filter((r) => r.status === "reviewed").length}
               </p>
-              <p className="text-slate-700 dark:text-slate-300">
+              <p className="text-sm sm:text-base text-sky-700 dark:text-sky-300 mt-1">
                 {t("reviews.reviewed") || "مقروءة"}
               </p>
-            </div>
+            </motion.div>
           </div>
 
           {/* الفلاتر */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-6">
             <input
               type="text"
               placeholder={t("reviews.search") || "ابحث عن التقييمات..."}
               value={search}
               onChange={(e) => dispatch(setSearch(e.target.value))}
-              className="flex-1 border border-sky-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="flex-1 border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl px-4 py-2.5 outline-none bg-white dark:bg-dark-light 
+                text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 
+                transition-all duration-300 shadow-sm hover:shadow-md"
             />
             <select
               value={evaluatorTypeFilter}
               onChange={(e) => dispatch(setEvaluatorTypeFilter(e.target.value))}
-              className="border border-sky-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
+                focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 transition-all duration-300 shadow-sm hover:shadow-md"
             >
               <option value="all">جميع الأنواع</option>
               <option value="patient">من مريض</option>
@@ -235,7 +307,8 @@ export default function PatientReviews() {
             <select
               value={statusFilter}
               onChange={(e) => dispatch(setStatusFilter(e.target.value))}
-              className="border border-sky-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
+                focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 transition-all duration-300 shadow-sm hover:shadow-md"
             >
               <option value="all">{t("reviews.all") || "الكل"}</option>
               <option value="new">{t("reviews.new") || "جديدة"}</option>
@@ -245,7 +318,8 @@ export default function PatientReviews() {
               type="date"
               value={dateFilter}
               onChange={(e) => dispatch(setDateFilter(e.target.value))}
-              className="border border-sky-200 dark:border-slate-700 rounded-xl px-3 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              className="border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
+                focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 transition-all duration-300 shadow-sm hover:shadow-md"
             />
           </div>
 
@@ -260,63 +334,69 @@ export default function PatientReviews() {
           {!loading && (
             <div className="space-y-4">
               {filteredReviews.length > 0 ? (
-                filteredReviews.map((review) => (
-                  <div
-                    key={review.id}
-                    className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 shadow rounded-2xl p-4 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h2 className="font-semibold text-lg text-slate-900 dark:text-white">
-                          {review.name || "غير معروف"}
-                        </h2>
-                        <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                          {review.evaluatorType || "-"}
+                filteredReviews.map((review, idx) => {
+                  return (
+                    <motion.div
+                      key={review.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: idx * 0.05 }}
+                      className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-6 
+                        flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-xl transition-all duration-300"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h2 className="font-semibold text-lg text-slate-900 dark:text-white">
+                            {review.name || "غير معروف"}
+                          </h2>
+                          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                            {review.evaluatorType || "-"}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                          {review.date || "-"}
+                        </p>
+                        {review.comment && (
+                          <p className="mt-2 text-slate-700 dark:text-slate-300">
+                            {review.comment}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-start md:items-end gap-2">
+                        {/* النجوم - تحويل من 1-10 إلى 5 نجوم */}
+                        <div className="flex gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => {
+                            const starRating = review.starRating || Math.round((review.rating || 0) / 2);
+                            return (
+                              <Star
+                                key={i}
+                                className={`w-5 h-5 ${
+                                  i < starRating
+                                    ? "fill-blue-500 text-blue-500 dark:fill-blue-400 dark:text-blue-400"
+                                    : "text-slate-300 dark:text-slate-600"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        {/* التقييم الرقمي */}
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          {review.rating || 0}/10
+                        </p>
+                        {/* الحالة */}
+                        <span
+                          className={`px-3 py-1 text-sm rounded-full ${
+                            review.status === "new"
+                              ? "bg-green-500 text-white dark:bg-green-600"
+                              : "bg-blue-500 text-white dark:bg-blue-600"
+                          }`}
+                        >
+                          {t(`reviews.${review.status}`) || review.status}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-                        {review.date || "-"}
-                      </p>
-                      {review.comment && (
-                        <p className="mt-2 text-slate-700 dark:text-slate-300">
-                          {review.comment}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-start md:items-end gap-2">
-                      {/* النجوم - تحويل من 1-10 إلى 5 نجوم */}
-                      <div className="flex gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => {
-                          const starRating = review.starRating || Math.round((review.rating || 0) / 2);
-                          return (
-                            <Star
-                              key={i}
-                              className={`w-5 h-5 ${
-                                i < starRating
-                                  ? "fill-blue-500 text-blue-500 dark:fill-blue-400 dark:text-blue-400"
-                                  : "text-slate-300 dark:text-slate-600"
-                              }`}
-                            />
-                          );
-                        })}
-                      </div>
-                      {/* التقييم الرقمي */}
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        {review.rating || 0}/10
-                      </p>
-                      {/* الحالة */}
-                      <span
-                        className={`px-3 py-1 text-sm rounded-full ${
-                          review.status === "new"
-                            ? "bg-green-500 text-white dark:bg-green-600"
-                            : "bg-blue-500 text-white dark:bg-blue-600"
-                        }`}
-                      >
-                        {t(`reviews.${review.status}`) || review.status}
-                      </span>
-                    </div>
-                  </div>
-                ))
+                    </motion.div>
+                  );
+                })
               ) : (
                 <p className="text-center text-slate-600 dark:text-slate-400 py-12">
                   {loading ? "جاري التحميل..." : (t("reviews.no_results") || "لا توجد تقييمات")}

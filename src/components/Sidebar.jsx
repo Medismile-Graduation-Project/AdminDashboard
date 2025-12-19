@@ -19,7 +19,7 @@ import {
   HelpCircle,
   Bell,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 const Sidebar = () => {
   const { t } = useTranslation();
@@ -34,7 +34,7 @@ const Sidebar = () => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     setUser(storedUser);
 
-    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    const handleResize = () => setIsMobile(window.innerWidth < 992);
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -78,75 +78,63 @@ const Sidebar = () => {
     );
   }
 
-  const itemVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { duration: 0.1 } },
-  };
-
-  const sidebarVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { duration: 0.1 } },
-  };
 
   const renderMenu = () => (
-    <motion.ul
-      initial="hidden"
-      animate="show"
-      variants={{ show: { transition: { staggerChildren: 0.01 } } }}
-      className="flex flex-col gap-2"
-    >
+    <ul className="flex flex-col gap-2">
       {menuItems.map((item) => {
         const isActive = pathname.startsWith(item.href);
         return (
-          <motion.li key={item.name} variants={itemVariants}>
+          <li key={item.name}>
             <Link
               href={item.href}
-              className={`flex items-center gap-2 sm:gap-3 p-2 rounded-lg transition-all duration-200 text-sm sm:text-base
+              className={`flex items-center gap-4 p-4 rounded-lg transition-colors text-base font-medium text-start
                 ${
                   isActive
-                    ? "bg-blue-600 text-white dark:bg-blue-600 dark:text-white shadow-md"
-                    : "text-slate-900 dark:text-slate-300 hover:bg-sky-200 dark:hover:bg-slate-800 hover:text-blue-900 dark:hover:text-slate-50"
-                }
-                ${isRtl ? "flex-row-reverse text-right" : "flex-row text-left"}`}
+                    ? "bg-sky-600 text-white dark:bg-sky-600"
+                    : "text-slate-700 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-dark-light hover:text-sky-700 dark:hover:text-sky-50"
+                }`}
               onClick={() => isMobile && setIsDropdownOpen(false)}
             >
-              {item.icon}
-              <span className="font-medium">{item.name}</span>
+              <div className={`flex-shrink-0 ${isActive ? "text-white" : "text-sky-600 dark:text-sky-400"}`}>
+                {item.icon}
+              </div>
+              <span>{item.name}</span>
             </Link>
-          </motion.li>
+          </li>
         );
       })}
-    </motion.ul>
+    </ul>
   );
 
   return (
     <>
-      {/* Desktop Sidebar with Animation */}
+      {/* Desktop Sidebar */}
       {!isMobile && (
-        <motion.div
-          variants={sidebarVariants}
-          initial="hidden"
-          animate="show"
-          className="sidebar-main fixed top-0 h-screen w-64 z-50 p-3 sm:p-4 flex flex-col shadow-lg bg-gradient-to-b from-sky-50 via-sky-200 to-blue-900 dark:bg-slate-900 border-r border-sky-300 dark:border-slate-700 overflow-y-auto transition-colors duration-200"
+        <div
+          dir={isRtl ? "rtl" : "ltr"}
+          className="sidebar-main fixed top-0 start-0 h-screen w-64 z-50 p-6 flex flex-col bg-white dark:bg-dark border-e border-slate-200 dark:border-dark-lighter overflow-y-auto"
         >
-          <div className="flex justify-between items-center mb-6">
-            <motion.h1
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-xl sm:text-2xl font-bold truncate text-blue-900 dark:text-slate-50"
-            >
+          <div className={`flex justify-between items-center mb-6 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
               {t("Root.title")}
-            </motion.h1>
-            <div className="flex gap-1">
+            </h1>
+            <div className={`flex gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
               <button
-                className="px-2 py-1 rounded bg-sky-200 hover:bg-blue-500 text-blue-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border dark:border-slate-700 transition"
+                className={`px-3 py-1 rounded-lg font-medium text-xs transition-colors ${
+                  i18n.language === "ar"
+                    ? "bg-sky-600 text-white"
+                    : "bg-slate-100 dark:bg-dark-light text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-lighter"
+                }`}
                 onClick={() => i18n.changeLanguage("ar")}
               >
                 AR
               </button>
               <button
-                className="px-2 py-1 rounded bg-sky-200 hover:bg-blue-500 text-blue-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border dark:border-slate-700 transition"
+                className={`px-3 py-1 rounded-lg font-medium text-xs transition-colors ${
+                  i18n.language === "en"
+                    ? "bg-sky-600 text-white"
+                    : "bg-slate-100 dark:bg-dark-light text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-lighter"
+                }`}
                 onClick={() => i18n.changeLanguage("en")}
               >
                 EN
@@ -155,10 +143,10 @@ const Sidebar = () => {
           </div>
 
           {renderMenu()}
-        </motion.div>
+        </div>
       )}
 
-      {/* Mobile Menu Animation */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {isMobile && isDropdownOpen && (
           <motion.div
@@ -166,8 +154,9 @@ const Sidebar = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4 }}
-            className="sidebar-mobile-menu fixed top-12 left-0 w-full h-[calc(100vh-3rem)] overflow-y-auto bg-sky-50 dark:bg-slate-900 dark:text-slate-100 shadow-xl z-40 p-3 sm:p-4 border-t border-sky-200 dark:border-slate-700 transition-colors duration-200"
+            transition={{ duration: 0.2 }}
+            dir={isRtl ? "rtl" : "ltr"}
+            className="sidebar-mobile-menu fixed top-12 start-0 w-full h-[calc(100vh-3rem)] overflow-y-auto bg-white dark:bg-dark border-t border-slate-200 dark:border-dark-lighter z-40 p-4"
           >
             {renderMenu()}
           </motion.div>
@@ -176,36 +165,42 @@ const Sidebar = () => {
 
       {/* Mobile Header */}
       {isMobile && (
-        <motion.div
-          initial={{ y: -40, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="sidebar-mobile-header fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 py-2 shadow-md bg-gradient-to-r from-sky-50 via-sky-200 to-blue-900 dark:bg-slate-900 transition-colors duration-200"
+        <div
+          dir={isRtl ? "rtl" : "ltr"}
+          className="sidebar-mobile-header fixed top-0 start-0 w-full z-50 flex items-center justify-between px-4 py-3 bg-white dark:bg-dark border-b border-slate-200 dark:border-dark-lighter"
         >
           <button
-            className="p-2 rounded-md hover:bg-white/20 dark:hover:bg-slate-800 text-blue-900 dark:text-slate-50 transition"
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-light text-slate-700 dark:text-slate-300 transition-colors"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
-            {isDropdownOpen ? <X size={22} /> : <Menu size={22} />}
+            {isDropdownOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <h1 className="text-lg font-bold text-blue-900 dark:text-slate-50">{t("Root.title")}</h1>
+          <h1 className="text-lg font-bold text-slate-900 dark:text-white">{t("Root.title")}</h1>
 
-          <div className="flex gap-1">
+          <div className={`flex gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
             <button
-              className="px-2 py-1 rounded bg-white/20 hover:bg-white/30 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border dark:border-slate-700 text-blue-900 transition"
+              className={`px-3 py-1 rounded-lg font-medium text-xs transition-colors ${
+                i18n.language === "ar"
+                  ? "bg-sky-600 text-white"
+                  : "bg-slate-100 dark:bg-dark-light text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-lighter"
+              }`}
               onClick={() => i18n.changeLanguage("ar")}
             >
               AR
             </button>
             <button
-              className="px-2 py-1 rounded bg-white/20 hover:bg-white/30 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border dark:border-slate-700 text-blue-900 transition"
+              className={`px-3 py-1 rounded-lg font-medium text-xs transition-colors ${
+                i18n.language === "en"
+                  ? "bg-sky-600 text-white"
+                  : "bg-slate-100 dark:bg-dark-light text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-lighter"
+              }`}
               onClick={() => i18n.changeLanguage("en")}
             >
               EN
             </button>
           </div>
-        </motion.div>
+        </div>
       )}
     </>
   );

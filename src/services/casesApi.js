@@ -10,22 +10,46 @@ const CASES_BASE_URL = "/cases/";
 /**
  * جلب جميع الحالات السريرية
  * GET /api/v1/cases/
+ * @param {Object} params - Query parameters: { patient_id, student_id, supervisor_id, is_public }
  * يعيد: Array of Case objects أو {status: "success", data: [...]}
  */
-export const fetchCases = async () => {
-  const response = await apiClient.get(CASES_BASE_URL);
-  
-  // الاستجابة قد تأتي بصيغة {status: "success", message: "...", data: [...]}
-  if (response.data && response.data.data && Array.isArray(response.data.data)) {
-    return response.data.data;
+export const fetchCases = async (params = {}) => {
+  try {
+    console.log("📋 Fetching cases with params:", params);
+    console.log("📋 API Base URL:", apiClient.defaults.baseURL);
+    console.log("📋 Full URL:", `${apiClient.defaults.baseURL}${CASES_BASE_URL}`);
+    
+    const response = await apiClient.get(CASES_BASE_URL, { params });
+    
+    console.log("📋 Cases API Response:", response.data);
+    console.log("📋 Response status:", response.status);
+    
+    // الاستجابة قد تأتي بصيغة {status: "success", message: "...", data: [...]}
+    if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      console.log("📋 Found cases in data.data:", response.data.data.length);
+      return response.data.data;
+    }
+    
+    // أو مباشرة كـ array
+    if (Array.isArray(response.data)) {
+      console.log("📋 Found cases as direct array:", response.data.length);
+      return response.data;
+    }
+    
+    // أو في results (pagination)
+    if (response.data && response.data.results && Array.isArray(response.data.results)) {
+      console.log("📋 Found cases in results:", response.data.results.length);
+      return response.data.results;
+    }
+    
+    console.warn("📋 No cases found in response");
+    return [];
+  } catch (error) {
+    console.error("📋 Error fetching cases:", error);
+    console.error("📋 Error response:", error.response?.data);
+    console.error("📋 Error status:", error.response?.status);
+    throw error;
   }
-  
-  // أو مباشرة كـ array
-  if (Array.isArray(response.data)) {
-    return response.data;
-  }
-  
-  return [];
 };
 
 /**
@@ -47,18 +71,40 @@ export const fetchCaseById = async (caseId) => {
 /**
  * إنشاء حالة سريرية جديدة
  * POST /api/v1/cases/
- * @param {Object} caseData - بيانات الحالة { title, description, priority, is_public }
+ * @param {Object} caseData - بيانات الحالة { title, description, priority, is_public, patient_id }
  * يعيد: Case object أو {status: "success", data: {...}}
  */
 export const createCase = async (caseData) => {
-  const response = await apiClient.post(CASES_BASE_URL, caseData);
-  
-  // الاستجابة قد تأتي بصيغة {status: "success", data: {...}}
-  if (response.data && response.data.data) {
-    return response.data.data;
+  try {
+    console.log("📋 Creating case with data:", caseData);
+    console.log("📋 API Base URL:", apiClient.defaults.baseURL);
+    console.log("📋 Full URL:", `${apiClient.defaults.baseURL}${CASES_BASE_URL}`);
+    
+    const response = await apiClient.post(CASES_BASE_URL, caseData);
+    
+    console.log("📋 Create case API Response:", response.data);
+    console.log("📋 Response status:", response.status);
+    
+    // الاستجابة قد تأتي بصيغة {status: "success", data: {...}}
+    if (response.data && response.data.data) {
+      console.log("📋 Found case in data.data");
+      return response.data.data;
+    }
+    
+    // أو مباشرة كـ Case object
+    if (response.data && response.data.id) {
+      console.log("📋 Found case as direct object");
+      return response.data;
+    }
+    
+    console.warn("📋 Unexpected response format:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("📋 Error creating case:", error);
+    console.error("📋 Error response:", error.response?.data);
+    console.error("📋 Error status:", error.response?.status);
+    throw error;
   }
-  
-  return response.data;
 };
 
 /**

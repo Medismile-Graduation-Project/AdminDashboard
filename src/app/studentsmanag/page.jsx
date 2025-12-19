@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { PlusCircle, Pencil, Trash2, X, Save, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
+import { motion } from "framer-motion";
 import {
   fetchStudentsAsync,
   createStudentAsync,
@@ -242,31 +243,37 @@ export default function StudentsmanagPage() {
   return (
     <AnimatedWrapper>
       <div
-        className={`p-4 sm:p-6 min-h-screen ${
+        className={`p-4 sm:p-6 lg:p-8 min-h-screen ${
           isRtl ? "text-right" : "text-left"
         }`}
       >
         <div className="max-w-[1400px] mx-auto">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-900 dark:text-white">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
               {t("students.title")}
             </h1>
-            <div className="flex gap-2 w-full sm:w-auto">
+            <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
               <input
                 type="text"
                 placeholder={t("students.search")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl w-full sm:w-64 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="px-4 py-2.5 sm:py-3 border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl w-full sm:w-64 
+                  focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 
+                  transition-all duration-300 bg-white dark:bg-dark-light text-slate-900 dark:text-white shadow-sm hover:shadow-md"
               />
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleAdd}
-                className="flex items-center gap-2 px-4 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-xl transition font-medium"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 
+                  dark:from-sky-500 dark:to-sky-600 dark:hover:from-sky-600 dark:hover:to-sky-700 text-white rounded-xl 
+                  transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
               >
                 <PlusCircle size={20} />
                 <span className="hidden sm:inline">{t("students.addStudent")}</span>
-              </button>
+              </motion.button>
             </div>
           </div>
 
@@ -279,54 +286,78 @@ export default function StudentsmanagPage() {
 
           {/* Desktop Table */}
           {!loading && (
-            <div className="hidden sm:block overflow-x-auto rounded-2xl border border-sky-200 dark:border-slate-700 shadow-lg">
-              <table className="w-full text-sm text-slate-900 dark:text-slate-200 min-w-[900px]">
-                <thead className="bg-gradient-to-r from-blue-900 to-blue-600 dark:from-slate-800 dark:to-slate-700 text-white">
+            <div className="hidden sm:block overflow-x-auto rounded-2xl border-2 border-sky-200/50 dark:border-dark-lighter shadow-2xl">
+              <table
+                className={`w-full text-sm text-slate-900 dark:text-slate-200 min-w-[900px] ${
+                  isRtl ? "text-right" : "text-left"
+                }`}
+                dir={isRtl ? "rtl" : "ltr"}
+              >
+                <thead className="bg-gradient-to-r from-sky-700 via-sky-600 to-sky-700 dark:from-dark-lighter dark:via-dark-light dark:to-dark-lighter text-white">
                   <tr>
-                    <th className="px-4 py-3">{t("students.name")}</th>
-                    <th className="px-4 py-3">{t("students.number")}</th>
-                    <th className="px-4 py-3">الجامعة</th>
-                    <th className="px-4 py-3">السنة الدراسية</th>
-                    <th className="px-4 py-3">{t("students.specialty")}</th>
-                    <th className="px-4 py-3">البريد الإلكتروني</th>
-                    <th className="px-4 py-3 text-center">
+                    <th className="px-6 py-4 font-semibold">{t("students.name")}</th>
+                    <th className="px-6 py-4 font-semibold">{t("students.number")}</th>
+                    <th className="px-6 py-4 font-semibold">الجامعة</th>
+                    <th className="px-6 py-4 font-semibold">السنة الدراسية</th>
+                    <th className="px-6 py-4 font-semibold">{t("students.specialty")}</th>
+                    <th className="px-6 py-4 font-semibold">البريد الإلكتروني</th>
+                    <th className="px-6 py-4 font-semibold text-center">
                       {t("students.actions")}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStudents.map((s, idx) => (
-                    <tr
+                    <motion.tr
                       key={s.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: idx * 0.02 }}
                       className={`${
                         idx % 2 === 0
-                          ? "bg-sky-50 dark:bg-slate-800/50"
-                          : "bg-white dark:bg-slate-800"
-                      } border-b border-sky-200 dark:border-slate-700 hover:bg-gradient-to-r hover:from-sky-200/30 hover:to-blue-600/30 dark:hover:from-slate-700/50 dark:hover:to-slate-600/50`}
+                          ? "bg-sky-50/50 dark:bg-dark-light/30"
+                          : "bg-white dark:bg-dark-light"
+                      } border-b border-sky-200/50 dark:border-dark-lighter hover:bg-gradient-to-r hover:from-sky-100/50 hover:to-sky-200/50 dark:hover:from-dark-lighter dark:hover:to-dark-lighter transition-all duration-300`}
                     >
-                      <td className="px-4 py-3">{s.studentName}</td>
-                      <td className="px-4 py-3">{s.studentNumber || "-"}</td>
-                      <td className="px-4 py-3">{s.university || "-"}</td>
-                      <td className="px-4 py-3">{s.year || "-"}</td>
-                      <td className="px-4 py-3">{s.specialty || "-"}</td>
-                      <td className="px-4 py-3">{s.email || "-"}</td>
-                      <td className="px-4 py-3 flex justify-center gap-2">
-                        <button
-                          onClick={() => handleEdit(s)}
-                          disabled={loading}
-                          className="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(s.id)}
-                          disabled={loading}
-                          className="p-2 rounded-lg bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                      <td className="px-6 py-4 font-medium">{s.studentName}</td>
+                      <td className="px-6 py-4">{s.studentNumber || "-"}</td>
+                      <td className="px-6 py-4">{s.university || "-"}</td>
+                      <td className="px-6 py-4">
+                        {s.year ? (
+                          <span className="px-2 py-1 rounded-lg bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 text-xs font-medium">
+                            {s.year}
+                          </span>
+                        ) : "-"}
                       </td>
-                    </tr>
+                      <td className="px-6 py-4">{s.specialty || "-"}</td>
+                      <td className="px-6 py-4 text-sm">{s.email || "-"}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center gap-2">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleEdit(s)}
+                            disabled={loading}
+                            className="p-2 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 
+                              dark:from-sky-600 dark:to-sky-700 dark:hover:from-sky-700 dark:hover:to-sky-800 text-white 
+                              disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-md hover:shadow-lg"
+                          >
+                            <Pencil size={16} />
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleDelete(s.id)}
+                            disabled={loading}
+                            className="p-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 
+                              dark:from-red-600 dark:to-red-700 dark:hover:from-red-700 dark:hover:to-red-800 text-white 
+                              disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-md hover:shadow-lg"
+                          >
+                            <Trash2 size={16} />
+                          </motion.button>
+                        </div>
+                      </td>
+                    </motion.tr>
                   ))}
                   {filteredStudents.length === 0 && !loading && (
                     <tr>
@@ -346,10 +377,13 @@ export default function StudentsmanagPage() {
           {/* Mobile Cards */}
           {!loading && (
             <div className="sm:hidden grid gap-4">
-              {filteredStudents.map((s) => (
-                <div
+              {filteredStudents.map((s, idx) => (
+                <motion.div
                   key={s.id}
-                  className="bg-white dark:bg-slate-800 rounded-2xl shadow p-4 flex flex-col gap-2 border border-sky-200 dark:border-slate-700"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  className="bg-white dark:bg-dark-light rounded-2xl shadow-lg p-5 flex flex-col gap-3 border-2 border-sky-200/50 dark:border-dark-lighter hover:shadow-xl transition-all duration-300"
                 >
                   <div className="flex justify-between items-start">
                     <div>
@@ -359,20 +393,22 @@ export default function StudentsmanagPage() {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
                         onClick={() => handleEdit(s)}
                         disabled={loading}
-                        className="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        className="p-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-md"
                       >
                         <Pencil size={16} />
-                      </button>
-                      <button
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
                         onClick={() => handleDelete(s.id)}
                         disabled={loading}
-                        className="p-2 rounded-lg bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        className="p-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-md"
                       >
                         <Trash2 size={16} />
-                      </button>
+                      </motion.button>
                     </div>
                   </div>
                   <p>
@@ -387,7 +423,7 @@ export default function StudentsmanagPage() {
                   <p>
                     البريد الإلكتروني: {s.email || "-"}
                   </p>
-                </div>
+                </motion.div>
               ))}
               {filteredStudents.length === 0 && !loading && (
                 <p className="text-center py-6 text-slate-500 dark:text-slate-400">
@@ -399,26 +435,40 @@ export default function StudentsmanagPage() {
 
           {/* Modal Form */}
           {showForm && (
-            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden border border-sky-200 dark:border-slate-700">
-                <div className="flex justify-between items-center p-3 sm:p-4 bg-gradient-to-r from-sky-200 to-blue-900 dark:from-slate-700 dark:to-slate-800 text-white">
-                  <h2 className="text-lg sm:text-xl font-bold text-white">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              onClick={() => !submitLoading && setShowForm(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-dark-light rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border-2 border-sky-200/50 dark:border-dark-lighter"
+              >
+                <div className="flex justify-between items-center p-4 sm:p-5 bg-gradient-to-r from-sky-600 via-sky-700 to-sky-600 dark:from-sky-700 dark:via-sky-800 dark:to-sky-700 text-white">
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-white">
                     {editingStudent
                       ? t("students.editStudent")
                       : t("students.addStudent")}
                   </h2>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => setShowForm(false)}
                     disabled={submitLoading}
-                    className="p-1 rounded-full hover:bg-blue-800 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors disabled:opacity-50"
+                    className="p-2 rounded-xl hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-300 disabled:opacity-50"
                   >
                     <X size={20} className="text-white" />
-                  </button>
+                  </motion.button>
                 </div>
 
                 <form
                   onSubmit={handleSubmit}
-                  className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-h-[80vh] overflow-y-auto"
+                  className="p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 max-h-[80vh] overflow-y-auto"
                 >
                   {/* الحقول المطلوبة لإنشاء طالب جديد */}
                   {!editingStudent && (
@@ -434,7 +484,9 @@ export default function StudentsmanagPage() {
                           onChange={handleChange}
                           required
                           placeholder={t("students.username") || "اسم المستخدم"}
-                          className="p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                          className="px-4 py-3 border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl focus:outline-none 
+                            focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 
+                            bg-white dark:bg-dark-light text-slate-900 dark:text-white transition-all duration-300 shadow-sm hover:shadow-md"
                         />
                       </div>
 
@@ -601,31 +653,40 @@ export default function StudentsmanagPage() {
                     />
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 col-span-1 sm:col-span-2 justify-end">
-                    <button
+                  <div className="flex flex-col sm:flex-row gap-3 col-span-1 sm:col-span-2 justify-end mt-4">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       type="button"
                       onClick={() => setShowForm(false)}
                       disabled={submitLoading}
-                      className="p-2 sm:p-3 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:ring-offset-2 transition disabled:opacity-50"
+                      className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 
+                        dark:from-red-600 dark:to-red-700 dark:hover:from-red-700 dark:hover:to-red-800 text-white rounded-xl 
+                        focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all duration-300 disabled:opacity-50 font-semibold shadow-lg hover:shadow-xl"
                     >
                       {t("students.cancel")}
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       type="submit"
                       disabled={submitLoading}
-                      className="p-2 sm:p-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-xl flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:ring-offset-2 transition disabled:opacity-50"
+                      className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 
+                        dark:from-green-600 dark:to-green-700 dark:hover:from-green-700 dark:hover:to-green-800 text-white rounded-xl 
+                        flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all duration-300 
+                        disabled:opacity-50 font-semibold shadow-lg hover:shadow-xl"
                     >
                       {submitLoading ? (
-                        <Loader2 className="animate-spin" size={16} />
+                        <Loader2 className="animate-spin" size={18} />
                       ) : (
-                        <Save size={16} />
-                      )}{" "}
+                        <Save size={18} />
+                      )}
                       {t("students.save")}
-                    </button>
+                    </motion.button>
                   </div>
                 </form>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           )}
         </div>
       </div>

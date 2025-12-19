@@ -74,7 +74,7 @@ export default function Home() {
     { name: t("Home.charts.systemUsageData.completedTasks"), value: 30 },
   ];
 
-  const COLORS = ["#3b82f6", "#bae6fd", "#1e3a8a"];
+  const COLORS = ["#0ea5e9", "#bae6fd", "#0369a1"]; // brand-500, brand-200, brand-700
 
   const notifications = [
     { message: t("Home.notificationsList.new") + " من الطالب أحمد", time: "قبل 10 دقائق" },
@@ -88,20 +88,20 @@ export default function Home() {
 
   return (
     <AnimatedWrapper>
-    <div className={`p-6 md:p-8 space-y-8 ${isRtl ? "text-right" : "text-left"}`}>
-      <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t("Home.greeting", { name: user.name })}</h1>
+    <div className={`p-6 space-y-8 ${isRtl ? "text-right" : "text-left"}`}>
+      <h1 className="text-3xl font-bold text-dark dark:text-white">{t("Home.greeting", { name: user.name })}</h1>
 
       {/* Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: t("Home.cards.totalPatients"), value: 120 },
           { label: t("Home.cards.activeStudents"), value: 45 },
           { label: t("Home.cards.ongoingCases"), value: 32 },
           { label: t("Home.cards.averageSatisfaction"), value: "88%" },
         ].map((card, idx) => (
-          <div key={idx} className="p-4 bg-sky-200 dark:bg-slate-800 rounded-lg shadow">
-            <p className="text-sm text-blue-700 dark:text-blue-300">{card.label}</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{card.value}</p>
+          <div key={idx} className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow">
+            <p className="text-sm text-sky-700 dark:text-sky-300">{card.label}</p>
+            <p className="text-2xl font-bold text-dark dark:text-white">{card.value}</p>
           </div>
         ))}
       </div>
@@ -109,8 +109,8 @@ export default function Home() {
       {/* Charts */}
       <div className={`flex flex-col lg:flex-row gap-4 ${isRtl ? "lg:flex-row-reverse" : ""}`}>
         {/* Student Performance */}
-        <div className="p-4 bg-sky-200 dark:bg-slate-800 rounded-lg shadow flex-1 min-w-[300px]">
-          <h2 className="text-lg font-semibold mb-2 text-slate-900 dark:text-white">
+        <div className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow flex-1 min-w-[300px]">
+          <h2 className="text-lg font-semibold mb-2 text-dark dark:text-white">
             {t("Home.charts.studentPerformance")}
           </h2>
           <ResponsiveContainer width="100%" height={250}>
@@ -120,15 +120,15 @@ export default function Home() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="score" fill="#3b82f6" />
+              <Bar dataKey="score" fill="#0ea5e9" />
               <Bar dataKey="completedTasks" fill="#bae6fd" />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* Weekly Consults */}
-        <div className="p-4 bg-sky-200 dark:bg-slate-800 rounded-lg shadow flex-1 min-w-[300px]">
-          <h2 className="text-lg font-semibold mb-2 text-slate-900 dark:text-white">
+        <div className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow flex-1 min-w-[300px]">
+          <h2 className="text-lg font-semibold mb-2 text-dark dark:text-white">
             {t("Home.charts.weeklyConsults")}
           </h2>
           <ResponsiveContainer width="100%" height={250}>
@@ -141,7 +141,7 @@ export default function Home() {
               <Line
                 type="monotone"
                 dataKey="consults"
-                stroke="#3b82f6"
+                stroke="#0ea5e9"
                 strokeWidth={3}
               />
             </LineChart>
@@ -149,8 +149,8 @@ export default function Home() {
         </div>
 
         {/* System Usage */}
-        <div className="p-4 bg-sky-200 dark:bg-slate-800 rounded-lg shadow flex-1 min-w-[300px]">
-          <h2 className="text-lg font-semibold mb-2 text-slate-900 dark:text-white">
+        <div className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow flex-1 min-w-[300px]">
+          <h2 className="text-lg font-semibold mb-2 text-dark dark:text-white">
             {t("Home.charts.systemUsage")}
           </h2>
           <ResponsiveContainer width="100%" height={250}>
@@ -175,8 +175,8 @@ export default function Home() {
 
       {/* Notifications & Appointments & Quick Access */}
       <div className={`flex flex-col lg:flex-row gap-4 ${isRtl ? "lg:flex-row-reverse" : ""}`}>
-        <div className="p-4 bg-sky-200 dark:bg-slate-800 rounded-lg shadow flex-1 min-w-[250px]">
-          <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-slate-900">
+        <div className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow flex-1 min-w-[250px]">
+          <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-dark dark:text-white">
             <BellIcon className="h-5 w-5" /> {t("Home.notifications")}
           </h2>
           <ul
@@ -185,16 +185,16 @@ export default function Home() {
             }`}
           >
             {notifications.map((note, idx) => (
-              <li key={idx} className="text-blue-700 dark:text-blue-300">
+              <li key={idx} className="text-sky-700 dark:text-sky-300">
                 {note.message} -{" "}
-                <span className="text-sm text-blue-500">{note.time}</span>
+                <span className="text-sm text-sky-500">{note.time}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="p-4 bg-sky-200 dark:bg-slate-800 rounded-lg shadow flex-1 min-w-[250px]">
-          <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-slate-900">
+        <div className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow flex-1 min-w-[250px]">
+          <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-dark dark:text-white">
             <CalendarIcon className="h-5 w-5" /> {t("Home.upcomingAppointments")}
           </h2>
           <ul
@@ -203,16 +203,16 @@ export default function Home() {
             }`}
           >
             {upcomingAppointments.map((app, idx) => (
-              <li key={idx} className="text-blue-700 dark:text-blue-300">
+              <li key={idx} className="text-sky-700 dark:text-sky-300">
                 {app.title} -{" "}
-                <span className="text-sm text-blue-500">{app.time}</span>
+                <span className="text-sm text-sky-500">{app.time}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="p-4 bg-sky-200 dark:bg-slate-800 rounded-lg shadow flex-1 min-w-[250px]">
-          <h2 className="text-lg font-semibold mb-2 text-slate-900 dark:text-white">
+        <div className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow flex-1 min-w-[250px]">
+          <h2 className="text-lg font-semibold mb-2 text-dark dark:text-white">
             {t("Home.quickAccess")}
           </h2>
           <ul
@@ -220,8 +220,8 @@ export default function Home() {
               isRtl ? "pr-5 text-right" : "pl-5 text-left"
             }`}
           >
-            <li className="text-blue-700">{t("Home.notificationsList.new")}</li>
-            <li className="text-blue-700">{t("Home.notificationsList.old")}</li>
+            <li className="text-sky-700 dark:text-sky-300">{t("Home.notificationsList.new")}</li>
+            <li className="text-sky-700 dark:text-sky-300">{t("Home.notificationsList.old")}</li>
           </ul>
         </div>
       </div>

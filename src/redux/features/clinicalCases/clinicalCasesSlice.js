@@ -77,13 +77,16 @@ const mapCaseToApiForCreate = (frontendCase) => {
     title: frontendCase.title || "",
     description: frontendCase.description || "",
     priority: frontendCase.priority || "medium",
-    is_public: frontendCase.is_public || false,
+    is_public: frontendCase.is_public !== undefined ? frontendCase.is_public : false,
   };
   
-  // إضافة patient_id إذا كان موجوداً (مطلوب عند تعطيل المصادقة)
+  // إضافة patient_id إذا كان موجوداً (مطلوب حسب التوثيق)
   if (frontendCase.patient_id) {
     apiData.patient_id = frontendCase.patient_id;
   }
+  
+  console.log("📋 mapCaseToApiForCreate - Input:", frontendCase);
+  console.log("📋 mapCaseToApiForCreate - Output:", apiData);
   
   // لا يمكن إضافة student_id أو supervisor_id عند الإنشاء
   // يتم الإسناد لاحقاً عبر طلبات الإسناد
@@ -116,19 +119,51 @@ const mapCaseToApiForUpdate = (frontendCase) => {
 // Async Thunks
 export const fetchCases = createAsyncThunk(
   "cases/fetchCases",
-  async (_, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const data = await casesApi.fetchCases();
+      console.log("📋 Redux - Fetching cases with params:", params);
+      const data = await casesApi.fetchCases(params);
+      
+      console.log("📋 Redux - Received data:", data);
       
       // البيانات تأتي كـ array من Case objects
       if (Array.isArray(data)) {
-        return data.map(mapCaseFromApi).filter(c => c !== null);
+        const mappedCases = data.map(mapCaseFromApi).filter(c => c !== null);
+        console.log("📋 Redux - Mapped cases:", mappedCases.length);
+        return mappedCases;
       }
       
+      console.warn("📋 Redux - Data is not an array:", typeof data);
       return [];
     } catch (error) {
+      console.error("📋 Redux - Error fetching cases:", error);
+      console.error("📋 Redux - Error response:", error.response?.data);
+      console.error("📋 Redux - Error status:", error.response?.status);
+      
       const errorData = error.response?.data;
-      const errorMessage = errorData?.message || errorData || error.message || "فشل في جلب الحالات";
+      let errorMessage = "فشل في جلب الحالات";
+      
+      if (errorData) {
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.errors) {
+          const errors = errorData.errors;
+          if (typeof errors === 'object') {
+            const firstError = Object.values(errors)[0];
+            errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+          } else {
+            errorMessage = errors;
+          }
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error("📋 Redux - Final error message:", errorMessage);
       return rejectWithValue(errorMessage);
     }
   }
@@ -150,14 +185,47 @@ export const createCase = createAsyncThunk(
   "cases/createCase",
   async (caseData, { rejectWithValue }) => {
     try {
+      console.log("📋 Redux - Creating case with data:", caseData);
       const apiData = mapCaseToApiForCreate(caseData);
+      console.log("📋 Redux - Mapped API data:", apiData);
+      
       const response = await casesApi.createCase(apiData);
+      console.log("📋 Redux - API response:", response);
       
       // الاستجابة من API تأتي كـ Case object
-      return mapCaseFromApi(response);
+      const mappedCase = mapCaseFromApi(response);
+      console.log("📋 Redux - Mapped case:", mappedCase);
+      
+      return mappedCase;
     } catch (error) {
+      console.error("📋 Redux - Error creating case:", error);
+      console.error("📋 Redux - Error response:", error.response?.data);
+      console.error("📋 Redux - Error status:", error.response?.status);
+      
       const errorData = error.response?.data;
-      const errorMessage = errorData?.message || errorData?.errors || errorData || error.message;
+      let errorMessage = "فشل إنشاء الحالة";
+      
+      if (errorData) {
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.errors) {
+          const errors = errorData.errors;
+          if (typeof errors === 'object') {
+            const firstError = Object.values(errors)[0];
+            errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+          } else {
+            errorMessage = errors;
+          }
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error("📋 Redux - Final error message:", errorMessage);
       return rejectWithValue(errorMessage);
     }
   }
@@ -319,8 +387,17 @@ const clinicalCasesSlice = createSlice({
       })
       .addCase(createCase.fulfilled, (state, action) => {
         state.loading = false;
+        console.log("📋 Redux - Case created successfully:", action.payload);
+        // إضافة الحالة الجديدة إلى القائمة مباشرة
         if (action.payload) {
-          state.cases.push(action.payload);
+          // التحقق من عدم وجود الحالة مسبقاً لتجنب التكرار
+          const existingIndex = state.cases.findIndex((c) => c.id === action.payload.id);
+          if (existingIndex === -1) {
+            state.cases.push(action.payload);
+          } else {
+            // إذا كانت موجودة، نحدثها
+            state.cases[existingIndex] = action.payload;
+          }
         }
         state.error = null;
       })
