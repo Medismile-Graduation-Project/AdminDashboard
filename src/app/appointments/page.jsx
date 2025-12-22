@@ -7,8 +7,9 @@ import { RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { fetchAppointmentsAsync, clearError } from "../../redux/features/appointments/appointmentsSlice";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
+import RoleGuard from "@/components/RoleGuard";
 
-export default function AppointmentsPage() {
+function AppointmentsContent() {
   const { t, i18n } = useTranslation();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -34,12 +35,10 @@ export default function AppointmentsPage() {
       const params = {};
       
       // المشرف: يجلب مواعيد الحالات المرتبطة به فقط
+      // Backend يفلتر تلقائياً حسب supervisor من case المرتبط بالموعد
       if (user.role === "supervisor" && user.id) {
-        // نحتاج أن نجلب حالات المشرف أولاً، ثم نجلب مواعيدها
-        // لكن API قد يدعم supervisor_id مباشرة، دعنا نستخدم user_id
-        params.user_id = user.id;
-        // أو يمكن استخدام supervisor_id إذا كان API يدعمه
-        // params.supervisor_id = user.id;
+        // يمكن استخدام case_id أو ترك Backend يفلتر تلقائياً
+        // حسب التوثيق، Backend يفلتر حسب request.user تلقائياً للمشرف
       }
       // مسؤول الجامعة: يرى جميع المواعيد (لا فلترة)
       // الطالب/المريض: يمكن إضافة فلترة هنا لاحقاً
@@ -54,9 +53,7 @@ export default function AppointmentsPage() {
   const handleRefresh = () => {
     if (user) {
       const params = {};
-      if (user.role === "supervisor" && user.id) {
-        params.user_id = user.id;
-      }
+      // Backend يفلتر تلقائياً حسب supervisor
       dispatch(fetchAppointmentsAsync(params));
     } else {
       dispatch(fetchAppointmentsAsync());
@@ -440,5 +437,14 @@ export default function AppointmentsPage() {
         </div>
       </div>
     </AnimatedWrapper>
+  );
+}
+
+export default function AppointmentsPage() {
+  // صفحة المواعيد متاحة للمشرف، مسؤول الجامعة، الطالب، والمريض
+  return (
+    <RoleGuard allowedRoles={["supervisor", "university_admin", "student", "patient"]}>
+      <AppointmentsContent />
+    </RoleGuard>
   );
 }

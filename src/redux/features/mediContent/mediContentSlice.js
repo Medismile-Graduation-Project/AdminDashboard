@@ -104,9 +104,9 @@ export const deleteCommunityContentAsync = createAsyncThunk(
  */
 export const fetchPendingContentAsync = createAsyncThunk(
   "mediContent/fetchPendingContent",
-  async (userId, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const data = await fetchPendingContent(userId);
+      const data = await fetchPendingContent();
       return data;
     } catch (error) {
       return rejectWithValue(

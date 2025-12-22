@@ -1,12 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Star, Loader2, PlusCircle, X, Save } from "lucide-react";
+import { Star, Loader2, PlusCircle, X, Save, Send, CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
 import {
   fetchEvaluationsAsync,
   createEvaluationAsync,
+  updateEvaluationAsync,
+  submitEvaluationAsync,
+  finalizeEvaluationAsync,
   setSearch,
   setStatusFilter,
   setDateFilter,
@@ -14,10 +17,13 @@ import {
   clearError,
 } from "../../redux/features/evaluations/evaluationsSlice";
 import { fetchStudentsAsync } from "../../redux/features/students/studentsSlice";
+import { fetchCases } from "../../redux/features/clinicalCases/clinicalCasesSlice";
+import { fetchAppointmentsAsync } from "../../redux/features/appointments/appointmentsSlice";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import toast from "react-hot-toast";
+import RoleGuard from "@/components/RoleGuard";
 
-export default function PatientReviews() {
+function EvaluationsContent() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const evaluationsState = useSelector((state) => state.evaluations);
@@ -44,10 +50,13 @@ export default function PatientReviews() {
   };
   
   const [formData, setFormData] = useState({
-    evaluator_type: getDefaultEvaluatorType(),
     student_id: "",
+    target_type: "case", // case, session, appointment
+    case_id: "",
+    session_id: "",
     appointment_id: "",
-    rating: 5,
+    score: 0, // 0-100
+    rubric: "", // JSON string
     comment: "",
   });
   
@@ -61,9 +70,11 @@ export default function PatientReviews() {
     }
   }, [user]);
 
-  // جلب الطلاب
+  // جلب الطلاب والحالات والمواعيد
   const studentsState = useSelector((state) => state.students);
   const students = studentsState?.students || [];
+  const cases = useSelector((state) => state.clinicalCases?.cases || []);
+  const appointments = useSelector((state) => state.appointments?.appointments || []);
 
   // جلب معلومات المستخدم
   const [user, setUser] = useState(null);
@@ -96,6 +107,16 @@ export default function PatientReviews() {
       
       dispatch(fetchEvaluationsAsync(params));
       dispatch(fetchStudentsAsync()); // جلب الطلاب للنموذج
+      // جلب الحالات والمواعيد للنموذج - فلترة حسب المستخدم
+      if (user?.role === "supervisor" && user?.id) {
+        // المشرف: فقط حالاته
+        dispatch(fetchCases({ supervisor_id: user.id }));
+        dispatch(fetchAppointmentsAsync({ supervisor_id: user.id }));
+      } else if (user?.role === "university_admin") {
+        // مسؤول الجامعة: جميع حالات الجامعة (Backend يفلتر تلقائياً)
+        dispatch(fetchCases({}));
+        dispatch(fetchAppointmentsAsync({}));
+      }
     }
   }, [dispatch, evaluatorTypeFilter, user]);
 
@@ -126,6 +147,11 @@ export default function PatientReviews() {
     
     return matchesSearch && matchesStatus && matchesDate;
   });
+  
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   // معالجة إضافة تقييم جديد
   const handleFormChange = (e) => {
@@ -139,46 +165,82 @@ export default function PatientReviews() {
 
     try {
       // التحقق من البيانات
-      if (!formData.rating || formData.rating < 1 || formData.rating > 10) {
-        toast.error("التقييم يجب أن يكون بين 1 و 10");
+      if (!formData.student_id) {
+        toast.error("يجب اختيار طالب");
         setSubmitLoading(false);
         return;
       }
 
-      // التحقق من student_id للمشرف ومسؤول الجامعة
-      if ((formData.evaluator_type === "supervisor" || formData.evaluator_type === "university") && !formData.student_id) {
-        toast.error("يجب اختيار طالب عند التقييم");
+      if (!formData.target_type) {
+        toast.error("يجب اختيار نوع الهدف");
+        setSubmitLoading(false);
+        return;
+      }
+
+      if (formData.score < 0 || formData.score > 100) {
+        toast.error("النقاط يجب أن تكون بين 0 و 100");
+        setSubmitLoading(false);
+        return;
+      }
+
+      // التحقق من وجود target_id حسب target_type
+      if (formData.target_type === "case" && !formData.case_id) {
+        toast.error("يجب اختيار حالة");
+        setSubmitLoading(false);
+        return;
+      }
+      if (formData.target_type === "session" && !formData.session_id) {
+        toast.error("يجب اختيار جلسة");
+        setSubmitLoading(false);
+        return;
+      }
+      if (formData.target_type === "appointment" && !formData.appointment_id) {
+        toast.error("يجب اختيار موعد");
         setSubmitLoading(false);
         return;
       }
 
       // تحضير البيانات للإرسال
       const evaluationData = {
-        evaluator_type: formData.evaluator_type,
-        rating: parseInt(formData.rating),
+        student_id: formData.student_id,
+        target_type: formData.target_type,
+        score: parseInt(formData.score),
         comment: formData.comment || null,
       };
 
-      // إضافة student_id إذا كان موجوداً
-      if (formData.student_id) {
-        evaluationData.student_id = formData.student_id;
-      }
-
-      // إضافة appointment_id إذا كان موجوداً
-      if (formData.appointment_id) {
+      // إضافة target_id حسب target_type
+      if (formData.target_type === "case") {
+        evaluationData.case_id = formData.case_id;
+      } else if (formData.target_type === "session") {
+        evaluationData.session_id = formData.session_id;
+      } else if (formData.target_type === "appointment") {
         evaluationData.appointment_id = formData.appointment_id;
       }
 
+      // إضافة rubric إذا كان موجوداً
+      if (formData.rubric) {
+        try {
+          evaluationData.rubric = JSON.parse(formData.rubric);
+        } catch {
+          toast.error("تنسيق JSON غير صحيح للـ rubric");
+          setSubmitLoading(false);
+          return;
+        }
+      }
+
       await dispatch(createEvaluationAsync(evaluationData)).unwrap();
-      toast.success("تم إضافة التقييم بنجاح");
+      toast.success("تم إنشاء التقييم بنجاح");
       setShowForm(false);
       
       // إعادة تعيين النموذج
       setFormData({
-        evaluator_type: getDefaultEvaluatorType(),
         student_id: "",
+        target_type: "case",
+        case_id: "",
+        session_id: "",
         appointment_id: "",
-        rating: 5,
+        score: 0,
+        rubric: "",
         comment: "",
       });
 
@@ -193,9 +255,43 @@ export default function PatientReviews() {
       }
       dispatch(fetchEvaluationsAsync(params));
     } catch (error) {
-      toast.error(error || "فشل في إضافة التقييم");
+      toast.error(error || "فشل في إنشاء التقييم");
     } finally {
       setSubmitLoading(false);
+    }
+  };
+  
+  // Handle Submit Evaluation (draft → submitted)
+  const handleSubmitEvaluationStatus = async (evaluationId) => {
+    try {
+      await dispatch(submitEvaluationAsync(evaluationId)).unwrap();
+      toast.success("تم تقديم التقييم بنجاح");
+      const params = {};
+      if (user?.role === "supervisor") {
+        params.evaluator_type = "supervisor";
+      } else if (user?.role === "university_admin" && evaluatorTypeFilter !== "all") {
+        params.evaluator_type = evaluatorTypeFilter;
+      }
+      dispatch(fetchEvaluationsAsync(params));
+    } catch (error) {
+      toast.error(error || "فشل في تقديم التقييم");
+    }
+  };
+  
+  // Handle Finalize Evaluation (submitted → final)
+  const handleFinalizeEvaluation = async (evaluationId) => {
+    try {
+      await dispatch(finalizeEvaluationAsync(evaluationId)).unwrap();
+      toast.success("تم تثبيت التقييم بنجاح");
+      const params = {};
+      if (user?.role === "supervisor") {
+        params.evaluator_type = "supervisor";
+      } else if (user?.role === "university_admin" && evaluatorTypeFilter !== "all") {
+        params.evaluator_type = evaluatorTypeFilter;
+      }
+      dispatch(fetchEvaluationsAsync(params));
+    } catch (error) {
+      toast.error(error || "فشل في تثبيت التقييم");
     }
   };
 
@@ -311,8 +407,9 @@ export default function PatientReviews() {
                 focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 transition-all duration-300 shadow-sm hover:shadow-md"
             >
               <option value="all">{t("reviews.all") || "الكل"}</option>
-              <option value="new">{t("reviews.new") || "جديدة"}</option>
-              <option value="reviewed">{t("reviews.reviewed") || "مقروءة"}</option>
+              <option value="draft">مسودة</option>
+              <option value="submitted">مقدم</option>
+              <option value="final">نهائي</option>
             </select>
             <input
               type="date"
@@ -379,20 +476,49 @@ export default function PatientReviews() {
                             );
                           })}
                         </div>
-                        {/* التقييم الرقمي */}
+                        {/* التقييم الرقمي (Score 0-100) */}
                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                          {review.rating || 0}/10
+                          {review.score !== undefined ? `${review.score}/100` : `${review.rating || 0}/10`}
                         </p>
+                        {review.target_type && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+                            {review.target_type === "case" ? "حالة" : review.target_type === "session" ? "جلسة" : "موعد"}
+                          </span>
+                        )}
                         {/* الحالة */}
                         <span
                           className={`px-3 py-1 text-sm rounded-full ${
-                            review.status === "new"
+                            review.status === "draft"
+                              ? "bg-yellow-500 text-white dark:bg-yellow-600"
+                              : review.status === "submitted"
+                              ? "bg-blue-500 text-white dark:bg-blue-600"
+                              : review.status === "final"
                               ? "bg-green-500 text-white dark:bg-green-600"
-                              : "bg-blue-500 text-white dark:bg-blue-600"
+                              : "bg-gray-500 text-white dark:bg-gray-600"
                           }`}
                         >
-                          {t(`reviews.${review.status}`) || review.status}
+                          {review.status === "draft" ? "مسودة" : review.status === "submitted" ? "مقدم" : review.status === "final" ? "نهائي" : review.status || "جديد"}
                         </span>
+                        
+                        {/* أزرار الإجراءات */}
+                        {(user?.role === "supervisor" || user?.role === "university_admin") && review.status === "draft" && (
+                          <button
+                            onClick={() => handleSubmitEvaluationStatus(review.id)}
+                            className="mt-2 px-3 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition flex items-center gap-1"
+                          >
+                            <Send size={14} />
+                            تقديم
+                          </button>
+                        )}
+                        {(user?.role === "supervisor" || user?.role === "university_admin") && review.status === "submitted" && (
+                          <button
+                            onClick={() => handleFinalizeEvaluation(review.id)}
+                            className="mt-2 px-3 py-1.5 text-sm rounded-lg bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white transition flex items-center gap-1"
+                          >
+                            <CheckCircle size={14} />
+                            تثبيت
+                          </button>
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -423,81 +549,151 @@ export default function PatientReviews() {
                 </div>
 
                 <form onSubmit={handleSubmitEvaluation} className="p-4 sm:p-6 space-y-4">
-                  {/* نوع المقيم */}
+                  {/* اختيار الطالب */}
                   <div>
                     <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
-                      نوع المقيم
+                      الطالب <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="evaluator_type"
-                      value={formData.evaluator_type}
+                      name="student_id"
+                      value={formData.student_id}
                       onChange={handleFormChange}
                       className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
                       disabled={submitLoading}
+                      required
                     >
-                      <option value="supervisor">مشرف</option>
-                      <option value="patient">مريض</option>
-                      <option value="student">طالب</option>
-                      <option value="university">جامعة</option>
-                      <option value="admin">أدمن</option>
+                      <option value="">اختر طالباً</option>
+                      {students.map((student) => (
+                        <option key={student.id} value={student.id}>
+                          {student.first_name} {student.last_name} {student.student_number ? `(${student.student_number})` : ""}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
-                  {/* اختيار الطالب (مطلوب للمشرف) */}
-                  {(formData.evaluator_type === "supervisor" || formData.evaluator_type === "university") && (
+                  {/* نوع الهدف */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      نوع الهدف <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="target_type"
+                      value={formData.target_type}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          target_type: e.target.value,
+                          case_id: "",
+                          session_id: "",
+                          appointment_id: "",
+                        }));
+                      }}
+                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      disabled={submitLoading}
+                      required
+                    >
+                      <option value="case">حالة سريرية</option>
+                      <option value="session">جلسة</option>
+                      <option value="appointment">موعد</option>
+                    </select>
+                  </div>
+
+                  {/* اختيار الحالة/الجلسة/الموعد حسب target_type */}
+                  {formData.target_type === "case" && (
                     <div>
                       <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
-                        الطالب <span className="text-red-500">*</span>
+                        الحالة <span className="text-red-500">*</span>
                       </label>
                       <select
-                        name="student_id"
-                        value={formData.student_id}
+                        name="case_id"
+                        value={formData.case_id}
                         onChange={handleFormChange}
                         className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
                         disabled={submitLoading}
                         required
                       >
-                        <option value="">اختر طالباً</option>
-                        {students.map((student) => (
-                          <option key={student.id} value={student.id}>
-                            {student.studentName} {student.studentNumber ? `(${student.studentNumber})` : ""}
+                        <option value="">اختر حالة</option>
+                        {cases.map((caseItem) => (
+                          <option key={caseItem.id} value={caseItem.id}>
+                            {caseItem.title || caseItem.id}
                           </option>
                         ))}
                       </select>
                     </div>
                   )}
 
-                  {/* الموعد (اختياري) */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
-                      الموعد (اختياري)
-                    </label>
-                    <input
-                      type="text"
-                      name="appointment_id"
-                      value={formData.appointment_id}
-                      onChange={handleFormChange}
-                      placeholder="معرف الموعد (UUID)"
-                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
-                      disabled={submitLoading}
-                    />
-                  </div>
+                  {formData.target_type === "session" && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                        الجلسة <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="session_id"
+                        value={formData.session_id}
+                        onChange={handleFormChange}
+                        placeholder="معرف الجلسة (UUID)"
+                        className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                        disabled={submitLoading}
+                        required
+                      />
+                    </div>
+                  )}
 
-                  {/* التقييم (1-10) */}
+                  {formData.target_type === "appointment" && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                        الموعد <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="appointment_id"
+                        value={formData.appointment_id}
+                        onChange={handleFormChange}
+                        className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                        disabled={submitLoading}
+                        required
+                      >
+                        <option value="">اختر موعداً</option>
+                        {appointments.map((appointment) => (
+                          <option key={appointment.id} value={appointment.id}>
+                            {appointment.date ? new Date(appointment.date).toLocaleDateString("ar-SA") : appointment.id}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* النقاط (0-100) */}
                   <div>
                     <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
-                      التقييم <span className="text-red-500">*</span> (1-10)
+                      النقاط <span className="text-red-500">*</span> (0-100)
                     </label>
                     <input
                       type="number"
-                      name="rating"
-                      value={formData.rating}
+                      name="score"
+                      value={formData.score}
                       onChange={handleFormChange}
-                      min="1"
-                      max="10"
+                      min="0"
+                      max="100"
                       className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
                       disabled={submitLoading}
                       required
+                    />
+                  </div>
+
+                  {/* Rubric (JSON) */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      Rubric (JSON - اختياري)
+                    </label>
+                    <textarea
+                      name="rubric"
+                      value={formData.rubric}
+                      onChange={handleFormChange}
+                      rows="3"
+                      placeholder='{"criteria": "value"}'
+                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition font-mono text-sm"
+                      disabled={submitLoading}
                     />
                   </div>
 
@@ -547,5 +743,14 @@ export default function PatientReviews() {
         </div>
       </div>
     </AnimatedWrapper>
+  );
+}
+
+export default function EvaluationsPage() {
+  // صفحة التقييمات متاحة للمشرف ومسؤول الجامعة
+  return (
+    <RoleGuard allowedRoles={["supervisor", "university_admin"]}>
+      <EvaluationsContent />
+    </RoleGuard>
   );
 }

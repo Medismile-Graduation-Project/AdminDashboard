@@ -248,3 +248,99 @@ export const supervisorCaseAction = async (caseId, actionData) => {
   return response.data;
 };
 
+/**
+ * ============================================
+ * CaseSession APIs (جلسات الحالة)
+ * ============================================
+ */
+
+/**
+ * جلب جميع جلسات حالة محددة
+ * GET /api/v1/cases/<case_id>/sessions/
+ * @param {string} caseId - UUID للحالة
+ */
+export const fetchCaseSessions = async (caseId) => {
+  const response = await apiClient.get(`${CASES_BASE_URL}${caseId}/sessions/`);
+  
+  if (response.data && response.data.data && Array.isArray(response.data.data)) {
+    return response.data.data;
+  }
+  
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  
+  if (response.data && response.data.results && Array.isArray(response.data.results)) {
+    return response.data.results;
+  }
+  
+  return [];
+};
+
+/**
+ * جلب جلسة محددة
+ * GET /api/v1/cases/<case_id>/sessions/<session_id>/
+ * @param {string} caseId - UUID للحالة
+ * @param {string} sessionId - UUID للجلسة
+ */
+export const fetchCaseSessionById = async (caseId, sessionId) => {
+  const response = await apiClient.get(`${CASES_BASE_URL}${caseId}/sessions/${sessionId}/`);
+  
+  if (response.data && response.data.data) {
+    return response.data.data;
+  }
+  
+  return response.data;
+};
+
+/**
+ * موافقة المشرف على جلسة
+ * POST /api/v1/cases/<case_id>/sessions/<session_id>/approve/
+ * @param {string} caseId - UUID للحالة
+ * @param {string} sessionId - UUID للجلسة
+ * @param {Object} data - { feedback?: string }
+ */
+export const approveCaseSession = async (caseId, sessionId, data = {}) => {
+  const response = await apiClient.post(`${CASES_BASE_URL}${caseId}/sessions/${sessionId}/approve/`, data);
+  
+  if (response.data && response.data.data) {
+    return response.data.data;
+  }
+  
+  return response.data;
+};
+
+/**
+ * رفض المشرف لجلسة
+ * POST /api/v1/cases/<case_id>/sessions/<session_id>/reject/
+ * @param {string} caseId - UUID للحالة
+ * @param {string} sessionId - UUID للجلسة
+ * @param {Object} data - { feedback?: string, reason?: string }
+ */
+export const rejectCaseSession = async (caseId, sessionId, data = {}) => {
+  const response = await apiClient.post(`${CASES_BASE_URL}${caseId}/sessions/${sessionId}/reject/`, data);
+  
+  if (response.data && response.data.data) {
+    return response.data.data;
+  }
+  
+  return response.data;
+};
+
+/**
+ * طلب تعديل من المشرف على جلسة
+ * POST /api/v1/cases/<case_id>/sessions/<session_id>/request-modification/
+ * @param {string} caseId - UUID للحالة
+ * @param {string} sessionId - UUID للجلسة
+ * @param {Object} data - { feedback: string, required_modifications?: string }
+ */
+export const requestCaseSessionModification = async (caseId, sessionId, data = {}) => {
+  const response = await apiClient.post(`${CASES_BASE_URL}${caseId}/sessions/${sessionId}/request-modification/`, data);
+  
+  if (response.data && response.data.data) {
+    return response.data.data;
+  }
+  
+  return response.data;
+};
+

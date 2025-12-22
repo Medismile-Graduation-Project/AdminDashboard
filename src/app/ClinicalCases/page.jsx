@@ -14,6 +14,10 @@ import {
   fetchAssignmentRequestsAsync,
   createAssignmentRequestAsync,
   supervisorCaseActionAsync,
+  fetchCaseSessionsAsync,
+  approveCaseSessionAsync,
+  rejectCaseSessionAsync,
+  requestCaseSessionModificationAsync,
   setSelectedCase,
   clearSelectedCase,
   clearError,
@@ -22,11 +26,12 @@ import { fetchPatients } from "../../redux/features/patients/patientsSlice";
 import { fetchStudentsAsync } from "../../redux/features/students/studentsSlice";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import toast from "react-hot-toast";
+import RoleGuard from "@/components/RoleGuard";
 
-export default function ClinicalCasesPage() {
+function ClinicalCasesContent() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
-  const { cases, loading, error, selectedCase, assignmentRequests } = useSelector((state) => state.clinicalCases);
+  const { cases, loading, error, selectedCase, assignmentRequests, caseSessions, loadingSessions } = useSelector((state) => state.clinicalCases);
   const { patients } = useSelector((state) => state.patients);
   const { students } = useSelector((state) => state.students);
   
@@ -60,6 +65,11 @@ export default function ClinicalCasesPage() {
     if (storedUser?.role === "supervisor" && storedUser?.id) {
       fetchParams.supervisor_id = storedUser.id;
       console.log("📋 Fetching cases for supervisor:", storedUser.id);
+    }
+    // إذا كان المستخدم مسؤول جامعة، نجلب جميع حالات جامعته (Backend يفلتر تلقائياً)
+    else if (storedUser?.role === "university_admin") {
+      // Backend يفلتر تلقائياً حسب university_id من request.user
+      console.log("📋 Fetching cases for university admin (all university cases)");
     }
     // إذا كان المستخدم طالباً، نجلب حالاته المسندة إليه
     else if (storedUser?.role === "student" && storedUser?.id) {
@@ -155,6 +165,12 @@ export default function ClinicalCasesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // مسؤول الجامعة: قراءة فقط - لا يمكنه إنشاء أو تعديل
+    if (user?.role === "university_admin") {
+      toast.error("مسؤول الجامعة: لا يمكنك إنشاء أو تعديل الحالات (قراءة فقط)");
+      return;
+    }
+    
     // التحقق من البيانات المطلوبة عند الإنشاء
     if (!editingCase) {
       if (!formData.title || !formData.description) {
@@ -177,6 +193,8 @@ export default function ClinicalCasesPage() {
         const fetchParams = {};
         if (user?.role === "supervisor" && user?.id) {
           fetchParams.supervisor_id = user.id;
+        } else if (user?.role === "university_admin") {
+          // Backend يفلتر تلقائياً حسب university_id
         } else if (user?.role === "student" && user?.id) {
           fetchParams.student_id = user.id;
         } else if (user?.role === "patient" && user?.id) {
@@ -273,6 +291,12 @@ export default function ClinicalCasesPage() {
   };
 
   const handleDelete = async (id) => {
+    // مسؤول الجامعة: قراءة فقط - لا يمكنه حذف
+    if (user?.role === "university_admin") {
+      toast.error("مسؤول الجامعة: لا يمكنك حذف الحالات (قراءة فقط)");
+      return;
+    }
+    
     if (confirm(t("ClinicalCases.confirmDelete"))) {
       try {
         await dispatch(deleteCase(id)).unwrap();
@@ -301,7 +325,12 @@ export default function ClinicalCasesPage() {
   const handleViewDetails = async (caseItem) => {
     try {
       await dispatch(fetchCaseById(caseItem.id)).unwrap();
-      await dispatch(fetchAssignmentRequestsAsync(caseItem.id)).unwrap();
+      // جلب طلبات الإسناد - فقط للمشرف
+      if (user?.role === "supervisor") {
+        await dispatch(fetchAssignmentRequestsAsync(caseItem.id)).unwrap();
+        // جلب جلسات الحالة - فقط للمشرف
+        await dispatch(fetchCaseSessionsAsync(caseItem.id)).unwrap();
+      }
       dispatch(setSelectedCase(caseItem));
       setShowDetails(true);
     } catch (error) {
@@ -328,8 +357,81 @@ export default function ClinicalCasesPage() {
     }
   };
 
-  // إجراء المشرف (قبول/رفض)
+  // إجراءات المشرف على الجلسات
+  const handleApproveSession = async (caseId, sessionId) => {
+    if (user?.role !== "supervisor") {
+      toast.error("فقط المشرف يمكنه مراجعة الجلسات");
+      return;
+    }
+    try {
+      await dispatch(approveCaseSessionAsync({ caseId, sessionId })).unwrap();
+      toast.success(t("ClinicalCases.sessionApproved") || "تمت الموافقة على الجلسة بنجاح");
+      // إعادة جلب الجلسات
+      await dispatch(fetchCaseSessionsAsync(caseId)).unwrap();
+    } catch (error) {
+      const errorMsg = typeof error === "string" 
+        ? error 
+        : error?.response?.data?.message || error?.message || "فشل الموافقة على الجلسة";
+      toast.error(errorMsg);
+    }
+  };
+
+  const handleRejectSession = async (caseId, sessionId) => {
+    if (user?.role !== "supervisor") {
+      toast.error("فقط المشرف يمكنه مراجعة الجلسات");
+      return;
+    }
+    const reason = prompt(t("ClinicalCases.rejectionReason") || "يرجى إدخال سبب الرفض (اختياري):");
+    try {
+      await dispatch(rejectCaseSessionAsync({ caseId, sessionId, reason: reason || undefined })).unwrap();
+      toast.success(t("ClinicalCases.sessionRejected") || "تم رفض الجلسة بنجاح");
+      // إعادة جلب الجلسات
+      await dispatch(fetchCaseSessionsAsync(caseId)).unwrap();
+    } catch (error) {
+      const errorMsg = typeof error === "string" 
+        ? error 
+        : error?.response?.data?.message || error?.message || "فشل رفض الجلسة";
+      toast.error(errorMsg);
+    }
+  };
+
+  const handleRequestModification = async (caseId, sessionId) => {
+    if (user?.role !== "supervisor") {
+      toast.error("فقط المشرف يمكنه طلب التعديل");
+      return;
+    }
+    const feedback = prompt(t("ClinicalCases.modificationFeedback") || "يرجى إدخال ملاحظات التعديل المطلوبة:");
+    if (!feedback || !feedback.trim()) {
+      toast.error(t("ClinicalCases.feedbackRequired") || "ملاحظات التعديل مطلوبة");
+      return;
+    }
+    try {
+      await dispatch(requestCaseSessionModificationAsync({ caseId, sessionId, feedback: feedback.trim() })).unwrap();
+      toast.success(t("ClinicalCases.modificationRequested") || "تم إرسال طلب التعديل بنجاح");
+      // إعادة جلب الجلسات
+      await dispatch(fetchCaseSessionsAsync(caseId)).unwrap();
+    } catch (error) {
+      const errorMsg = typeof error === "string" 
+        ? error 
+        : error?.response?.data?.message || error?.message || "فشل إرسال طلب التعديل";
+      toast.error(errorMsg);
+    }
+  };
+
+  // إجراء المشرف (قبول/رفض) - فقط للمشرف
   const handleSupervisorAction = async (caseId, action, studentId) => {
+    // مسؤول الجامعة: قراءة فقط - لا يمكنه قبول/رفض طلبات الإسناد
+    if (user?.role === "university_admin") {
+      toast.error("مسؤول الجامعة: لا يمكنك قبول/رفض طلبات الإسناد (قراءة فقط)");
+      return;
+    }
+    
+    // فقط المشرف يمكنه قبول/رفض
+    if (user?.role !== "supervisor") {
+      toast.error("فقط المشرف يمكنه قبول/رفض طلبات الإسناد");
+      return;
+    }
+    
     try {
       await dispatch(supervisorCaseActionAsync({
         caseId,
@@ -409,17 +511,20 @@ export default function ClinicalCasesPage() {
                 bg-white dark:bg-dark-light text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 
                 focus:border-sky-500 dark:focus:border-sky-400 transition-all duration-300 shadow-sm hover:shadow-md"
             />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleAddCase}
-              className="flex items-center justify-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-sky-600 to-sky-700 
-                hover:from-sky-700 hover:to-sky-800 dark:from-sky-500 dark:to-sky-600 dark:hover:from-sky-600 dark:hover:to-sky-700 
-                text-white transition-all duration-300 shadow-lg hover:shadow-xl font-semibold"
-              aria-label={t("ClinicalCases.addNew")}
-            >
-              <PlusCircle size={20} />
-            </motion.button>
+            {/* زر إضافة حالة - يظهر فقط للمشرف */}
+            {user?.role === "supervisor" && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleAddCase}
+                className="flex items-center justify-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-sky-600 to-sky-700 
+                  hover:from-sky-700 hover:to-sky-800 dark:from-sky-500 dark:to-sky-600 dark:hover:from-sky-600 dark:hover:to-sky-700 
+                  text-white transition-all duration-300 shadow-lg hover:shadow-xl font-semibold"
+                aria-label={t("ClinicalCases.addNew")}
+              >
+                <PlusCircle size={20} />
+              </motion.button>
+            )}
           </div>
         </div>
 
@@ -511,8 +616,13 @@ export default function ClinicalCasesPage() {
                     <td className="px-6 py-4">
                       <div className="flex justify-center gap-2">
                       <button onClick={() => handleViewDetails(c)} className="p-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition" title={t("ClinicalCases.viewDetails") || "عرض التفاصيل"}><Eye size={16} /></button>
-                      <button onClick={() => handleEditCase(c)} className="p-2 rounded-lg bg-blue-600 hover:bg-blue-900 text-white transition" title={t("ClinicalCases.edit") || "تعديل"}><Pencil size={16} /></button>
-                      <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition" title={t("ClinicalCases.delete") || "حذف"}><Trash2 size={16} /></button>
+                      {/* أزرار التعديل والحذف - تظهر فقط للمشرف */}
+                      {user?.role === "supervisor" && (
+                        <>
+                          <button onClick={() => handleEditCase(c)} className="p-2 rounded-lg bg-blue-600 hover:bg-blue-900 text-white transition" title={t("ClinicalCases.edit") || "تعديل"}><Pencil size={16} /></button>
+                          <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition" title={t("ClinicalCases.delete") || "حذف"}><Trash2 size={16} /></button>
+                        </>
+                      )}
                       </div>
                     </td>
                   </motion.tr>
@@ -541,8 +651,13 @@ export default function ClinicalCasesPage() {
                     <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">{c.description || "-"}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleEditCase(c)} className="p-2 rounded-lg bg-blue-600 hover:bg-blue-900 text-white transition"><Pencil size={16} /></button>
-                    <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition"><Trash2 size={16} /></button>
+                    {/* أزرار التعديل والحذف - تظهر فقط للمشرف */}
+                    {user?.role === "supervisor" && (
+                      <>
+                        <button onClick={() => handleEditCase(c)} className="p-2 rounded-lg bg-blue-600 hover:bg-blue-900 text-white transition"><Pencil size={16} /></button>
+                        <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition"><Trash2 size={16} /></button>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="mt-3 text-sm space-y-1">
@@ -805,48 +920,50 @@ export default function ClinicalCasesPage() {
                   <p className="text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">{selectedCase.description || "-"}</p>
                 </div>
 
-                {/* طلبات الإسناد */}
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t("ClinicalCases.details.assignmentRequests") || "طلبات الإسناد"}</h3>
-                    {user?.role === "student" && selectedCase.status === "open" && (
-                      <button
-                        onClick={() => setShowAssignmentRequest(true)}
-                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition"
-                      >
-                        {t("ClinicalCases.details.requestAssignment") || "طلب إسناد"}
-                      </button>
-                    )}
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {(selectedCase.assignment_requests || assignmentRequests[selectedCase.id] || []).length > 0 ? (
-                      (selectedCase.assignment_requests || assignmentRequests[selectedCase.id] || []).map((request) => (
-                        <div key={request.id} className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <p className="font-semibold text-slate-900 dark:text-white">
-                                {request.student?.first_name && request.student?.last_name
-                                  ? `${request.student.first_name} ${request.student.last_name}`
-                                  : request.student?.username || request.student?.email || "-"}
-                              </p>
-                              {request.message && (
-                                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{request.message}</p>
-                              )}
-                              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                                {request.created_at ? new Date(request.created_at).toLocaleString("ar-SA") : "-"}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-1 rounded-full text-xs ${
-                                request.status === "accepted" ? "bg-green-100 text-green-600" :
-                                request.status === "rejected" ? "bg-red-100 text-red-600" :
-                                "bg-yellow-100 text-yellow-600"
-                              }`}>
-                                {request.status === "accepted" ? t("ClinicalCases.requestStatus.accepted") || "مقبول" :
-                                 request.status === "rejected" ? t("ClinicalCases.requestStatus.rejected") || "مرفوض" :
-                                 t("ClinicalCases.requestStatus.pending") || "قيد الانتظار"}
-                              </span>
-                              {user?.role === "supervisor" && request.status === "pending" && (
+                {/* طلبات الإسناد - تظهر فقط للمشرف والطالب */}
+                {(user?.role === "supervisor" || user?.role === "student") && (
+                  <div>
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-semibold text-slate-700 dark:text-slate-300">{t("ClinicalCases.details.assignmentRequests") || "طلبات الإسناد"}</h3>
+                      {user?.role === "student" && selectedCase.status === "open" && (
+                        <button
+                          onClick={() => setShowAssignmentRequest(true)}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition"
+                        >
+                          {t("ClinicalCases.details.requestAssignment") || "طلب إسناد"}
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {(selectedCase.assignment_requests || assignmentRequests[selectedCase.id] || []).length > 0 ? (
+                        (selectedCase.assignment_requests || assignmentRequests[selectedCase.id] || []).map((request) => (
+                          <div key={request.id} className="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="font-semibold text-slate-900 dark:text-white">
+                                  {request.student?.first_name && request.student?.last_name
+                                    ? `${request.student.first_name} ${request.student.last_name}`
+                                    : request.student?.username || request.student?.email || "-"}
+                                </p>
+                                {request.message && (
+                                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{request.message}</p>
+                                )}
+                                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                                  {request.created_at ? new Date(request.created_at).toLocaleString("ar-SA") : "-"}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  request.status === "accepted" ? "bg-green-100 text-green-600" :
+                                  request.status === "rejected" ? "bg-red-100 text-red-600" :
+                                  "bg-yellow-100 text-yellow-600"
+                                }`}>
+                                  {request.status === "accepted" ? t("ClinicalCases.requestStatus.accepted") || "مقبول" :
+                                   request.status === "rejected" ? t("ClinicalCases.requestStatus.rejected") || "مرفوض" :
+                                   t("ClinicalCases.requestStatus.pending") || "قيد الانتظار"}
+                                </span>
+                                {/* أزرار قبول/رفض - فقط للمشرف */}
+                                {user?.role === "supervisor" && request.status === "pending" && (
                                 <div className="flex gap-1">
                                   <button
                                     onClick={() => handleSupervisorAction(selectedCase.id, "accept", request.student?.id || request.student)}
@@ -873,6 +990,123 @@ export default function ClinicalCasesPage() {
                     )}
                   </div>
                 </div>
+
+                {/* جلسات الحالة - تظهر فقط للمشرف */}
+                {user?.role === "supervisor" && (
+                  <div>
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-semibold text-slate-700 dark:text-slate-300">
+                        {t("ClinicalCases.details.sessions") || "جلسات الحالة"}
+                      </h3>
+                    </div>
+                    {loadingSessions ? (
+                      <div className="flex justify-center items-center py-8">
+                        <Loader2 className="animate-spin text-blue-500" size={24} />
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {(caseSessions[selectedCase.id] || []).length > 0 ? (
+                          (caseSessions[selectedCase.id] || []).map((session) => (
+                            <div
+                              key={session.id}
+                              className="bg-slate-50 dark:bg-slate-700 p-4 rounded-lg border border-slate-200 dark:border-slate-600"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex-1">
+                                  <p className="font-semibold text-slate-900 dark:text-white">
+                                    {session.title || t("ClinicalCases.details.sessionTitle") || "جلسة"}
+                                  </p>
+                                  {session.description && (
+                                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                                      {session.description}
+                                    </p>
+                                  )}
+                                  <div className="flex flex-wrap gap-2 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                    {session.session_date && (
+                                      <span>
+                                        {t("ClinicalCases.details.sessionDate") || "التاريخ"}:{" "}
+                                        {new Date(session.session_date).toLocaleDateString("ar-SA")}
+                                      </span>
+                                    )}
+                                    {session.student && (
+                                      <span>
+                                        {t("ClinicalCases.details.student") || "الطالب"}:{" "}
+                                        {session.student?.first_name} {session.student?.last_name}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-2">
+                                    <span
+                                      className={`px-2 py-1 rounded-full text-xs ${
+                                        session.status === "approved"
+                                          ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                          : session.status === "rejected"
+                                          ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                          : session.status === "pending_modification"
+                                          ? "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                          : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                                      }`}
+                                    >
+                                      {session.status === "approved"
+                                        ? t("ClinicalCases.sessionStatus.approved") || "موافق عليها"
+                                        : session.status === "rejected"
+                                        ? t("ClinicalCases.sessionStatus.rejected") || "مرفوضة"
+                                        : session.status === "pending_modification"
+                                        ? t("ClinicalCases.sessionStatus.pendingModification") || "في انتظار التعديل"
+                                        : t("ClinicalCases.sessionStatus.pending") || "قيد المراجعة"}
+                                    </span>
+                                  </div>
+                                  {session.supervisor_feedback && (
+                                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                                      <strong>{t("ClinicalCases.details.feedback") || "ملاحظات المشرف"}:</strong>{" "}
+                                      {session.supervisor_feedback}
+                                    </p>
+                                  )}
+                                </div>
+                                {/* أزرار إجراءات المشرف - فقط للجلسات المعلقة */}
+                                {session.status === "pending" && (
+                                  <div className="flex flex-col gap-2 ml-2">
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handleApproveSession(selectedCase.id, session.id)}
+                                      className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-xs"
+                                      title={t("ClinicalCases.approveSession") || "موافقة"}
+                                    >
+                                      <CheckCircle size={16} />
+                                    </motion.button>
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handleRejectSession(selectedCase.id, session.id)}
+                                      className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition text-xs"
+                                      title={t("ClinicalCases.rejectSession") || "رفض"}
+                                    >
+                                      <XCircle size={16} />
+                                    </motion.button>
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handleRequestModification(selectedCase.id, session.id)}
+                                      className="p-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition text-xs"
+                                      title={t("ClinicalCases.requestModification") || "طلب تعديل"}
+                                    >
+                                      <Pencil size={16} />
+                                    </motion.button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-slate-500 dark:text-slate-400 text-center py-4">
+                            {t("ClinicalCases.details.noSessions") || "لا توجد جلسات لهذه الحالة"}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* سجل الحالة (History) */}
                 <div>
@@ -957,5 +1191,14 @@ export default function ClinicalCasesPage() {
       </div>
     </div>
     </AnimatedWrapper>
+  );
+}
+
+export default function ClinicalCasesPage() {
+  // داشبورد مشتركة للمشرف ومسؤول الجامعة مع فصل الصلاحيات داخل الصفحة
+  return (
+    <RoleGuard allowedRoles={["supervisor", "university_admin", "student", "patient"]}>
+      <ClinicalCasesContent />
+    </RoleGuard>
   );
 }

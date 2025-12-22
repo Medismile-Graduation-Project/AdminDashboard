@@ -33,9 +33,38 @@ const sessionsSlice = createSlice({
     deleteSession: (state, action) => {
       return state.filter((s) => s.id !== action.payload);
     },
+    approveSession: (state, action) => {
+      const index = state.findIndex((s) => s.id === action.payload);
+      if (index !== -1) {
+        state[index].status = "معتمدة";
+        state[index].approved = true;
+      }
+    },
+    rejectSession: (state, action) => {
+      const index = state.findIndex((s) => s.id === action.payload);
+      if (index !== -1) {
+        state[index].status = "مرفوضة";
+        state[index].rejected = true;
+      }
+    },
+    requestModification: (state, action) => {
+      const { sessionId, comments } = action.payload;
+      const index = state.findIndex((s) => s.id === sessionId);
+      if (index !== -1) {
+        state[index].status = "طلب تعديل";
+        state[index].modificationRequested = true;
+        state[index].modificationComments = comments;
+      }
+    },
   },
 });
 
-export const { addSession, updateSession, deleteSession } =
-  sessionsSlice.actions;
+export const { 
+  addSession, 
+  updateSession, 
+  deleteSession,
+  approveSession,
+  rejectSession,
+  requestModification,
+} = sessionsSlice.actions;
 export default sessionsSlice.reducer;

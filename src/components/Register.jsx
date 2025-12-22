@@ -99,13 +99,25 @@ export default function RegisterPage() {
         
         console.log("Register data:", registerData);
         
-        result = await dispatch(
-          registerSupervisorAsync(registerData)
-        ).unwrap();
+        result = await dispatch(registerSupervisorAsync(registerData)).unwrap();
       } else if (role === "college_admin") {
-        // تسجيل إدارة كلية (يتطلب مصادقة - سنتعامل معه لاحقاً)
-        setError("إنشاء حساب إدارة الكلية يتطلب صلاحيات خاصة. يرجى التواصل مع المسؤول.");
-        return;
+        // تسجيل مسؤول جامعة (university_admin) عبر endpoint الخاص بالـ backend
+        if (!collegeUniversityId) {
+          setError("معرف الجامعة مطلوب لإنشاء حساب إدارة الجامعة");
+          return;
+        }
+
+        const registerData = {
+          username,
+          email,
+          password,
+          password_confirm: passwordConfirm,
+          first_name: firstName,
+          last_name: lastName,
+          university_id: collegeUniversityId,
+        };
+
+        result = await dispatch(registerCollegeAdminAsync(registerData)).unwrap();
       }
 
       if (result) {
@@ -264,7 +276,7 @@ export default function RegisterPage() {
                            focus:ring-2 focus:ring-[var(--color-accent)] transition"
               >
                 <option value="supervisor">مشرف</option>
-                <option value="college_admin" disabled>إدارة الكلية (يتطلب صلاحيات)</option>
+                <option value="college_admin">إدارة الجامعة</option>
               </select>
             </div>
 
@@ -305,6 +317,22 @@ export default function RegisterPage() {
                   />
                 </div>
               </>
+            )}
+
+            {/* حقول إضافية لإدارة الجامعة */}
+            {role === "college_admin" && (
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="معرف الجامعة (مطلوب)"
+                  value={collegeUniversityId}
+                  onChange={(e) => setCollegeUniversityId(e.target.value)}
+                  className="w-full px-4 py-2 border border-[var(--color-border)] rounded-lg 
+                             focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] 
+                             bg-[var(--color-bg-lightest)] text-[var(--color-bg-dark)] transition"
+                  required
+                />
+              </div>
             )}
 
             <button

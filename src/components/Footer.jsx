@@ -65,7 +65,8 @@ export default function Footer() {
         { name: t("Sidebar.treatments"), href: "/treatments" },
         { name: t("Sidebar.reports"), href: "/reports" },
         { name: t("Sidebar.content"), href: "/Medicontent" },
-        { name: t("Sidebar.studentsmanag"), href: "/studentsmanag" }
+        { name: t("Sidebar.studentsmanag"), href: "/studentsmanag" },
+        { name: "المواد الدراسية", href: "/subjects" }
       );
     }
 

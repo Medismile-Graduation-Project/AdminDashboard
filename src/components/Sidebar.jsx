@@ -66,6 +66,7 @@ const Sidebar = () => {
       { name: t("Sidebar.reports"), href: "/reports", icon: <BarChart2 size={18} /> },
       { name: t("Sidebar.content"), href: "/Medicontent", icon: <File size={18} /> },
       { name: t("Sidebar.studentsmanag"), href: "/studentsmanag", icon: <Users size={18} /> },
+      { name: "المواد الدراسية", href: "/subjects", icon: <BookOpen size={18} /> },
       { name: t("Sidebar.notifications"), href: "/notifications", icon: <Bell size={18} /> },
       { name: t("Sidebar.support"), href: "/support", icon: <HelpCircle size={18} /> }
     );

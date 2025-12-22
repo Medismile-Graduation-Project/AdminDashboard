@@ -321,14 +321,111 @@ export const supervisorCaseActionAsync = createAsyncThunk(
   }
 );
 
+/**
+ * ============================================
+ * CaseSession Thunks (جلسات الحالة)
+ * ============================================
+ */
+
+/**
+ * جلب جميع جلسات حالة محددة
+ */
+export const fetchCaseSessionsAsync = createAsyncThunk(
+  "cases/fetchCaseSessions",
+  async (caseId, { rejectWithValue }) => {
+    try {
+      const data = await casesApi.fetchCaseSessions(caseId);
+      return { caseId, sessions: Array.isArray(data) ? data : [] };
+    } catch (error) {
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || errorData || error.message;
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+/**
+ * جلب جلسة محددة
+ */
+export const fetchCaseSessionByIdAsync = createAsyncThunk(
+  "cases/fetchCaseSessionById",
+  async ({ caseId, sessionId }, { rejectWithValue }) => {
+    try {
+      const data = await casesApi.fetchCaseSessionById(caseId, sessionId);
+      return { caseId, sessionId, session: data };
+    } catch (error) {
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || errorData || error.message;
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+/**
+ * موافقة المشرف على جلسة
+ */
+export const approveCaseSessionAsync = createAsyncThunk(
+  "cases/approveCaseSession",
+  async ({ caseId, sessionId, feedback }, { rejectWithValue }) => {
+    try {
+      const data = await casesApi.approveCaseSession(caseId, sessionId, { feedback });
+      return { caseId, sessionId, session: data };
+    } catch (error) {
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || errorData || error.message;
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+/**
+ * رفض المشرف لجلسة
+ */
+export const rejectCaseSessionAsync = createAsyncThunk(
+  "cases/rejectCaseSession",
+  async ({ caseId, sessionId, feedback, reason }, { rejectWithValue }) => {
+    try {
+      const data = await casesApi.rejectCaseSession(caseId, sessionId, { feedback, reason });
+      return { caseId, sessionId, session: data };
+    } catch (error) {
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || errorData || error.message;
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+/**
+ * طلب تعديل من المشرف على جلسة
+ */
+export const requestCaseSessionModificationAsync = createAsyncThunk(
+  "cases/requestCaseSessionModification",
+  async ({ caseId, sessionId, feedback, required_modifications }, { rejectWithValue }) => {
+    try {
+      const data = await casesApi.requestCaseSessionModification(caseId, sessionId, {
+        feedback,
+        required_modifications,
+      });
+      return { caseId, sessionId, session: data };
+    } catch (error) {
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || errorData || error.message;
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
 const clinicalCasesSlice = createSlice({
   name: "clinicalCases",
   initialState: {
     cases: [],
     selectedCase: null,
     assignmentRequests: {}, // { caseId: [requests] }
+    caseSessions: {}, // { caseId: [sessions] }
+    selectedSession: null,
     loading: false,
     loadingSelected: false,
+    loadingSessions: false,
     error: null,
   },
   reducers: {
@@ -496,6 +593,108 @@ const clinicalCasesSlice = createSlice({
       })
       .addCase(supervisorCaseActionAsync.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload;
+      })
+      // fetchCaseSessionsAsync
+      .addCase(fetchCaseSessionsAsync.pending, (state) => {
+        state.loadingSessions = true;
+        state.error = null;
+      })
+      .addCase(fetchCaseSessionsAsync.fulfilled, (state, action) => {
+        state.loadingSessions = false;
+        const { caseId, sessions } = action.payload;
+        state.caseSessions[caseId] = sessions;
+        state.error = null;
+      })
+      .addCase(fetchCaseSessionsAsync.rejected, (state, action) => {
+        state.loadingSessions = false;
+        state.error = action.payload;
+      })
+      // fetchCaseSessionByIdAsync
+      .addCase(fetchCaseSessionByIdAsync.fulfilled, (state, action) => {
+        const { caseId, sessionId, session } = action.payload;
+        state.selectedSession = session;
+        // تحديث الجلسة في قائمة الجلسات
+        if (state.caseSessions[caseId]) {
+          const index = state.caseSessions[caseId].findIndex((s) => s.id === sessionId);
+          if (index !== -1) {
+            state.caseSessions[caseId][index] = session;
+          }
+        }
+      })
+      // approveCaseSessionAsync
+      .addCase(approveCaseSessionAsync.pending, (state) => {
+        state.loadingSessions = true;
+        state.error = null;
+      })
+      .addCase(approveCaseSessionAsync.fulfilled, (state, action) => {
+        state.loadingSessions = false;
+        const { caseId, sessionId, session } = action.payload;
+        // تحديث الجلسة في قائمة الجلسات
+        if (state.caseSessions[caseId]) {
+          const index = state.caseSessions[caseId].findIndex((s) => s.id === sessionId);
+          if (index !== -1) {
+            state.caseSessions[caseId][index] = session;
+          }
+        }
+        // تحديث الجلسة المحددة
+        if (state.selectedSession && state.selectedSession.id === sessionId) {
+          state.selectedSession = session;
+        }
+        state.error = null;
+      })
+      .addCase(approveCaseSessionAsync.rejected, (state, action) => {
+        state.loadingSessions = false;
+        state.error = action.payload;
+      })
+      // rejectCaseSessionAsync
+      .addCase(rejectCaseSessionAsync.pending, (state) => {
+        state.loadingSessions = true;
+        state.error = null;
+      })
+      .addCase(rejectCaseSessionAsync.fulfilled, (state, action) => {
+        state.loadingSessions = false;
+        const { caseId, sessionId, session } = action.payload;
+        // تحديث الجلسة في قائمة الجلسات
+        if (state.caseSessions[caseId]) {
+          const index = state.caseSessions[caseId].findIndex((s) => s.id === sessionId);
+          if (index !== -1) {
+            state.caseSessions[caseId][index] = session;
+          }
+        }
+        // تحديث الجلسة المحددة
+        if (state.selectedSession && state.selectedSession.id === sessionId) {
+          state.selectedSession = session;
+        }
+        state.error = null;
+      })
+      .addCase(rejectCaseSessionAsync.rejected, (state, action) => {
+        state.loadingSessions = false;
+        state.error = action.payload;
+      })
+      // requestCaseSessionModificationAsync
+      .addCase(requestCaseSessionModificationAsync.pending, (state) => {
+        state.loadingSessions = true;
+        state.error = null;
+      })
+      .addCase(requestCaseSessionModificationAsync.fulfilled, (state, action) => {
+        state.loadingSessions = false;
+        const { caseId, sessionId, session } = action.payload;
+        // تحديث الجلسة في قائمة الجلسات
+        if (state.caseSessions[caseId]) {
+          const index = state.caseSessions[caseId].findIndex((s) => s.id === sessionId);
+          if (index !== -1) {
+            state.caseSessions[caseId][index] = session;
+          }
+        }
+        // تحديث الجلسة المحددة
+        if (state.selectedSession && state.selectedSession.id === sessionId) {
+          state.selectedSession = session;
+        }
+        state.error = null;
+      })
+      .addCase(requestCaseSessionModificationAsync.rejected, (state, action) => {
+        state.loadingSessions = false;
         state.error = action.payload;
       });
   },

@@ -55,21 +55,32 @@ export const fetchEvaluationById = async (evaluationId) => {
 };
 
 /**
- * إنشاء تقييم جديد
+ * إنشاء تقييم جديد (النظام الجديد حسب التوثيق)
  * POST /api/v1/evaluations/
  * @param {Object} evaluationData - بيانات التقييم
  * {
- *   patient_id?: string (uuid or null),
- *   student_id?: string (uuid or null),
- *   appointment_id?: string (uuid or null),
- *   rating: number (1-10, required),
- *   comment?: string (nullable),
- *   evaluator_type: string (required) - patient, supervisor, student, university, admin
+ *   student_id: string (uuid, required),
+ *   target_type: string (required) - "case" | "session" | "appointment",
+ *   case_id?: string (uuid, required if target_type === "case"),
+ *   session_id?: string (uuid, required if target_type === "session"),
+ *   appointment_id?: string (uuid, required if target_type === "appointment"),
+ *   score: number (0-100, required),
+ *   rubric?: object (JSON),
+ *   comment?: string (nullable)
  * }
  */
 export const createEvaluation = async (evaluationData) => {
   const response = await apiClient.post(EVALUATIONS_BASE_URL, evaluationData);
-  return response.data;
+  return response.data?.data || response.data;
+};
+
+/**
+ * تحديث تقييم (فقط المسودات)
+ * PATCH /api/v1/evaluations/<evaluation_id>/
+ */
+export const updateEvaluation = async (evaluationId, evaluationData) => {
+  const response = await apiClient.patch(`${EVALUATIONS_BASE_URL}${evaluationId}/`, evaluationData);
+  return response.data?.data || response.data;
 };
 
 /**
@@ -81,6 +92,24 @@ export const fetchStudentAverageRatings = async (studentId) => {
     `${EVALUATIONS_BASE_URL}students/${studentId}/average-ratings/`
   );
   return response.data;
+};
+
+/**
+ * تقديم تقييم (Submit) - نقل من draft إلى submitted
+ * POST /api/v1/evaluations/<evaluation_id>/submit/
+ */
+export const submitEvaluation = async (evaluationId) => {
+  const response = await apiClient.post(`${EVALUATIONS_BASE_URL}${evaluationId}/submit/`);
+  return response.data?.data || response.data;
+};
+
+/**
+ * تثبيت تقييم (Finalize) - نقل من submitted إلى final
+ * POST /api/v1/evaluations/<evaluation_id>/finalize/
+ */
+export const finalizeEvaluation = async (evaluationId) => {
+  const response = await apiClient.post(`${EVALUATIONS_BASE_URL}${evaluationId}/finalize/`);
+  return response.data?.data || response.data;
 };
 
 

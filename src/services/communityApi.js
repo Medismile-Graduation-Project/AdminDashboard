@@ -112,13 +112,10 @@ export const deleteCommunityContent = async (id) => {
 
 /**
  * جلب المنشورات المعلقة
- * GET /api/v1/community/pending/
- * Query Parameters: user_id (مطلوب)
+ * GET /api/v1/community/moderation/pending/
  */
-export const fetchPendingContent = async (userId) => {
-  const response = await apiClient.get(`${COMMUNITY_BASE_URL}pending/`, {
-    params: { user_id: userId },
-  });
+export const fetchPendingContent = async () => {
+  const response = await apiClient.get(`${COMMUNITY_BASE_URL}moderation/pending/`);
   
   if (Array.isArray(response.data)) {
     return response.data;
@@ -126,6 +123,10 @@ export const fetchPendingContent = async (userId) => {
   
   if (response.data?.results && Array.isArray(response.data.results)) {
     return response.data.results;
+  }
+  
+  if (response.data?.data && Array.isArray(response.data.data)) {
+    return response.data.data;
   }
   
   return [];

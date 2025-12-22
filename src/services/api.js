@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Base URL للـ API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://medismile1-production.up.railway.app/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://medismile1-production.up.railway.app/api";
 
 // إنشاء axios instance مع الإعدادات الافتراضية
 const apiClient = axios.create({

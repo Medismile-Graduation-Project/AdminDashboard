@@ -36,8 +36,9 @@ import { approveContentAsync, rejectContentAsync } from "../../redux/features/me
 import { supervisorCaseActionAsync } from "../../redux/features/clinicalCases/clinicalCasesSlice";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import toast from "react-hot-toast";
+import RoleGuard from "@/components/RoleGuard";
 
-export default function NotificationsPage() {
+function NotificationsContent() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const [mounted, setMounted] = useState(false);
@@ -952,5 +953,14 @@ export default function NotificationsPage() {
         </div>
       </div>
     </AnimatedWrapper>
+  );
+}
+
+export default function NotificationsPage() {
+  // صفحة الإشعارات متاحة لجميع الأدوار
+  return (
+    <RoleGuard allowedRoles={["supervisor", "university_admin", "student", "patient", "tech_support"]}>
+      <NotificationsContent />
+    </RoleGuard>
   );
 }

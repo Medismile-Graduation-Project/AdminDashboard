@@ -5,7 +5,7 @@
 قم بإنشاء ملف `.env.local` في المجلد الرئيسي للمشروع (`my-next15-project/`) وأضف المتغير التالي:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
 ```
 
 ## الاستخدام
@@ -14,7 +14,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 
 1. **ملف الإعدادات الأساسي**: `src/services/api.js`
    - يستخدم `process.env.NEXT_PUBLIC_API_BASE_URL`
-   - القيمة الافتراضية: `http://localhost:8000/api/v1`
+   - القيمة الافتراضية: `http://localhost:8000/api`
 
 2. **جميع API Services تستخدم `apiClient`**:
    - ✅ `studentsApi.js` - إدارة الطلاب
@@ -26,13 +26,13 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 
 ```env
 # API Base URL
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
 ```
 
 أو للإنتاج:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com/api/v1
+NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com/api
 ```
 
 ## ملاحظات مهمة

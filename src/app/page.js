@@ -40,12 +40,17 @@ export default function Home() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    if (!currentUser) {
-      router.push("/login");
-    } else {
-      setUser(currentUser);
-    }
+    // ⚠️ معلق مؤقتاً للاختبار - يمكن الوصول بدون login
+    // const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    // if (!currentUser) {
+    //   router.push("/login");
+    // } else {
+    //   setUser(currentUser);
+    // }
+    
+    // إنشاء user افتراضي للاختبار
+    const mockUser = { id: 1, name: "Test User", role: "supervisor" };
+    setUser(mockUser);
   }, [router]);
 
   if (!user) return null;

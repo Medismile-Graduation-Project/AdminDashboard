@@ -163,8 +163,33 @@ export default function Navbar() {
 
             {/* تبديل الوضع الليلي/النهاري */}
             <div className="p-1.5 rounded-lg">
-                <ToggleTheme />
-              </div>
+              <ToggleTheme />
+            </div>
+
+            {/* 🔧 زر تبديل الدور للاختبار */}
+            {process.env.NODE_ENV === "development" && (
+              <select
+                value={currentUser?.role || "college_admin"}
+                onChange={(e) => {
+                  const newRole = e.target.value;
+                  localStorage.setItem("test_role", newRole);
+                  const updatedUser = {
+                    ...currentUser,
+                    role: newRole,
+                    name: newRole === "supervisor" ? "مشرف تجريبي" : "مدير كلية تجريبي",
+                  };
+                  localStorage.setItem("user", JSON.stringify(updatedUser));
+                  setCurrentUser(updatedUser);
+                  window.location.reload(); // إعادة تحميل الصفحة لتطبيق التغييرات
+                }}
+                className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-dark-lighter
+                  bg-white dark:bg-dark-light text-slate-900 dark:text-white focus:outline-none 
+                  focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              >
+                <option value="college_admin">إدارة الكلية</option>
+                <option value="supervisor">مشرف</option>
+              </select>
+            )}
 
             {/* إشعارات */}
             <div className="relative">

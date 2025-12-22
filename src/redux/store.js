@@ -1,7 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit";
 import studentsReducer from "./features/students/studentsSlice";
+import universityReducer from "./features/university/universitySlice";
 import clinicalCasesReducer from "./features/clinicalCases/clinicalCasesSlice";
 import supervisorReducer from "./features/supervisor/supervisorSlice";
+import supervisorsReducer from "./features/supervisors/supervisorsSlice";
 import evaluationsReducer from "./features/evaluations/evaluationsSlice";
 import patientsReducer from "./features/patients/patientsSlice";
 import treatmentsReducer from "./features/treatments/treatmentsSlice";
@@ -13,15 +15,18 @@ import notificationsReducer from "./features/notifications/notificationsSlice";
 import themeReducer from "./features/theme/themeSlice";
 import authReducer from "./features/auth/authSlice";
 import supportReducer from "./features/support/supportSlice";
+import subjectsReducer from "./features/subjects/subjectsSlice";
 
 
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    students: studentsReducer,
+  students: studentsReducer,
+  university: universityReducer,
     clinicalCases: clinicalCasesReducer,
     supervisor: supervisorReducer,
+    supervisors: supervisorsReducer,
     evaluations: evaluationsReducer,
     patients: patientsReducer,
     treatments: treatmentsReducer,
@@ -32,6 +37,7 @@ export const store = configureStore({
     notifications: notificationsReducer,
     theme: themeReducer,
     support: supportReducer,
+    subjects: subjectsReducer,
   },
 });
 

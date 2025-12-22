@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
-import { Download, FileText, RefreshCw } from "lucide-react";
+import { Download, FileText, RefreshCw, PlusCircle, X, Save, Eye, EyeOff } from "lucide-react";
+import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import * as XLSX from "xlsx";
@@ -14,13 +15,30 @@ import {
   fetchReportsAsync,
   fetchStudentReportsAsync,
   fetchUniversityReportsAsync,
+  createReportAsync,
+  updateReportAsync,
+  setFilters,
+  clearError,
 } from "@/redux/features/reports/reportsSlice";
+import { fetchStudentsAsync } from "@/redux/features/students/studentsSlice";
+import RoleGuard from "@/components/RoleGuard";
 
-export default function ReportsPage() {
+function ReportsContent() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    student_id: "",
+    report_type: "",
+    title: "",
+    description: "",
+    file_url: "",
+    is_active: true,
+  });
+  const [showInactive, setShowInactive] = useState(true); // Show/hide inactive reports
   
   useEffect(() => setMounted(true), []);
   
@@ -30,10 +48,16 @@ export default function ReportsPage() {
     setUser(storedUser);
   }, []);
 
+  // جلب الطلاب لاستخدامها في النموذج
+  const students = useSelector((state) => state.students?.students || []);
+  
   // جلب التقارير من API عند تحميل الصفحة
   useEffect(() => {
     if (user) {
       const params = {};
+      if (!showInactive) {
+        params.is_active = true;
+      }
       
       if (user.role === "student") {
         // الطالب يرى تقاريره فقط
@@ -43,7 +67,6 @@ export default function ReportsPage() {
         }
       } else if (user.role === "supervisor") {
         // المشرف يرى تقارير طلابه من نفس الجامعة
-        // TODO: قد نحتاج فلترة إضافية حسب university_id للطلاب
         dispatch(fetchReportsAsync(params));
       } else if (user.role === "college_admin" || user.role === "university_admin" || user.role === "tech_support") {
         // الإداريون يرون جميع التقارير
@@ -55,8 +78,13 @@ export default function ReportsPage() {
       } else {
         dispatch(fetchReportsAsync(params));
       }
+      
+      // جلب الطلاب للنموذج (لـ university_admin فقط)
+      if (user.role === "university_admin" || user.role === "supervisor") {
+        dispatch(fetchStudentsAsync());
+      }
     }
-  }, [user, dispatch]);
+  }, [user, dispatch, showInactive]);
 
   const isRtl = i18n.language === "ar";
 
@@ -90,19 +118,104 @@ export default function ReportsPage() {
     }
   };
 
-  // تحديد التقارير المعروضة حسب دور المستخدم
+  // تحديد التقارير المعروضة حسب دور المستخدم + filter by is_active
   const displayedReports = useMemo(() => {
+    let result = [];
+    
     if (user?.role === "student") {
       const studentId = user.id || user.user_id;
-      return studentReports[studentId] || [];
+      result = studentReports[studentId] || [];
     } else if (user?.role === "college_admin" || user?.role === "university_admin" || user?.role === "tech_support") {
       const universityId = user.university_id || user.university;
       if (universityId && universityReports[universityId]) {
-        return universityReports[universityId];
+        result = universityReports[universityId];
+      } else {
+        result = reports;
       }
+    } else {
+      result = reports;
     }
-    return reports;
-  }, [reports, studentReports, universityReports, user]);
+    
+    // Filter by is_active إذا كان showInactive = false
+    if (!showInactive) {
+      result = result.filter((r) => r.is_active === true);
+    }
+    
+    return result;
+  }, [reports, studentReports, universityReports, user, showInactive]);
+  
+  // Handle form change
+  const handleFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+  
+  // Handle form submit
+  const handleSubmitReport = async (e) => {
+    e.preventDefault();
+    setFormLoading(true);
+    
+    try {
+      if (!formData.student_id || !formData.report_type || !formData.title) {
+        toast.error("يجب إدخال جميع الحقول المطلوبة");
+        setFormLoading(false);
+        return;
+      }
+      
+      const reportData = {
+        student_id: formData.student_id,
+        report_type: formData.report_type,
+        title: formData.title,
+        description: formData.description || null,
+        file_url: formData.file_url || null,
+        is_active: formData.is_active !== undefined ? formData.is_active : true,
+      };
+      
+      await dispatch(createReportAsync(reportData)).unwrap();
+      toast.success("تم إنشاء التقرير بنجاح");
+      setShowForm(false);
+      setFormData({
+        student_id: "",
+        report_type: "",
+        title: "",
+        description: "",
+        file_url: "",
+        is_active: true,
+      });
+      
+      // Refresh reports
+      handleRefresh();
+    } catch (error) {
+      toast.error(error || "فشل في إنشاء التقرير");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+  
+  // Toggle report active status
+  const handleToggleActive = async (reportId, currentStatus) => {
+    try {
+      await dispatch(updateReportAsync({
+        id: reportId,
+        data: { is_active: !currentStatus },
+      })).unwrap();
+      toast.success(`تم ${!currentStatus ? "تفعيل" : "إخفاء"} التقرير`);
+      handleRefresh();
+    } catch (error) {
+      toast.error(error || "فشل في تحديث التقرير");
+    }
+  };
+  
+  // Handle error display
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
 
   // دالة تصدير التقارير إلى Excel
   const exportReportsToExcel = () => {
@@ -194,6 +307,32 @@ export default function ReportsPage() {
               {t("reports.mainTitle") || "التقارير"}
             </h1>
             <div className="flex gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
+              {(user?.role === "university_admin" || user?.role === "supervisor") && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowForm(true)}
+                  className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 
+                    hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 
+                    text-white transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
+                >
+                  <PlusCircle size={18} />
+                  <span className="hidden sm:inline">{t("reports.create") || "إنشاء تقرير"}</span>
+                </motion.button>
+              )}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowInactive(!showInactive)}
+                className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl
+                  ${showInactive 
+                    ? "bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 dark:from-gray-500 dark:to-gray-600 dark:hover:from-gray-600 dark:hover:to-gray-700 text-white"
+                    : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 text-white"
+                  }`}
+              >
+                {showInactive ? <EyeOff size={18} /> : <Eye size={18} />}
+                <span className="hidden sm:inline">{showInactive ? "إخفاء غير النشطة" : "إظهار الكل"}</span>
+              </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -274,11 +413,26 @@ export default function ReportsPage() {
                     <h3 className="font-bold text-lg sm:text-xl bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent flex-1">
                       {report.title || t("reports.report") || "تقرير"} #{report.id?.slice(0, 8) || "N/A"}
                     </h3>
-                    {report.is_active && (
-                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                        {t("reports.active") || "نشط"}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {report.is_active ? (
+                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                          {t("reports.active") || "نشط"}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400">
+                          {t("reports.inactive") || "غير نشط"}
+                        </span>
+                      )}
+                      {(user?.role === "university_admin" || user?.role === "supervisor") && (
+                        <button
+                          onClick={() => handleToggleActive(report.id, report.is_active)}
+                          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                          title={report.is_active ? "إخفاء التقرير" : "إظهار التقرير"}
+                        >
+                          {report.is_active ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   
                   {report.description && (
@@ -352,8 +506,170 @@ export default function ReportsPage() {
               ))}
             </div>
           )}
+
+          {/* Modal لإنشاء تقرير جديد */}
+          {showForm && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-sky-200 dark:border-slate-700">
+                <div className="flex justify-between items-center p-3 sm:p-4 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-slate-700 dark:to-slate-800 text-white">
+                  <h2 className="text-lg sm:text-xl font-bold text-white">
+                    {t("reports.create") || "إنشاء تقرير جديد"}
+                  </h2>
+                  <button
+                    onClick={() => setShowForm(false)}
+                    disabled={formLoading}
+                    className="p-1 rounded-full hover:bg-blue-800 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors disabled:opacity-50"
+                  >
+                    <X size={20} className="text-white" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmitReport} className="p-4 sm:p-6 space-y-4">
+                  {/* الطالب */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      الطالب <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="student_id"
+                      value={formData.student_id}
+                      onChange={handleFormChange}
+                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      disabled={formLoading}
+                      required
+                    >
+                      <option value="">اختر طالباً</option>
+                      {students.map((student) => (
+                        <option key={student.id} value={student.id}>
+                          {student.first_name} {student.last_name} {student.student_number ? `(${student.student_number})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* نوع التقرير */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      نوع التقرير <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="report_type"
+                      value={formData.report_type}
+                      onChange={handleFormChange}
+                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      disabled={formLoading}
+                      required
+                    >
+                      <option value="">اختر نوع التقرير</option>
+                      <option value="progress">تقرير تقدم</option>
+                      <option value="performance">تقرير أداء</option>
+                      <option value="final">تقرير نهائي</option>
+                      <option value="other">أخرى</option>
+                    </select>
+                  </div>
+
+                  {/* العنوان */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      العنوان <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleFormChange}
+                      placeholder="عنوان التقرير"
+                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      disabled={formLoading}
+                      required
+                    />
+                  </div>
+
+                  {/* الوصف */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      الوصف (اختياري)
+                    </label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleFormChange}
+                      rows="3"
+                      placeholder="وصف التقرير..."
+                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      disabled={formLoading}
+                    />
+                  </div>
+
+                  {/* رابط الملف */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      رابط الملف (اختياري)
+                    </label>
+                    <input
+                      type="url"
+                      name="file_url"
+                      value={formData.file_url}
+                      onChange={handleFormChange}
+                      placeholder="https://..."
+                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      disabled={formLoading}
+                    />
+                  </div>
+
+                  {/* نشط */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="is_active"
+                      checked={formData.is_active}
+                      onChange={handleFormChange}
+                      className="w-4 h-4 rounded border-sky-200 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
+                      disabled={formLoading}
+                    />
+                    <label className="text-sm text-slate-700 dark:text-slate-300">
+                      تفعيل التقرير (ظاهر للمستخدمين)
+                    </label>
+                  </div>
+
+                  {/* أزرار الإجراءات */}
+                  <div className="flex justify-end gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowForm(false)}
+                      disabled={formLoading}
+                      className="p-2 sm:p-3 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:ring-offset-2 transition disabled:opacity-50"
+                    >
+                      {t("actions.cancel") || "إلغاء"}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={formLoading}
+                      className="p-2 sm:p-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-xl flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:ring-offset-2 transition disabled:opacity-50"
+                    >
+                      {formLoading ? (
+                        <RefreshCw size={16} className="animate-spin" />
+                      ) : (
+                        <Save size={16} />
+                      )}{" "}
+                      {t("actions.save") || "حفظ"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </AnimatedWrapper>
+  );
+}
+
+export default function ReportsPage() {
+  // صفحة التقارير متاحة للمشرف، مسؤول الجامعة، الطالب، وtech_support
+  return (
+    <RoleGuard allowedRoles={["supervisor", "university_admin", "student", "tech_support"]}>
+      <ReportsContent />
+    </RoleGuard>
   );
 }

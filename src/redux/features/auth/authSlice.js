@@ -6,7 +6,7 @@ export const loginAsync = createAsyncThunk(
   "auth/login",
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.post("/accounts/login/", {
+      const response = await apiClient.post("/accounts/auth/login/", {
         email,
         password,
       });
@@ -23,10 +23,11 @@ export const loginAsync = createAsyncThunk(
 
       return { tokens, user };
     } catch (error) {
-      // معالجة أفضل للأخطاء
+      // معالجة الأخطاء حسب صيغة API الموحدة
       let errorMessage = "فشل تسجيل الدخول";
       
       if (error.response?.data) {
+        // صيغة API الموحدة: { status: "error", message: "...", errors: {...} }
         if (error.response.data.message) {
           errorMessage = error.response.data.message;
         } else if (error.response.data.detail) {
@@ -35,6 +36,15 @@ export const loginAsync = createAsyncThunk(
           errorMessage = Array.isArray(error.response.data.non_field_errors) 
             ? error.response.data.non_field_errors[0] 
             : error.response.data.non_field_errors;
+        } else if (error.response.data.errors) {
+          // معالجة errors object
+          const errors = error.response.data.errors;
+          if (typeof errors === 'object') {
+            const firstError = Object.values(errors)[0];
+            errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+          } else {
+            errorMessage = errors;
+          }
         }
       } else if (error.message) {
         errorMessage = error.message;
@@ -53,7 +63,7 @@ export const logoutAsync = createAsyncThunk(
     // محاولة تسجيل الخروج من API (اختياري - لا نمنع العملية إذا فشل)
     if (refreshToken) {
       try {
-        await apiClient.post("/accounts/logout/", {
+        await apiClient.post("/accounts/auth/logout/", {
           refresh: refreshToken,
         });
         console.log("✅ Logout API success");

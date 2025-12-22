@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,18 +16,39 @@ import {
   sendMessage,
   uploadFiles,
 } from "../../redux/features/supervisor/supervisorSlice";
+import RoleGuard from "@/components/RoleGuard";
+import { fetchStudentsAsync } from "../../redux/features/students/studentsSlice";
+import { useEffect } from "react";
+import { getUser } from "@/lib/auth";
 
-export default function SupervisorPage() {
+function SupervisorContent() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
 
   const { students, selectedStudent, messages } = useSelector(
     (state) => state.supervisor
   );
+  
+  // جلب الطلاب من API (طلاب المشرف فقط)
+  const apiStudents = useSelector((state) => state.students?.students || []);
+  const [user, setUser] = useState(null);
+  
+  useEffect(() => {
+    setUser(getUser());
+  }, []);
+  
+  useEffect(() => {
+    if (user?.role === "supervisor") {
+      dispatch(fetchStudentsAsync());
+    }
+  }, [dispatch, user]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [mobileView, setMobileView] = useState("list"); // "list" | "chat"
+  
+  // استخدام الطلاب من API إذا كانوا متاحين، وإلا استخدم mock data
+  const displayStudents = apiStudents.length > 0 ? apiStudents : students;
 
   // إرسال رسالة
   const handleSend = (type = "normal") => {
@@ -51,9 +72,10 @@ export default function SupervisorPage() {
   };
 
   // 🔍 فلترة الطلاب
-  const filteredStudents = students.filter((s) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStudents = displayStudents.filter((s) => {
+    const name = s.name || s.first_name || s.username || s.email || "";
+    return name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   // اختيار طالب
   const handleSelectStudent = (student) => {
@@ -96,7 +118,7 @@ export default function SupervisorPage() {
                     : "hover:bg-sky-50 dark:hover:bg-slate-700"
                 }`}
               >
-                {student.name}
+                {student.name || student.first_name || student.username || student.email || "-"}
               </li>
             ))
           )}
@@ -222,5 +244,14 @@ export default function SupervisorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SupervisorPage() {
+  // صفحة الرسائل متاحة فقط للمشرف
+  return (
+    <RoleGuard allowedRoles={["supervisor"]}>
+      <SupervisorContent />
+    </RoleGuard>
   );
 }

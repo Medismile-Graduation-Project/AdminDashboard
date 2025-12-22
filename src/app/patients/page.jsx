@@ -13,8 +13,9 @@ import {
   clearError,
 } from "../../redux/features/patients/patientsSlice";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
+import RoleGuard from "@/components/RoleGuard";
 
-export default function PatientsPage() {
+function PatientsPageContent() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const { patients, loading, error } = useSelector((state) => state.patients);
@@ -667,5 +668,14 @@ export default function PatientsPage() {
       </div>
     </div>
     </AnimatedWrapper>
+  );
+}
+
+export default function PatientsPage() {
+  // وفق التوثيق: قائمة المرضى متاحة لمسؤولي الجامعات والدعم التقني فقط
+  return (
+    <RoleGuard allowedRoles={["university_admin", "tech_support"]}>
+      <PatientsPageContent />
+    </RoleGuard>
   );
 }

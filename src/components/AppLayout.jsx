@@ -24,6 +24,10 @@ export default function AppLayout({ children }) {
 
   useEffect(() => setMounted(true), []);
 
+  const hideLayout = ["/login", "/register"].some((p) =>
+    pathname.startsWith(p)
+  );
+
   // التحقق من المصادقة عند التحميل
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -38,11 +42,7 @@ export default function AppLayout({ children }) {
         router.push("/login");
       }
     }
-  }, [dispatch, router, pathname]);
-
-  const hideLayout = ["/login", "/register"].some((p) =>
-    pathname.startsWith(p)
-  );
+  }, [dispatch, router, pathname, hideLayout]);
 
   // عند تغيير المسار: أظهر اللودينغ فورًا ثم أخفِه بعد 0.3 ثانية
   useEffect(() => {

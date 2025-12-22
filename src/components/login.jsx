@@ -29,12 +29,30 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    const accessToken = localStorage.getItem("access_token");
-    
-    if (currentUser && accessToken) {
-      router.push("/");
-    } else {
+    // إذا كان المستخدم مسجلاً دخوله بالفعل، نعيد توجيهه بعيداً عن صفحة تسجيل الدخول
+    try {
+      const storedUser =
+        typeof window !== "undefined"
+          ? JSON.parse(localStorage.getItem("user") || "null")
+          : null;
+      const accessToken =
+        typeof window !== "undefined"
+          ? localStorage.getItem("access_token")
+          : null;
+
+      if (storedUser && accessToken) {
+        const role = storedUser.role;
+        if (role === "supervisor") {
+          router.push("/ClinicalCases");
+        } else if (role === "university_admin") {
+          router.push("/patients");
+        } else {
+          router.push("/");
+        }
+      } else {
+        setIsLoading(false);
+      }
+    } catch {
       setIsLoading(false);
     }
   }, [router]);
@@ -54,12 +72,14 @@ export default function LoginPage() {
       if (result?.user) {
         toast.success("تم تسجيل الدخول بنجاح");
         
-        // التوجيه حسب الدور
-        if (result.user.role === "supervisor") {
+        // التوجيه حسب الدور (حسب توثيق API)
+        const role = result.user.role;
+        if (role === "supervisor") {
           router.push("/ClinicalCases");
-        } else if (result.user.role === "college_admin" || result.user.role === "university_admin") {
+        } else if (role === "university_admin") {
           router.push("/patients");
         } else {
+          // للأدوار الأخرى (patient, student, tech_support)
           router.push("/");
         }
       }

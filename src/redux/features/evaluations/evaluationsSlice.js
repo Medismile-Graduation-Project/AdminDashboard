@@ -2,8 +2,11 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   fetchEvaluations,
   createEvaluation as createEvaluationApi,
+  updateEvaluation as updateEvaluationApi,
   fetchEvaluationById,
   fetchStudentAverageRatings,
+  submitEvaluation,
+  finalizeEvaluation,
 } from "../../../services/evaluationsApi";
 
 /**
@@ -69,30 +72,47 @@ const mapEvaluationFromApi = (apiEvaluation) => {
   
   return {
     id: safeValue(apiEvaluation.id),
-    // اسم المقيم
-    name: getEvaluatorName(apiEvaluation),
+    // اسم المقيم (من evaluator object)
+    name: apiEvaluation.evaluator ? getUserName(apiEvaluation.evaluator) : getEvaluatorName(apiEvaluation),
     // تاريخ التقييم
     date: formatDate(apiEvaluation.created_at),
-    // التقييم (من 1-10، نحوله إلى 5 نجوم)
-    rating: safeValue(apiEvaluation.rating, 0),
-    // عدد النجوم للعرض (تحويل من 1-10 إلى 1-5)
-    starRating: Math.round((safeValue(apiEvaluation.rating, 0) / 10) * 5),
+    // التقييم (من 1-10 للتوافق مع النظام القديم، أو score 0-100 للنظام الجديد)
+    rating: safeValue(apiEvaluation.rating, safeValue(apiEvaluation.score, 0) / 10), // تحويل score إلى rating للتوافق
+    // Score (0-100) - النظام الجديد
+    score: safeValue(apiEvaluation.score, safeValue(apiEvaluation.rating, 0) * 10), // تحويل rating إلى score للتوافق
+    // عدد النجوم للعرض (تحويل من 1-10 إلى 1-5 أو من score)
+    starRating: Math.round((safeValue(apiEvaluation.rating, safeValue(apiEvaluation.score, 0) / 10) / 10) * 5),
     // التعليق
     comment: safeValue(apiEvaluation.comment, ""),
-    // نوع المقيم
+    // نوع المقيم (للتوافق مع النظام القديم)
     evaluatorType: safeValue(apiEvaluation.evaluator_type, ""),
-    // حالة التقييم (new/reviewed - سنستخدم evaluator_type كحالة مؤقتاً)
-    status: "new", // يمكن تحسينه لاحقاً بناءً على منطق إضافي
+    // النظام الجديد: target_type, status
+    target_type: safeValue(apiEvaluation.target_type, ""),
+    target_id: safeValue(apiEvaluation.case_id || apiEvaluation.session_id || apiEvaluation.appointment_id),
+    status: safeValue(apiEvaluation.status, "draft"), // draft, submitted, final
+    rubric: safeValue(apiEvaluation.rubric, null), // JSON object
     // بيانات API الأصلية
     _apiData: {
       id: safeValue(apiEvaluation.id),
+      evaluator: safeValue(apiEvaluation.evaluator),
       patient: safeValue(apiEvaluation.patient),
       student: safeValue(apiEvaluation.student),
       appointment: safeValue(apiEvaluation.appointment),
+      case: safeValue(apiEvaluation.case),
+      session: safeValue(apiEvaluation.session),
       rating: safeValue(apiEvaluation.rating),
+      score: safeValue(apiEvaluation.score),
       comment: safeValue(apiEvaluation.comment),
       evaluator_type: safeValue(apiEvaluation.evaluator_type),
+      target_type: safeValue(apiEvaluation.target_type),
+      case_id: safeValue(apiEvaluation.case_id),
+      session_id: safeValue(apiEvaluation.session_id),
+      appointment_id: safeValue(apiEvaluation.appointment_id),
+      rubric: safeValue(apiEvaluation.rubric),
+      status: safeValue(apiEvaluation.status),
       created_at: safeValue(apiEvaluation.created_at),
+      submitted_at: safeValue(apiEvaluation.submitted_at),
+      finalized_at: safeValue(apiEvaluation.finalized_at),
     },
   };
 };
@@ -128,10 +148,61 @@ export const createEvaluationAsync = createAsyncThunk(
   async (evaluationData, { rejectWithValue }) => {
     try {
       const createdEvaluation = await createEvaluationApi(evaluationData);
-      return mapEvaluationFromApi(createdEvaluation);
+      return createdEvaluation; // نعيد البيانات كما هي (قد تحتاج mapping لاحقاً)
     } catch (error) {
       return rejectWithValue(
-        error?.response?.data?.message || error?.message || "فشل في إنشاء التقييم"
+        error?.response?.data?.message || error?.message || error?.response?.data?.detail || "فشل في إنشاء التقييم"
+      );
+    }
+  }
+);
+
+/**
+ * تحديث تقييم (فقط المسودات)
+ */
+export const updateEvaluationAsync = createAsyncThunk(
+  "evaluations/updateEvaluation",
+  async ({ evaluationId, evaluationData }, { rejectWithValue }) => {
+    try {
+      const updated = await updateEvaluationApi(evaluationId, evaluationData);
+      return updated;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في تحديث التقييم"
+      );
+    }
+  }
+);
+
+/**
+ * تقديم تقييم (Submit)
+ */
+export const submitEvaluationAsync = createAsyncThunk(
+  "evaluations/submitEvaluation",
+  async (evaluationId, { rejectWithValue }) => {
+    try {
+      const updated = await submitEvaluation(evaluationId);
+      return updated;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في تقديم التقييم"
+      );
+    }
+  }
+);
+
+/**
+ * تثبيت تقييم (Finalize)
+ */
+export const finalizeEvaluationAsync = createAsyncThunk(
+  "evaluations/finalizeEvaluation",
+  async (evaluationId, { rejectWithValue }) => {
+    try {
+      const updated = await finalizeEvaluation(evaluationId);
+      return updated;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في تثبيت التقييم"
       );
     }
   }
@@ -215,6 +286,60 @@ const evaluationsSlice = createSlice({
       .addCase(createEvaluationAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "حدث خطأ أثناء إنشاء التقييم";
+      })
+      // تحديث تقييم
+      .addCase(updateEvaluationAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateEvaluationAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        const index = state.reviews.findIndex((r) => r.id === updated.id);
+        if (index !== -1) {
+          state.reviews[index] = mapEvaluationFromApi(updated);
+        }
+        state.error = null;
+      })
+      .addCase(updateEvaluationAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "حدث خطأ أثناء تحديث التقييم";
+      })
+      // تقديم تقييم
+      .addCase(submitEvaluationAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(submitEvaluationAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        const index = state.reviews.findIndex((r) => r.id === updated.id);
+        if (index !== -1) {
+          state.reviews[index] = mapEvaluationFromApi(updated);
+        }
+        state.error = null;
+      })
+      .addCase(submitEvaluationAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "حدث خطأ أثناء تقديم التقييم";
+      })
+      // تثبيت تقييم
+      .addCase(finalizeEvaluationAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(finalizeEvaluationAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        const index = state.reviews.findIndex((r) => r.id === updated.id);
+        if (index !== -1) {
+          state.reviews[index] = mapEvaluationFromApi(updated);
+        }
+        state.error = null;
+      })
+      .addCase(finalizeEvaluationAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "حدث خطأ أثناء تثبيت التقييم";
       })
       // جلب متوسط التقييمات
       .addCase(fetchStudentAverageRatingsAsync.pending, (state) => {

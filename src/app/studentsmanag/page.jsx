@@ -14,8 +14,9 @@ import {
 } from "../../redux/features/students/studentsSlice";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import toast from "react-hot-toast";
+import RoleGuard from "@/components/RoleGuard";
 
-export default function StudentsmanagPage() {
+function StudentsmanagPageContent() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const studentsState = useSelector((state) => state.students);
@@ -24,7 +25,23 @@ export default function StudentsmanagPage() {
   const error = studentsState?.error || null;
 
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+      setUser(storedUser);
+
+      // تعبئة university_id افتراضياً من المستخدم (مسؤول الجامعة)
+      const uniId = storedUser?.university_id || storedUser?.university || "";
+      if (uniId) {
+        setFormData((prev) => ({
+          ...prev,
+          university_id: uniId,
+        }));
+      }
+    }
+  }, []);
 
   const [showForm, setShowForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
@@ -72,7 +89,8 @@ export default function StudentsmanagPage() {
       student_id: "",
       year_of_study: "",
       specialization: "",
-      university_id: "",
+      university_id:
+        user?.university_id || user?.university || "",
       address: "",
       phone_number: "",
     });
@@ -163,8 +181,14 @@ export default function StudentsmanagPage() {
         if (formData.specialization) {
           createData.specialization = formData.specialization;
         }
-        if (formData.university_id) {
-          createData.university_id = formData.university_id;
+        // حقل الجامعة كما يطلب الـ API: university (وليس university_id)
+        const uniId =
+          formData.university_id ||
+          user?.university_id ||
+          user?.university ||
+          null;
+        if (uniId) {
+          createData.university = uniId;
         }
 
         await dispatch(createStudentAsync(createData)).unwrap();
@@ -691,5 +715,14 @@ export default function StudentsmanagPage() {
         </div>
       </div>
     </AnimatedWrapper>
+  );
+}
+
+export default function StudentsmanagPage() {
+  // وفق التوثيق: إنشاء/إدارة الطلاب يتم من خلال مسؤول الجامعة فقط
+  return (
+    <RoleGuard allowedRoles={["university_admin"]}>
+      <StudentsmanagPageContent />
+    </RoleGuard>
   );
 }
