@@ -8,16 +8,23 @@ import { useSelector, useDispatch } from "react-redux";
 import { Menu, X, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ToggleTheme from "./ToggleTheme";
-import { fetchNotificationsAsync, toggleNotificationReadAsync, fetchUnreadCountAsync } from "../redux/features/notifications/notificationsSlice";
+// 🔕 الإشعارات معلقة مؤقتاً
+// import { fetchNotificationsAsync, toggleNotificationReadAsync, fetchUnreadCountAsync } from "../redux/features/notifications/notificationsSlice";
 import { logoutAsync } from "../redux/features/auth/authSlice";
+import { getUser } from "@/lib/auth";
 import toast from "react-hot-toast";
 
 // دالة إرسال إشعار
 export function sendNotification(notification) {
-  const notifications = JSON.parse(localStorage.getItem("notifications")) || [];
-  notifications.push(notification);
-  localStorage.setItem("notifications", JSON.stringify(notifications));
-  window.dispatchEvent(new Event("new-notification"));
+  try {
+    const stored = localStorage.getItem("notifications");
+    const notifications = stored ? JSON.parse(stored) : [];
+    notifications.push(notification);
+    localStorage.setItem("notifications", JSON.stringify(notifications));
+    window.dispatchEvent(new Event("new-notification"));
+  } catch (error) {
+    console.error("Error saving notification to localStorage:", error);
+  }
 }
 
 export default function Navbar() {
@@ -31,24 +38,34 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
 
-  // إشعارات من Redux
-  const notificationsState = useSelector((state) => state.notifications);
-  const notifications = notificationsState?.notifications || [];
-  const unreadCount = notificationsState?.unreadCount || 0;
+  // 🔕 الإشعارات معلقة مؤقتاً
+  // const notificationsState = useSelector((state) => state.notifications);
+  // const notifications = notificationsState?.notifications || [];
+  // const unreadCount = notificationsState?.unreadCount || 0;
+  const unreadCount = 0; // مؤقتاً
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
+    // استخدام getUser من auth.js الذي يتعامل مع الأخطاء بشكل آمن
+    const user = getUser();
     setCurrentUser(user);
 
     const handleUserLogin = () => {
-      const updatedUser = JSON.parse(localStorage.getItem("user"));
+      const updatedUser = getUser();
       setCurrentUser(updatedUser);
     };
 
+    const handleUserLogout = () => {
+      setCurrentUser(null);
+    };
+
     window.addEventListener("user-login", handleUserLogin);
-    return () => window.removeEventListener("user-login", handleUserLogin);
+    window.addEventListener("user-logout", handleUserLogout);
+    return () => {
+      window.removeEventListener("user-login", handleUserLogin);
+      window.removeEventListener("user-logout", handleUserLogout);
+    };
   }, []);
 
   useEffect(() => {
@@ -61,35 +78,69 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ============================================
+  // 🔕 الإشعارات معلقة مؤقتاً
+  // ============================================
   // تحميل الإشعارات من API
-  useEffect(() => {
-    // جلب جميع الإشعارات (بدون فلترة recipient_id لأن المصادقة غير مفعلة)
-    dispatch(fetchNotificationsAsync({}));
-    dispatch(fetchUnreadCountAsync({}));
-  }, [dispatch]);
+  // useEffect(() => {
+  //   // فقط إذا كان هناك مستخدم مسجل دخول
+  //   if (!currentUser?.id) return;
 
-  // إعادة جلب الإشعارات كل 30 ثانية
-  useEffect(() => {
-    const interval = setInterval(() => {
-      dispatch(fetchNotificationsAsync({}));
-      dispatch(fetchUnreadCountAsync({}));
-    }, 30000); // 30 ثانية
+  //   // جلب الإشعارات مرة واحدة عند التحميل
+  //   const loadNotifications = async () => {
+  //     try {
+  //       await dispatch(fetchNotificationsAsync({ recipient_id: currentUser.id })).unwrap();
+  //       await dispatch(fetchUnreadCountAsync({ recipient_id: currentUser.id })).unwrap();
+  //     } catch (error) {
+  //       // تجاهل الأخطاء الصامتة - لا نطبع في console لتجنب الفوضى
+  //       // إذا كان الخطأ 500، سنتوقف عن إعادة المحاولة
+  //     }
+  //   };
 
-    return () => clearInterval(interval);
-  }, [dispatch]);
+  //   loadNotifications();
+  // }, [dispatch, currentUser?.id]);
 
-  const markAsRead = async (id) => {
-    try {
-      await dispatch(toggleNotificationReadAsync(id)).unwrap();
-      // إعادة جلب الإشعارات بعد التحديث
-      if (currentUser?.id) {
-        dispatch(fetchNotificationsAsync({ recipient_id: currentUser.id }));
-        dispatch(fetchUnreadCountAsync({ recipient_id: currentUser.id }));
-      }
-    } catch (error) {
-      console.error("Error toggling notification read status:", error);
-    }
-  };
+  // إعادة جلب الإشعارات كل 30 ثانية (فقط إذا نجحت المحاولة الأولى)
+  // useEffect(() => {
+  //   if (!currentUser?.id) return;
+
+  //   let consecutiveErrors = 0;
+  //   const MAX_CONSECUTIVE_ERRORS = 3; // بعد 3 أخطاء متتالية، نتوقف
+
+  //   const interval = setInterval(async () => {
+  //     try {
+  //       await dispatch(fetchNotificationsAsync({ recipient_id: currentUser.id })).unwrap();
+  //       await dispatch(fetchUnreadCountAsync({ recipient_id: currentUser.id })).unwrap();
+  //       consecutiveErrors = 0; // نجحت، نعيد العداد
+  //     } catch (error) {
+  //       consecutiveErrors++;
+        
+  //       // إذا تجاوزنا الحد الأقصى للأخطاء، نتوقف عن إعادة المحاولة
+  //       if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+  //         clearInterval(interval);
+  //         // يمكن إضافة toast notification هنا لإعلام المستخدم
+  //         return;
+  //       }
+  //     }
+  //   }, 30000); // 30 ثانية
+
+  //   return () => clearInterval(interval);
+  // }, [dispatch, currentUser?.id]);
+
+  // 🔕 الإشعارات معلقة مؤقتاً
+  // const markAsRead = async (id) => {
+  //   if (!id || !currentUser?.id) return;
+    
+  //   try {
+  //     await dispatch(toggleNotificationReadAsync(id)).unwrap();
+  //     // إعادة جلب الإشعارات بعد التحديث
+  //     dispatch(fetchNotificationsAsync({ recipient_id: currentUser.id }));
+  //     dispatch(fetchUnreadCountAsync({ recipient_id: currentUser.id }));
+  //   } catch (error) {
+  //     // لا نعرض الأخطاء في Console لتجنب الفوضى
+  //     // console.error("Error toggling notification read status:", error);
+  //   }
+  // };
 
   const handleLogout = async () => {
     try {
@@ -116,7 +167,11 @@ export default function Navbar() {
 
   const isRtl = i18n?.language === "ar";
   const fallbackInitial =
-    currentUser?.name?.[0]?.toUpperCase() || currentUser?.email?.[0]?.toUpperCase();
+    currentUser?.first_name?.[0]?.toUpperCase() ||
+    currentUser?.name?.[0]?.toUpperCase() ||
+    currentUser?.username?.[0]?.toUpperCase() ||
+    currentUser?.email?.[0]?.toUpperCase() ||
+    "U";
 
 
   return (
@@ -191,8 +246,8 @@ export default function Navbar() {
               </select>
             )}
 
-            {/* إشعارات */}
-            <div className="relative">
+            {/* 🔕 إشعارات - معلقة مؤقتاً */}
+            {/* <div className="relative">
               <button
                 onClick={() => router.push("/notifications")}
                 className="relative p-2 rounded-lg bg-white dark:bg-dark-light border border-slate-200 dark:border-dark-lighter
@@ -208,7 +263,7 @@ export default function Navbar() {
                   </span>
                 )}
               </button>
-            </div>
+            </div> */}
 
             {/* Profile */}
             <div
@@ -221,17 +276,26 @@ export default function Navbar() {
                          overflow-hidden transition-colors hover:bg-sky-700 dark:hover:bg-sky-600"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
-                {currentUser.image ? (
+                {currentUser?.image ? (
                   <Image
                     src={currentUser.image}
                     alt="Profile"
                     width={40}
                     height={40}
                     className="w-full h-full object-cover rounded-full"
+                    onError={(e) => {
+                      // في حالة فشل تحميل الصورة، نخفي الصورة ونعرض الحرف
+                      const button = e.target.closest("button");
+                      const image = button?.querySelector("img");
+                      const span = button?.querySelector("span");
+                      if (image) image.style.display = "none";
+                      if (span) span.style.display = "flex";
+                    }}
                   />
-                ) : (
-                  <span className="text-sm">{fallbackInitial}</span>
-                )}
+                ) : null}
+                <span className={`text-sm ${currentUser?.image ? "hidden" : "flex"}`}>
+                  {fallbackInitial}
+                </span>
               </button>
 
               <AnimatePresence>
@@ -245,28 +309,17 @@ export default function Navbar() {
                                bg-white dark:bg-dark-light rounded-lg border border-slate-200 dark:border-dark-lighter z-50
                                flex flex-col py-2 overflow-hidden"
                   >
-                    {currentUser.role === "supervisor" && (
+                    {/* هذا المشروع خاص فقط بإدارة الجامعة */}
+                    {(currentUser.role === "university_admin" || currentUser.role === "college_admin") && (
                       <button
                         onClick={() => {
-                          router.push("/ClinicalCases");
+                          router.push("/");
                           setMenuOpen(false);
                         }}
                         className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-dark-lighter 
                                  transition-colors text-slate-700 dark:text-slate-300 text-sm font-medium text-start"
                       >
-                        لوحة المشرف
-                      </button>
-                    )}
-                    {currentUser.role === "college_admin" && (
-                      <button
-                        onClick={() => {
-                          router.push("/patients");
-                          setMenuOpen(false);
-                        }}
-                        className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-dark-lighter 
-                                 transition-colors text-slate-700 dark:text-slate-300 text-sm font-medium text-start"
-                      >
-                        لوحة إدارة الكلية
+                        لوحة إدارة الجامعة
                       </button>
                     )}
                     <button
@@ -335,7 +388,8 @@ export default function Navbar() {
 
         {/* Right side: notifications + menu */}
         <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
-          {currentUser && (
+          {/* 🔕 إشعارات - معلقة مؤقتاً */}
+          {/* {currentUser && (
             <button
               onClick={() => router.push("/notifications")}
               className="relative p-2 rounded-lg bg-white dark:bg-dark-light border border-slate-200 dark:border-dark-lighter
@@ -350,7 +404,7 @@ export default function Navbar() {
                 </span>
               )}
             </button>
-          )}
+          )} */}
 
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
@@ -402,8 +456,8 @@ export default function Navbar() {
                     <span className="text-slate-700 dark:text-slate-300 font-medium">تبديل المظهر</span>
                   </div>
 
-                  {/* إشعارات */}
-                  <button
+                  {/* 🔕 إشعارات - معلقة مؤقتاً */}
+                  {/* <button
                     onClick={() => {
                       router.push("/notifications");
                       setMobileMenu(false);
@@ -417,31 +471,20 @@ export default function Navbar() {
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
-                  </button>
+                  </button> */}
 
                   <div className="border-t border-slate-200 dark:border-dark-lighter my-2"></div>
                   
-                  {/* روابط حسب الدور */}
-                  {currentUser.role === "supervisor" && (
+                  {/* هذا المشروع خاص فقط بإدارة الجامعة */}
+                  {(currentUser.role === "university_admin" || currentUser.role === "college_admin") && (
                     <button
                       onClick={() => {
-                        router.push("/ClinicalCases");
+                        router.push("/");
                         setMobileMenu(false);
                       }}
                       className="block w-full py-2 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter transition-colors text-slate-700 dark:text-slate-300 font-medium mb-1 text-start"
                     >
-                      لوحة المشرف
-                    </button>
-                  )}
-                  {currentUser.role === "college_admin" && (
-                    <button
-                      onClick={() => {
-                        router.push("/patients");
-                        setMobileMenu(false);
-                      }}
-                      className="block w-full py-2 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter transition-colors text-slate-700 dark:text-slate-300 font-medium mb-1 text-start"
-                    >
-                      لوحة إدارة الكلية
+                      لوحة إدارة الجامعة
                     </button>
                   )}
                   <button

@@ -1,0 +1,1376 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import { useRtl } from "@/hooks/useRtl";
+import { useRole } from "@/hooks/useRole";
+import RoleGuard from "@/components/RoleGuard";
+import AnimatedWrapper from "@/components/AnimatedWrapper";
+import {
+  fetchUniversityDetails,
+  updateUniversityDetails,
+  fetchFaculties,
+  createFaculty,
+  updateFaculty,
+  deleteFaculty,
+  fetchPrograms,
+  createProgram,
+  updateProgram,
+  deleteProgram,
+  fetchAcademicYears,
+  createAcademicYear,
+  updateAcademicYear,
+  deleteAcademicYear,
+} from "@/services/universityApi";
+import { Building2, GraduationCap, School, CalendarDays, Plus, Edit, Trash2, X } from "lucide-react";
+import toast from "react-hot-toast";
+import apiClient from "@/services/api";
+
+/**
+ * صفحة البنية الأكاديمية
+ * متاحة فقط لإدارة الجامعة
+ */
+export default function AcademicStructurePage() {
+  return (
+    <RoleGuard>
+      <AcademicStructureContent />
+    </RoleGuard>
+  );
+}
+
+function AcademicStructureContent() {
+  const { t } = useTranslation();
+  const isRtl = useRtl();
+  const router = useRouter();
+  const { user } = useRole();
+
+  const [loading, setLoading] = useState(true);
+  const [university, setUniversity] = useState(null);
+  const [universityId, setUniversityId] = useState(null);
+  const [faculties, setFaculties] = useState([]);
+  const [programs, setPrograms] = useState([]);
+  const [academicYears, setAcademicYears] = useState([]);
+
+  const [activeTab, setActiveTab] = useState("universities");
+
+  // Forms state
+  const [facultyForm, setFacultyForm] = useState({ name: "", code: "", description: "" });
+  const [programForm, setProgramForm] = useState({ name: "", code: "", faculty: "", level: "bachelor", duration_years: "", description: "" });
+  const [yearForm, setYearForm] = useState({ name: "", start_date: "", end_date: "", description: "", is_active: false });
+  const [universityForm, setUniversityForm] = useState({ name: "", address: "", phone: "", email: "" });
+
+  // Edit & Delete states
+  const [editingFaculty, setEditingFaculty] = useState(null);
+  const [editingProgram, setEditingProgram] = useState(null);
+  const [editingYear, setEditingYear] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, type: "", id: "", name: "" });
+
+  // جلب البيانات مباشرة - Backend يفلتر تلقائياً حسب Token
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+
+      // جلب universityId من user object (تم إضافته بعد Login)
+      let universityId = user?.university_id || user?.university;
+      
+      // إذا لم يكن موجوداً، قد يكون object
+      if (!universityId && user?.university && typeof user.university === 'object') {
+        universityId = user.university.id;
+      }
+
+      // إذا لم يكن هناك universityId، نجرب جلب Profile من API (fallback)
+      if (!universityId && user?.id && (user?.role === "university_admin" || user?.role === "college_admin")) {
+        try {
+          if (process.env.NODE_ENV === "development") {
+            console.log("⚠️ university_id not found, fetching profile...");
+          }
+          
+          const profileResponse = await apiClient.get(
+            `/accounts/university-admins/${user.id}/`
+          );
+          
+          const profile = profileResponse.data?.data || profileResponse.data;
+          
+          // استخراج university_id من Profile
+          if (profile?.university) {
+            if (typeof profile.university === 'object') {
+              universityId = profile.university.id || profile.university;
+            } else {
+              universityId = profile.university;
+            }
+          } else if (profile?.university_id) {
+            universityId = profile.university_id;
+          }
+          
+          // إذا تم جلب university_id، نحدث user object في localStorage
+          if (universityId) {
+            user.university_id = universityId;
+            user.university = universityId;
+            localStorage.setItem("user", JSON.stringify(user));
+            
+            if (process.env.NODE_ENV === "development") {
+              console.log("✅ University ID fetched and saved:", universityId);
+            }
+          }
+        } catch (profileError) {
+          if (process.env.NODE_ENV === "development") {
+            console.error("❌ Error fetching profile:", profileError);
+          }
+        }
+      }
+
+      // إذا لم يكن هناك universityId بعد كل المحاولات، لا يمكننا المتابعة
+      if (!universityId) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("❌ لم يتم العثور على university_id");
+          console.log("User object:", user);
+          console.log("User keys:", user ? Object.keys(user) : "No user");
+        }
+        toast.error("لم يتم العثور على معرف الجامعة. يرجى إعادة تسجيل الدخول.");
+        setLoading(false);
+        return;
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ University ID found:", universityId);
+      }
+
+      // جلب البيانات - Backend يفلتر تلقائياً حسب Token
+      const [uniData, facData, progData, yearsData] = await Promise.all([
+        fetchUniversityDetails(universityId).catch(() => null),
+        fetchFaculties(universityId).catch(() => []),
+        fetchPrograms(universityId).catch(() => []),
+        fetchAcademicYears(universityId).catch(() => []),
+      ]);
+
+      setUniversity(uniData);
+      setUniversityId(universityId); // حفظ universityId في state
+      setFaculties(Array.isArray(facData) ? facData : []);
+      setPrograms(Array.isArray(progData) ? progData : []);
+      setAcademicYears(Array.isArray(yearsData) ? yearsData : []);
+
+      if (uniData) {
+        setUniversityForm({
+          name: uniData.name || "",
+          address: uniData.address || "",
+          phone: uniData.phone || "",
+          email: uniData.email || "",
+        });
+        // حفظ universityId من uniData أيضاً
+        if (uniData.id) {
+          setUniversityId(uniData.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading academic structure:", error);
+      toast.error("فشل في جلب البيانات");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateFaculty = async (e) => {
+    e.preventDefault();
+    if (!universityId) return;
+
+    try {
+      const newFaculty = await createFaculty(universityId, {
+        name: facultyForm.name,
+        description: facultyForm.description || "",
+      });
+
+      setFaculties([...faculties, newFaculty]);
+      setFacultyForm({ name: "", code: "", description: "" });
+      toast.success("تم إنشاء الكلية بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في إنشاء الكلية");
+    }
+  };
+
+  const handleCreateProgram = async (e) => {
+    e.preventDefault();
+    if (!universityId) return;
+
+    try {
+      const newProgram = await createProgram(universityId, {
+        name: programForm.name,
+        code: programForm.code,
+        faculty: programForm.faculty || null,
+        level: programForm.level,
+        duration_years: programForm.duration_years || null,
+        description: programForm.description,
+      });
+
+      setPrograms([...programs, newProgram]);
+      setProgramForm({ name: "", code: "", faculty: "", level: "bachelor", duration_years: "", description: "" });
+      toast.success("تم إنشاء البرنامج بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في إنشاء البرنامج");
+    }
+  };
+
+  const handleCreateAcademicYear = async (e) => {
+    e.preventDefault();
+    if (!universityId) return;
+
+    try {
+      const newYear = await createAcademicYear(universityId, {
+        name: yearForm.name,
+        start_date: yearForm.start_date,
+        end_date: yearForm.end_date,
+        description: yearForm.description,
+      });
+
+      setAcademicYears([...academicYears, newYear]);
+      setYearForm({ name: "", start_date: "", end_date: "", description: "" });
+      toast.success("تم إنشاء السنة الأكاديمية بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في إنشاء السنة الأكاديمية");
+    }
+  };
+
+  const handleUpdateUniversity = async (e) => {
+    e.preventDefault();
+    if (!universityId) return;
+
+    try {
+      const updated = await updateUniversityDetails(universityId, universityForm);
+      setUniversity(updated);
+      toast.success("تم تحديث بيانات الجامعة بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في تحديث بيانات الجامعة");
+    }
+  };
+
+  // Faculty handlers
+  const handleEditFaculty = (faculty) => {
+    setEditingFaculty(faculty);
+    setFacultyForm({
+      name: faculty.name || "",
+      code: faculty.code || "",
+      description: faculty.description || "",
+    });
+  };
+
+  const handleUpdateFaculty = async (e) => {
+    e.preventDefault();
+    if (!universityId || !editingFaculty) return;
+
+    try {
+      const updated = await updateFaculty(universityId, editingFaculty.id, {
+        name: facultyForm.name,
+        description: facultyForm.description || "",
+      });
+      setFaculties(faculties.map((f) => (f.id === updated.id ? updated : f)));
+      setEditingFaculty(null);
+      setFacultyForm({ name: "", code: "", description: "" });
+      toast.success("تم تحديث الكلية بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في تحديث الكلية");
+    }
+  };
+
+  const handleDeleteFaculty = async () => {
+    if (!universityId || !deleteConfirm.id) return;
+
+    try {
+      await deleteFaculty(universityId, deleteConfirm.id);
+      setFaculties(faculties.filter((f) => f.id !== deleteConfirm.id));
+      setDeleteConfirm({ show: false, type: "", id: "", name: "" });
+      toast.success("تم حذف الكلية بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في حذف الكلية");
+    }
+  };
+
+  // Program handlers
+  const handleEditProgram = (program) => {
+    setEditingProgram(program);
+    setProgramForm({
+      name: program.name || "",
+      code: program.code || "",
+      faculty: program.faculty || "",
+      level: program.level || "bachelor",
+      duration_years: program.duration_years || "",
+      description: program.description || "",
+    });
+  };
+
+  const handleUpdateProgram = async (e) => {
+    e.preventDefault();
+    if (!universityId || !editingProgram) return;
+
+    try {
+      const updated = await updateProgram(universityId, editingProgram.id, programForm);
+      setPrograms(programs.map((p) => (p.id === updated.id ? updated : p)));
+      setEditingProgram(null);
+      setProgramForm({ name: "", code: "", faculty: "", level: "bachelor", duration_years: "", description: "" });
+      toast.success("تم تحديث البرنامج بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في تحديث البرنامج");
+    }
+  };
+
+  const handleDeleteProgram = async () => {
+    if (!universityId || !deleteConfirm.id) return;
+
+    try {
+      await deleteProgram(universityId, deleteConfirm.id);
+      setPrograms(programs.filter((p) => p.id !== deleteConfirm.id));
+      setDeleteConfirm({ show: false, type: "", id: "", name: "" });
+      toast.success("تم حذف البرنامج بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في حذف البرنامج");
+    }
+  };
+
+  // Academic Year handlers
+  const handleEditYear = (year) => {
+    setEditingYear(year);
+    setYearForm({
+      name: year.name || "",
+      start_date: year.start_date || "",
+      end_date: year.end_date || "",
+      description: year.description || "",
+      is_active: year.is_active || false,
+    });
+  };
+
+  const handleUpdateYear = async (e) => {
+    e.preventDefault();
+    if (!universityId || !editingYear) return;
+
+    try {
+      const updated = await updateAcademicYear(universityId, editingYear.id, yearForm);
+      setAcademicYears(academicYears.map((y) => (y.id === updated.id ? updated : y)));
+      setEditingYear(null);
+      setYearForm({ name: "", start_date: "", end_date: "", description: "", is_active: false });
+      toast.success("تم تحديث السنة الأكاديمية بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في تحديث السنة الأكاديمية");
+    }
+  };
+
+  const handleDeleteYear = async () => {
+    if (!universityId || !deleteConfirm.id) return;
+
+    try {
+      await deleteAcademicYear(universityId, deleteConfirm.id);
+      setAcademicYears(academicYears.filter((y) => y.id !== deleteConfirm.id));
+      setDeleteConfirm({ show: false, type: "", id: "", name: "" });
+      toast.success("تم حذف السنة الأكاديمية بنجاح");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "فشل في حذف السنة الأكاديمية");
+    }
+  };
+
+  if (loading) {
+    return (
+      <AnimatedWrapper>
+        <div className={`p-6 ${isRtl ? "text-right" : "text-left"}`}>
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/3"></div>
+            <div className="h-64 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          </div>
+        </div>
+      </AnimatedWrapper>
+    );
+  }
+
+  const tabs = [
+    {
+      id: "universities",
+      name: "الجامعات",
+      nameEn: "Universities",
+      icon: Building2,
+    },
+    {
+      id: "faculties",
+      name: "الكليات",
+      nameEn: "Faculties",
+      icon: School,
+    },
+    {
+      id: "programs",
+      name: "البرامج الأكاديمية",
+      nameEn: "Academic Programs",
+      icon: GraduationCap,
+    },
+    {
+      id: "years",
+      name: "السنوات الأكاديمية",
+      nameEn: "Academic Years",
+      icon: CalendarDays,
+    },
+  ];
+
+  return (
+    <AnimatedWrapper>
+      <div className={`p-6 space-y-6 ${isRtl ? "text-right" : "text-left"}`}>
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+            البنية الأكاديمية
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400">
+            إدارة الجامعات، الكليات، البرامج الأكاديمية، والسنوات الأكاديمية
+          </p>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-slate-200 dark:border-slate-700">
+          <nav className="flex space-x-8" aria-label="Tabs">
+            {tabs.map((tab) => {
+              const TabIcon = tab.icon;
+              const tabName = isRtl ? tab.name : tab.nameEn;
+              const isActive = activeTab === tab.id;
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    isActive
+                      ? "border-sky-500 text-sky-600 dark:text-sky-400"
+                      : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300"
+                  }`}
+                >
+                  <TabIcon size={18} />
+                  {tabName}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div>
+          {/* Universities Tab */}
+          {activeTab === "universities" && (
+            <div className="space-y-4">
+              {university ? (
+                  <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow">
+                    <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">
+                      {university.name}
+                    </h2>
+                    <div className="space-y-2 text-slate-700 dark:text-slate-300">
+                      {university.code && (
+                        <p>
+                          <span className="font-medium">الرمز:</span> {university.code}
+                        </p>
+                      )}
+                      {university.address && (
+                        <p>
+                          <span className="font-medium">العنوان:</span> {university.address}
+                        </p>
+                      )}
+                      {university.phone && (
+                        <p>
+                          <span className="font-medium">الهاتف:</span> {university.phone}
+                        </p>
+                      )}
+                      {university.email && (
+                        <p>
+                          <span className="font-medium">البريد الإلكتروني:</span> {university.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-slate-500 dark:text-slate-400">لا توجد بيانات الجامعة</p>
+                )}
+
+              <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow">
+                  <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">
+                    تحديث بيانات الجامعة
+                  </h2>
+                  <form onSubmit={handleUpdateUniversity} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          الاسم
+                        </label>
+                        <input
+                          type="text"
+                          value={universityForm.name}
+                          onChange={(e) =>
+                            setUniversityForm({ ...universityForm, name: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          العنوان
+                        </label>
+                        <input
+                          type="text"
+                          value={universityForm.address}
+                          onChange={(e) =>
+                            setUniversityForm({ ...universityForm, address: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          الهاتف
+                        </label>
+                        <input
+                          type="text"
+                          value={universityForm.phone}
+                          onChange={(e) =>
+                            setUniversityForm({ ...universityForm, phone: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          البريد الإلكتروني
+                        </label>
+                        <input
+                          type="email"
+                          value={universityForm.email}
+                          onChange={(e) =>
+                            setUniversityForm({ ...universityForm, email: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+                    >
+                      حفظ التغييرات
+                    </button>
+                  </form>
+                </div>
+            </div>
+          )}
+
+          {/* Faculties Tab */}
+          {activeTab === "faculties" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow">
+                  <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">
+                    إضافة كلية جديدة
+                  </h2>
+                  <form onSubmit={handleCreateFaculty} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          اسم الكلية *
+                        </label>
+                        <input
+                          type="text"
+                          value={facultyForm.name}
+                          onChange={(e) =>
+                            setFacultyForm({ ...facultyForm, name: e.target.value })
+                          }
+                          required
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          رمز الكلية
+                        </label>
+                        <input
+                          type="text"
+                          value={facultyForm.code}
+                          onChange={(e) =>
+                            setFacultyForm({ ...facultyForm, code: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        الوصف
+                      </label>
+                      <textarea
+                        value={facultyForm.description}
+                        onChange={(e) =>
+                          setFacultyForm({ ...facultyForm, description: e.target.value })
+                        }
+                        rows={3}
+                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+                    >
+                      إضافة كلية
+                    </button>
+                  </form>
+                </div>
+
+              <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow">
+                <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">
+                  قائمة الكليات ({faculties.length})
+                </h2>
+                {faculties.length > 0 ? (
+                  <div className="space-y-2">
+                    {faculties.map((faculty) => (
+                      <div
+                        key={faculty.id}
+                        className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-between"
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900 dark:text-white">
+                            {faculty.name}
+                          </p>
+                          {faculty.code && (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              رمز: {faculty.code}
+                            </p>
+                          )}
+                          {faculty.description && (
+                            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                              {faculty.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditFaculty(faculty)}
+                            className="p-2 text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-colors"
+                            title="تعديل"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() =>
+                              setDeleteConfirm({
+                                show: true,
+                                type: "faculty",
+                                id: faculty.id,
+                                name: faculty.name,
+                              })
+                            }
+                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="حذف"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 dark:text-slate-400">لا توجد كليات</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Programs Tab */}
+          {activeTab === "programs" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow">
+                  <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">
+                    إضافة برنامج أكاديمي جديد
+                  </h2>
+                  <form onSubmit={handleCreateProgram} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          اسم البرنامج *
+                        </label>
+                        <input
+                          type="text"
+                          value={programForm.name}
+                          onChange={(e) =>
+                            setProgramForm({ ...programForm, name: e.target.value })
+                          }
+                          required
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          رمز البرنامج *
+                        </label>
+                        <input
+                          type="text"
+                          value={programForm.code}
+                          onChange={(e) =>
+                            setProgramForm({ ...programForm, code: e.target.value })
+                          }
+                          required
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          الكلية
+                        </label>
+                        <select
+                          value={programForm.faculty}
+                          onChange={(e) =>
+                            setProgramForm({ ...programForm, faculty: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        >
+                          <option value="">اختر كلية</option>
+                          {faculties.map((faculty) => (
+                            <option key={faculty.id} value={faculty.id}>
+                              {faculty.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          المستوى الأكاديمي *
+                        </label>
+                        <select
+                          value={programForm.level}
+                          onChange={(e) =>
+                            setProgramForm({ ...programForm, level: e.target.value })
+                          }
+                          required
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        >
+                          <option value="bachelor">بكالوريوس</option>
+                          <option value="master">ماجستير</option>
+                          <option value="doctorate">دكتوراه</option>
+                          <option value="diploma">دبلوم</option>
+                          <option value="certificate">شهادة</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          مدة البرنامج (بالسنوات)
+                        </label>
+                        <input
+                          type="number"
+                          value={programForm.duration_years}
+                          onChange={(e) =>
+                            setProgramForm({ ...programForm, duration_years: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        الوصف
+                      </label>
+                      <textarea
+                        value={programForm.description}
+                        onChange={(e) =>
+                          setProgramForm({ ...programForm, description: e.target.value })
+                        }
+                        rows={3}
+                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+                    >
+                      إضافة برنامج
+                    </button>
+                  </form>
+                </div>
+
+              <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow">
+                <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">
+                  قائمة البرامج الأكاديمية ({programs.length})
+                </h2>
+                {programs.length > 0 ? (
+                  <div className="space-y-2">
+                    {programs.map((program) => (
+                      <div
+                        key={program.id}
+                        className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-between"
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900 dark:text-white">
+                            {program.name}
+                          </p>
+                          {program.code && (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              رمز: {program.code}
+                            </p>
+                          )}
+                          {program.level && (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              المستوى: {program.level}
+                            </p>
+                          )}
+                          {program.description && (
+                            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                              {program.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditProgram(program)}
+                            className="p-2 text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-colors"
+                            title="تعديل"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() =>
+                              setDeleteConfirm({
+                                show: true,
+                                type: "program",
+                                id: program.id,
+                                name: program.name,
+                              })
+                            }
+                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="حذف"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 dark:text-slate-400">لا توجد برامج أكاديمية</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Academic Years Tab */}
+          {activeTab === "years" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow">
+                  <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">
+                    إضافة سنة أكاديمية جديدة
+                  </h2>
+                  <form onSubmit={handleCreateAcademicYear} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          اسم السنة *
+                        </label>
+                        <input
+                          type="text"
+                          value={yearForm.name}
+                          onChange={(e) =>
+                            setYearForm({ ...yearForm, name: e.target.value })
+                          }
+                          placeholder="مثال: 2024-2025"
+                          required
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          تاريخ البداية *
+                        </label>
+                        <input
+                          type="date"
+                          value={yearForm.start_date}
+                          onChange={(e) =>
+                            setYearForm({ ...yearForm, start_date: e.target.value })
+                          }
+                          required
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          تاريخ النهاية *
+                        </label>
+                        <input
+                          type="date"
+                          value={yearForm.end_date}
+                          onChange={(e) =>
+                            setYearForm({ ...yearForm, end_date: e.target.value })
+                          }
+                          required
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        الوصف
+                      </label>
+                      <textarea
+                        value={yearForm.description}
+                        onChange={(e) =>
+                          setYearForm({ ...yearForm, description: e.target.value })
+                        }
+                        rows={3}
+                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+                    >
+                      إضافة سنة أكاديمية
+                    </button>
+                  </form>
+                </div>
+
+              <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow">
+                <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">
+                  قائمة السنوات الأكاديمية ({academicYears.length})
+                </h2>
+                {academicYears.length > 0 ? (
+                  <div className="space-y-2">
+                    {academicYears.map((year) => (
+                      <div
+                        key={year.id}
+                        className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900 dark:text-white">
+                              {year.name}
+                            </p>
+                            {year.start_date && year.end_date && (
+                              <p className="text-sm text-slate-500 dark:text-slate-400">
+                                من {new Date(year.start_date).toLocaleDateString("ar-SA")} إلى{" "}
+                                {new Date(year.end_date).toLocaleDateString("ar-SA")}
+                              </p>
+                            )}
+                            {year.description && (
+                              <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                                {year.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {year.is_active && (
+                              <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-xs font-medium">
+                                نشطة
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleEditYear(year)}
+                              className="p-2 text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-colors"
+                              title="تعديل"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button
+                              onClick={() =>
+                                setDeleteConfirm({
+                                  show: true,
+                                  type: "year",
+                                  id: year.id,
+                                  name: year.name,
+                                })
+                              }
+                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              title="حذف"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 dark:text-slate-400">لا توجد سنوات أكاديمية</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Edit Faculty Modal */}
+      {editingFaculty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-light rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                تعديل الكلية
+              </h2>
+              <button
+                onClick={() => {
+                  setEditingFaculty(null);
+                  setFacultyForm({ name: "", code: "", description: "" });
+                }}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateFaculty} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    اسم الكلية *
+                  </label>
+                  <input
+                    type="text"
+                    value={facultyForm.name}
+                    onChange={(e) =>
+                      setFacultyForm({ ...facultyForm, name: e.target.value })
+                    }
+                    required
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    رمز الكلية
+                  </label>
+                  <input
+                    type="text"
+                    value={facultyForm.code}
+                    onChange={(e) =>
+                      setFacultyForm({ ...facultyForm, code: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  الوصف
+                </label>
+                <textarea
+                  value={facultyForm.description}
+                  onChange={(e) =>
+                    setFacultyForm({ ...facultyForm, description: e.target.value })
+                  }
+                  rows={3}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingFaculty(null);
+                    setFacultyForm({ name: "", code: "", description: "" });
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+                >
+                  حفظ التغييرات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Program Modal */}
+      {editingProgram && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-light rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                تعديل البرنامج الأكاديمي
+              </h2>
+              <button
+                onClick={() => {
+                  setEditingProgram(null);
+                  setProgramForm({ name: "", code: "", faculty: "", level: "bachelor", duration_years: "", description: "" });
+                }}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateProgram} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    اسم البرنامج *
+                  </label>
+                  <input
+                    type="text"
+                    value={programForm.name}
+                    onChange={(e) =>
+                      setProgramForm({ ...programForm, name: e.target.value })
+                    }
+                    required
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    رمز البرنامج *
+                  </label>
+                  <input
+                    type="text"
+                    value={programForm.code}
+                    onChange={(e) =>
+                      setProgramForm({ ...programForm, code: e.target.value })
+                    }
+                    required
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    الكلية
+                  </label>
+                  <select
+                    value={programForm.faculty}
+                    onChange={(e) =>
+                      setProgramForm({ ...programForm, faculty: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  >
+                    <option value="">اختر كلية</option>
+                    {faculties.map((faculty) => (
+                      <option key={faculty.id} value={faculty.id}>
+                        {faculty.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    المستوى الأكاديمي *
+                  </label>
+                  <select
+                    value={programForm.level}
+                    onChange={(e) =>
+                      setProgramForm({ ...programForm, level: e.target.value })
+                    }
+                    required
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  >
+                    <option value="bachelor">بكالوريوس</option>
+                    <option value="master">ماجستير</option>
+                    <option value="doctorate">دكتوراه</option>
+                    <option value="diploma">دبلوم</option>
+                    <option value="certificate">شهادة</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    مدة البرنامج (بالسنوات)
+                  </label>
+                  <input
+                    type="number"
+                    value={programForm.duration_years}
+                    onChange={(e) =>
+                      setProgramForm({ ...programForm, duration_years: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  الوصف
+                </label>
+                <textarea
+                  value={programForm.description}
+                  onChange={(e) =>
+                    setProgramForm({ ...programForm, description: e.target.value })
+                  }
+                  rows={3}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProgram(null);
+                    setProgramForm({ name: "", code: "", faculty: "", level: "bachelor", duration_years: "", description: "" });
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+                >
+                  حفظ التغييرات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Academic Year Modal */}
+      {editingYear && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-light rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                تعديل السنة الأكاديمية
+              </h2>
+              <button
+                onClick={() => {
+                  setEditingYear(null);
+                  setYearForm({ name: "", start_date: "", end_date: "", description: "", is_active: false });
+                }}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateYear} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    اسم السنة *
+                  </label>
+                  <input
+                    type="text"
+                    value={yearForm.name}
+                    onChange={(e) =>
+                      setYearForm({ ...yearForm, name: e.target.value })
+                    }
+                    placeholder="مثال: 2024-2025"
+                    required
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    تاريخ البداية *
+                  </label>
+                  <input
+                    type="date"
+                    value={yearForm.start_date}
+                    onChange={(e) =>
+                      setYearForm({ ...yearForm, start_date: e.target.value })
+                    }
+                    required
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    تاريخ النهاية *
+                  </label>
+                  <input
+                    type="date"
+                    value={yearForm.end_date}
+                    onChange={(e) =>
+                      setYearForm({ ...yearForm, end_date: e.target.value })
+                    }
+                    required
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  الوصف
+                </label>
+                <textarea
+                  value={yearForm.description}
+                  onChange={(e) =>
+                    setYearForm({ ...yearForm, description: e.target.value })
+                  }
+                  rows={3}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={yearForm.is_active}
+                    onChange={(e) =>
+                      setYearForm({ ...yearForm, is_active: e.target.checked })
+                    }
+                    className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
+                  />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
+                    السنة الأكاديمية النشطة
+                  </span>
+                </label>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingYear(null);
+                    setYearForm({ name: "", start_date: "", end_date: "", description: "", is_active: false });
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+                >
+                  حفظ التغييرات
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-light rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
+              تأكيد الحذف
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              هل أنت متأكد من حذف {deleteConfirm.type === "faculty" ? "الكلية" : deleteConfirm.type === "program" ? "البرنامج" : "السنة الأكاديمية"}{" "}
+              <span className="font-semibold text-slate-900 dark:text-white">
+                "{deleteConfirm.name}"
+              </span>
+              ؟
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() =>
+                  setDeleteConfirm({ show: false, type: "", id: "", name: "" })
+                }
+                className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => {
+                  if (deleteConfirm.type === "faculty") {
+                    handleDeleteFaculty();
+                  } else if (deleteConfirm.type === "program") {
+                    handleDeleteProgram();
+                  } else if (deleteConfirm.type === "year") {
+                    handleDeleteYear();
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                حذف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AnimatedWrapper>
+  );
+}
+

@@ -62,5 +62,32 @@ export const createSupervisor = async (supervisorData) => {
   return response.data?.data || response.data;
 };
 
+/**
+ * تحديث مشرف
+ * PATCH /api/v1/accounts/supervisors/{user_id}/update/
+ * يعيد: {status: "success", message: "...", data: {...}}
+ */
+export const updateSupervisor = async (userId, supervisorData) => {
+  const response = await apiClient.patch(`${SUPERVISORS_BASE_URL}${userId}/update/`, supervisorData);
+  
+  return response.data?.data || response.data;
+};
+
+/**
+ * حذف مشرف
+ * DELETE /api/v1/accounts/supervisors/{user_id}/delete/
+ * يعيد: {status: "success", message: "..."}
+ */
+export const deleteSupervisor = async (userId) => {
+  if (!userId) {
+    throw new Error("User ID is required for deletion");
+  }
+  
+  await apiClient.delete(`${SUPERVISORS_BASE_URL}${userId}/delete/`);
+  return userId;
+};
+
+
+
 
 

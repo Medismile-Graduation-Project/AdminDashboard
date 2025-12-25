@@ -9,8 +9,15 @@ const CASES_BASE_URL = "/cases/";
 
 /**
  * جلب جميع الحالات السريرية
- * GET /api/v1/cases/
- * @param {Object} params - Query parameters: { patient_id, student_id, supervisor_id, is_public }
+ * GET /api/cases/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - الفلترة حسب الدور:
+ *   - مسؤول الجامعة: جميع حالات جامعته (يتم الفلترة تلقائياً من Backend)
+ * - Query Parameters: status, priority, is_public
+ * 
+ * @param {Object} params - Query parameters: { status, priority, is_public }
  * يعيد: Array of Case objects أو {status: "success", data: [...]}
  */
 export const fetchCases = async (params = {}) => {
@@ -54,18 +61,29 @@ export const fetchCases = async (params = {}) => {
 
 /**
  * جلب حالة سريرية محددة
- * GET /api/v1/cases/<uuid:pk>/
+ * GET /api/cases/<case_id>/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - يتضمن: history, assignment_requests, sessions
+ * 
+ * @param {string} caseId - UUID للحالة
  * يعيد: Case object أو {status: "success", data: {...}}
  */
 export const fetchCaseById = async (caseId) => {
-  const response = await apiClient.get(`${CASES_BASE_URL}${caseId}/`);
-  
-  // الاستجابة قد تأتي بصيغة {status: "success", data: {...}}
-  if (response.data && response.data.data) {
-    return response.data.data;
+  try {
+    const response = await apiClient.get(`${CASES_BASE_URL}${caseId}/`);
+    
+    // الاستجابة قد تأتي بصيغة {status: "success", data: {...}}
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching case by ID:", error);
+    throw error;
   }
-  
-  return response.data;
 };
 
 /**

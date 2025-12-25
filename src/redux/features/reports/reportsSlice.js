@@ -10,6 +10,58 @@ import {
 } from "../../../services/reportsApi";
 
 /**
+ * دالة مساعدة لاستخراج اسم المستخدم من User object
+ */
+const getUserName = (user) => {
+  if (!user) return "-";
+  if (typeof user === "string") return user;
+  
+  const firstName = user.first_name || "";
+  const lastName = user.last_name || "";
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`.trim();
+  }
+  if (firstName) return firstName;
+  if (user.username) return user.username;
+  if (user.name) return user.name;
+  if (user.email) return user.email;
+  return "-";
+};
+
+/**
+ * Mapping function لتحويل بيانات API إلى تنسيق مناسب للـ Frontend
+ */
+const mapReportFromApi = (apiReport) => {
+  if (!apiReport) {
+    return null;
+  }
+  
+  // Helper function لمعالجة null/undefined
+  const safeValue = (value, defaultValue = null) => {
+    return value !== null && value !== undefined ? value : defaultValue;
+  };
+  
+  return {
+    id: safeValue(apiReport.id),
+    title: safeValue(apiReport.title, ""),
+    description: safeValue(apiReport.description, ""),
+    report_type: safeValue(apiReport.report_type, ""),
+    file_url: safeValue(apiReport.file_url, ""),
+    is_active: safeValue(apiReport.is_active, true),
+    // معلومات الطالب (nested User object)
+    student: safeValue(apiReport.student, null),
+    student_name: getUserName(apiReport.student),
+    student_id: apiReport.student?.id || apiReport.student_id || null,
+    // معلومات الجامعة
+    university: safeValue(apiReport.university, null),
+    university_id: apiReport.university?.id || apiReport.university_id || null,
+    // الحقول التاريخية
+    created_at: safeValue(apiReport.created_at),
+    updated_at: safeValue(apiReport.updated_at),
+  };
+};
+
+/**
  * جلب قائمة التقارير
  */
 export const fetchReportsAsync = createAsyncThunk(
@@ -17,7 +69,11 @@ export const fetchReportsAsync = createAsyncThunk(
   async (params = {}, { rejectWithValue }) => {
     try {
       const data = await fetchReports(params);
-      return data;
+      // تحويل كل تقرير باستخدام دالة mapping
+      if (Array.isArray(data)) {
+        return data.map(mapReportFromApi).filter(Boolean);
+      }
+      return [];
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في جلب التقارير"
@@ -34,7 +90,7 @@ export const fetchReportByIdAsync = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const data = await fetchReportById(id);
-      return data;
+      return mapReportFromApi(data);
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في جلب التقرير"
@@ -51,7 +107,7 @@ export const createReportAsync = createAsyncThunk(
   async (reportData, { rejectWithValue }) => {
     try {
       const data = await createReport(reportData);
-      return data;
+      return mapReportFromApi(data);
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في إنشاء التقرير"
@@ -68,7 +124,7 @@ export const updateReportAsync = createAsyncThunk(
   async ({ id, data }, { rejectWithValue }) => {
     try {
       const updated = await updateReport(id, data);
-      return updated;
+      return mapReportFromApi(updated);
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في تحديث التقرير"

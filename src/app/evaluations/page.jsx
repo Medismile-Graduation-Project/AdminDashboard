@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Star, Loader2, PlusCircle, X, Save, Send, CheckCircle } from "lucide-react";
+import { Star, Loader2, PlusCircle, X, Save, Send, CheckCircle, Edit } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
@@ -23,6 +23,14 @@ import AnimatedWrapper from "@/components/AnimatedWrapper";
 import toast from "react-hot-toast";
 import RoleGuard from "@/components/RoleGuard";
 
+export default function EvaluationsPage() {
+  return (
+    <RoleGuard>
+      <EvaluationsContent />
+    </RoleGuard>
+  );
+}
+
 function EvaluationsContent() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
@@ -38,15 +46,23 @@ function EvaluationsContent() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // جلب معلومات المستخدم أولاً
+  const [user, setUser] = useState(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    setUser(storedUser);
+    setUserLoaded(true);
+  }, []);
+
   // State للنموذج
   const [showForm, setShowForm] = useState(false);
+  const [editingEvaluation, setEditingEvaluation] = useState(null); // للتعديل
   const [submitLoading, setSubmitLoading] = useState(false);
   
-  // تحديد evaluator_type حسب دور المستخدم
+  // تحديد evaluator_type - مسؤول الجامعة فقط
   const getDefaultEvaluatorType = () => {
-    if (user?.role === "supervisor") return "supervisor";
-    if (user?.role === "university_admin") return "university";
-    return "supervisor"; // افتراضي
+    return "university";
   };
   
   const [formData, setFormData] = useState({
@@ -76,49 +92,31 @@ function EvaluationsContent() {
   const cases = useSelector((state) => state.clinicalCases?.cases || []);
   const appointments = useSelector((state) => state.appointments?.appointments || []);
 
-  // جلب معلومات المستخدم
-  const [user, setUser] = useState(null);
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
-    setUser(storedUser);
-  }, []);
-
   // جلب التقييمات عند تحميل الصفحة
   useEffect(() => {
-    if (user) {
-      // بناء معاملات البحث
-      const params = {};
-      
-      // المشرف: يعرض التقييمات التي قام بها فقط (evaluator_type: supervisor)
-      if (user.role === "supervisor") {
-        params.evaluator_type = "supervisor";
-      }
-      // مسؤول الجامعة: يعرض جميع التقييمات أو تقييماته (evaluator_type: university)
-      else if (user.role === "university_admin") {
-        // يمكن عرض جميع التقييمات أو فلترة حسب evaluator_type
-        if (evaluatorTypeFilter !== "all") {
-          params.evaluator_type = evaluatorTypeFilter;
-        }
-      }
-      // للمستخدمين الآخرين
-      else if (evaluatorTypeFilter !== "all") {
-        params.evaluator_type = evaluatorTypeFilter;
-      }
-      
-      dispatch(fetchEvaluationsAsync(params));
-      dispatch(fetchStudentsAsync()); // جلب الطلاب للنموذج
-      // جلب الحالات والمواعيد للنموذج - فلترة حسب المستخدم
-      if (user?.role === "supervisor" && user?.id) {
-        // المشرف: فقط حالاته
-        dispatch(fetchCases({ supervisor_id: user.id }));
-        dispatch(fetchAppointmentsAsync({ supervisor_id: user.id }));
-      } else if (user?.role === "university_admin") {
-        // مسؤول الجامعة: جميع حالات الجامعة (Backend يفلتر تلقائياً)
-        dispatch(fetchCases({}));
-        dispatch(fetchAppointmentsAsync({}));
-      }
+    if (!userLoaded) return; // انتظر حتى يتم تحميل المستخدم
+    
+    // بناء معاملات البحث - مسؤول الجامعة فقط
+    const params = {};
+    
+    // مسؤول الجامعة: يمكن عرض جميع التقييمات أو فلترة حسب evaluator_type
+    if (evaluatorTypeFilter !== "all") {
+      params.evaluator_type = evaluatorTypeFilter;
     }
-  }, [dispatch, evaluatorTypeFilter, user]);
+    
+    dispatch(fetchEvaluationsAsync(params));
+    dispatch(fetchStudentsAsync()); // جلب الطلاب للنموذج
+    // جلب الحالات والمواعيد للنموذج - فلترة حسب المستخدم
+    if (user?.role === "supervisor" && user?.id) {
+      // المشرف: فقط حالاته
+      dispatch(fetchCases({ supervisor_id: user.id }));
+      dispatch(fetchAppointmentsAsync({ supervisor_id: user.id }));
+    } else if (user?.role === "university_admin") {
+      // مسؤول الجامعة: جميع حالات الجامعة (Backend يفلتر تلقائياً)
+      dispatch(fetchCases({}));
+      dispatch(fetchAppointmentsAsync({}));
+    }
+  }, [dispatch, userLoaded, user?.id, user?.role, evaluatorTypeFilter]);
 
   // عرض رسائل الخطأ
   useEffect(() => {
@@ -153,14 +151,146 @@ function EvaluationsContent() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // معالجة إضافة تقييم جديد
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // معالجة تعديل تقييم (فقط المسودات)
+  const handleEditEvaluation = (review) => {
+    if (review.status !== "draft") {
+      toast.error("يمكن تعديل المسودات فقط");
+      return;
+    }
+    
+    // ملء النموذج ببيانات التقييم الحالي
+    const apiData = review._apiData || {};
+    setFormData({
+      student_id: apiData.student?.id || apiData.student_id || "",
+      target_type: apiData.target_type || "case",
+      case_id: apiData.case_id || apiData.case?.id || "",
+      session_id: apiData.session_id || apiData.session?.id || "",
+      appointment_id: apiData.appointment_id || apiData.appointment?.id || "",
+      score: apiData.score || review.score || 0,
+      rubric: apiData.rubric ? JSON.stringify(apiData.rubric, null, 2) : "",
+      comment: apiData.comment || review.comment || "",
+    });
+    setEditingEvaluation(review);
+    setShowForm(true);
+  };
+
+  // معالجة تحديث تقييم
+  const handleUpdateEvaluation = async (e) => {
+    e.preventDefault();
+    if (!editingEvaluation) return;
+    
+    setSubmitLoading(true);
+
+    try {
+      // التحقق من البيانات
+      if (!formData.student_id) {
+        toast.error("يجب اختيار طالب");
+        setSubmitLoading(false);
+        return;
+      }
+
+      if (!formData.target_type) {
+        toast.error("يجب اختيار نوع الهدف");
+        setSubmitLoading(false);
+        return;
+      }
+
+      if (formData.score < 0 || formData.score > 100) {
+        toast.error("النقاط يجب أن تكون بين 0 و 100");
+        setSubmitLoading(false);
+        return;
+      }
+
+      // التحقق من وجود target_id حسب target_type
+      if (formData.target_type === "case" && !formData.case_id) {
+        toast.error("يجب اختيار حالة");
+        setSubmitLoading(false);
+        return;
+      }
+      if (formData.target_type === "session" && !formData.session_id) {
+        toast.error("يجب اختيار جلسة");
+        setSubmitLoading(false);
+        return;
+      }
+      if (formData.target_type === "appointment" && !formData.appointment_id) {
+        toast.error("يجب اختيار موعد");
+        setSubmitLoading(false);
+        return;
+      }
+
+      // تحضير البيانات للإرسال
+      const evaluationData = {
+        student_id: formData.student_id,
+        target_type: formData.target_type,
+        score: parseInt(formData.score),
+        comment: formData.comment || null,
+      };
+
+      // إضافة target_id حسب target_type
+      if (formData.target_type === "case") {
+        evaluationData.case_id = formData.case_id;
+      } else if (formData.target_type === "session") {
+        evaluationData.session_id = formData.session_id;
+      } else if (formData.target_type === "appointment") {
+        evaluationData.appointment_id = formData.appointment_id;
+      }
+
+      // إضافة rubric إذا كان موجوداً
+      if (formData.rubric) {
+        try {
+          evaluationData.rubric = JSON.parse(formData.rubric);
+        } catch {
+          toast.error("تنسيق JSON غير صحيح للـ rubric");
+          setSubmitLoading(false);
+          return;
+        }
+      }
+
+      await dispatch(updateEvaluationAsync({
+        evaluationId: editingEvaluation.id,
+        evaluationData
+      })).unwrap();
+      toast.success("تم تحديث التقييم بنجاح");
+      setShowForm(false);
+      setEditingEvaluation(null);
+      
+      // إعادة تعيين النموذج
+      setFormData({
+        student_id: "",
+        target_type: "case",
+        case_id: "",
+        session_id: "",
+        appointment_id: "",
+        score: 0,
+        rubric: "",
+        comment: "",
+      });
+
+      // إعادة جلب التقييمات
+      const params = {};
+      if (user?.role === "supervisor") {
+        params.evaluator_type = "supervisor";
+      } else if (user?.role === "university_admin" && evaluatorTypeFilter !== "all") {
+        params.evaluator_type = evaluatorTypeFilter;
+      } else if (evaluatorTypeFilter !== "all") {
+        params.evaluator_type = evaluatorTypeFilter;
+      }
+      dispatch(fetchEvaluationsAsync(params));
+    } catch (error) {
+      toast.error(error || "فشل في تحديث التقييم");
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   const handleSubmitEvaluation = async (e) => {
     e.preventDefault();
+    
+    // إذا كان في وضع التعديل، استخدم handleUpdateEvaluation
+    if (editingEvaluation) {
+      return handleUpdateEvaluation(e);
+    }
+    
     setSubmitLoading(true);
 
     try {
@@ -231,6 +361,7 @@ function EvaluationsContent() {
       await dispatch(createEvaluationAsync(evaluationData)).unwrap();
       toast.success("تم إنشاء التقييم بنجاح");
       setShowForm(false);
+      setEditingEvaluation(null);
       
       // إعادة تعيين النموذج
       setFormData({
@@ -502,13 +633,22 @@ function EvaluationsContent() {
                         
                         {/* أزرار الإجراءات */}
                         {(user?.role === "supervisor" || user?.role === "university_admin") && review.status === "draft" && (
-                          <button
-                            onClick={() => handleSubmitEvaluationStatus(review.id)}
-                            className="mt-2 px-3 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition flex items-center gap-1"
-                          >
-                            <Send size={14} />
-                            تقديم
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleEditEvaluation(review)}
+                              className="mt-2 px-3 py-1.5 text-sm rounded-lg bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-white transition flex items-center gap-1"
+                            >
+                              <Edit size={14} />
+                              تعديل
+                            </button>
+                            <button
+                              onClick={() => handleSubmitEvaluationStatus(review.id)}
+                              className="mt-2 px-3 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition flex items-center gap-1"
+                            >
+                              <Send size={14} />
+                              تقديم
+                            </button>
+                          </>
                         )}
                         {(user?.role === "supervisor" || user?.role === "university_admin") && review.status === "submitted" && (
                           <button
@@ -537,10 +677,16 @@ function EvaluationsContent() {
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-sky-200 dark:border-slate-700">
                 <div className="flex justify-between items-center p-3 sm:p-4 bg-gradient-to-r from-sky-200 to-blue-900 dark:from-slate-700 dark:to-slate-800 text-white">
                   <h2 className="text-lg sm:text-xl font-bold text-white">
-                    {t("reviews.addEvaluation") || "إضافة تقييم جديد"}
+                    {editingEvaluation 
+                      ? (t("reviews.editEvaluation") || "تعديل تقييم")
+                      : (t("reviews.addEvaluation") || "إضافة تقييم جديد")
+                    }
                   </h2>
                   <button
-                    onClick={() => setShowForm(false)}
+                    onClick={() => {
+                      setShowForm(false);
+                      setEditingEvaluation(null);
+                    }}
                     disabled={submitLoading}
                     className="p-1 rounded-full hover:bg-blue-800 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors disabled:opacity-50"
                   >
@@ -717,7 +863,10 @@ function EvaluationsContent() {
                   <div className="flex justify-end gap-3 pt-4">
                     <button
                       type="button"
-                      onClick={() => setShowForm(false)}
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingEvaluation(null);
+                      }}
                       disabled={submitLoading}
                       className="p-2 sm:p-3 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:ring-offset-2 transition disabled:opacity-50"
                     >
@@ -746,11 +895,3 @@ function EvaluationsContent() {
   );
 }
 
-export default function EvaluationsPage() {
-  // صفحة التقييمات متاحة للمشرف ومسؤول الجامعة
-  return (
-    <RoleGuard allowedRoles={["supervisor", "university_admin"]}>
-      <EvaluationsContent />
-    </RoleGuard>
-  );
-}

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setTheme, updateThemeFromSystem } from "../redux/features/theme/themeSlice";
 import { setUser } from "../redux/features/auth/authSlice";
+import { getUser } from "@/lib/auth";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -24,25 +25,30 @@ export default function AppLayout({ children }) {
 
   useEffect(() => setMounted(true), []);
 
-  const hideLayout = ["/login", "/register"].some((p) =>
+  const hideLayout = ["/login"].some((p) =>
     pathname.startsWith(p)
   );
 
   // التحقق من المصادقة عند التحميل
+  const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
+    if (authChecked || hideLayout) return; // منع إعادة التحقق أو إذا كنا في صفحة login/register
+    
     if (typeof window !== "undefined") {
-      const user = JSON.parse(localStorage.getItem("user") || "null");
+      const user = getUser();
       const accessToken = localStorage.getItem("access_token");
       
       if (user && accessToken) {
         // تحديث Redux state بالمستخدم
         dispatch(setUser(user));
-      } else if (!hideLayout) {
+        setAuthChecked(true);
+      } else {
         // إذا لم يكن هناك user أو token وكان في صفحة محمية، نوجه للـ login
+        setAuthChecked(true);
         router.push("/login");
       }
     }
-  }, [dispatch, router, pathname, hideLayout]);
+  }, [dispatch, router, pathname, hideLayout, authChecked]);
 
   // عند تغيير المسار: أظهر اللودينغ فورًا ثم أخفِه بعد 0.3 ثانية
   useEffect(() => {

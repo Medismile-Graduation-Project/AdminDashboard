@@ -15,6 +15,71 @@ import {
 } from "../../../services/communityApi";
 
 /**
+ * دالة مساعدة لاستخراج اسم المستخدم من User object
+ */
+const getUserName = (user) => {
+  if (!user) return "-";
+  if (typeof user === "string") return user;
+  
+  const firstName = user.first_name || "";
+  const lastName = user.last_name || "";
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`.trim();
+  }
+  if (firstName) return firstName;
+  if (user.username) return user.username;
+  if (user.name) return user.name;
+  if (user.email) return user.email;
+  return "-";
+};
+
+/**
+ * Mapping function لتحويل بيانات API إلى تنسيق مناسب للـ Frontend
+ */
+const mapContentFromApi = (apiContent) => {
+  if (!apiContent) {
+    return null;
+  }
+  
+  // Helper function لمعالجة null/undefined
+  const safeValue = (value, defaultValue = null) => {
+    return value !== null && value !== undefined ? value : defaultValue;
+  };
+  
+  return {
+    id: safeValue(apiContent.id),
+    title: safeValue(apiContent.title, ""),
+    description: safeValue(apiContent.description, ""),
+    content_type: safeValue(apiContent.content_type, ""),
+    category: safeValue(apiContent.category, ""),
+    url: safeValue(apiContent.url, ""),
+    file: safeValue(apiContent.file, ""),
+    file_url: safeValue(apiContent.file_url, ""),
+    is_featured: safeValue(apiContent.is_featured, false),
+    status: safeValue(apiContent.status, "pending"),
+    // معلومات المستخدم (nested User object)
+    author: safeValue(apiContent.author, null),
+    author_name: getUserName(apiContent.author),
+    author_id: apiContent.author?.id || apiContent.author_id || null,
+    // معلومات الموافقة
+    approved_by: safeValue(apiContent.approved_by, null),
+    approved_by_name: getUserName(apiContent.approved_by),
+    rejection_reason: safeValue(apiContent.rejection_reason, ""),
+    approved_at: safeValue(apiContent.approved_at),
+    // معلومات الجامعة
+    university: safeValue(apiContent.university, null),
+    university_id: apiContent.university?.id || apiContent.university_id || null,
+    // إحصائيات
+    likes_count: safeValue(apiContent.likes_count, 0),
+    comments_count: safeValue(apiContent.comments_count, 0),
+    is_liked: safeValue(apiContent.is_liked, false),
+    // الحقول التاريخية
+    created_at: safeValue(apiContent.created_at),
+    updated_at: safeValue(apiContent.updated_at),
+  };
+};
+
+/**
  * جلب قائمة المحتوى
  */
 export const fetchCommunityContentAsync = createAsyncThunk(
@@ -22,7 +87,11 @@ export const fetchCommunityContentAsync = createAsyncThunk(
   async (params = {}, { rejectWithValue }) => {
     try {
       const data = await fetchCommunityContent(params);
-      return data;
+      // تحويل كل محتوى باستخدام دالة mapping
+      if (Array.isArray(data)) {
+        return data.map(mapContentFromApi).filter(Boolean);
+      }
+      return [];
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في جلب المحتوى"
@@ -39,7 +108,7 @@ export const fetchCommunityContentByIdAsync = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const data = await fetchCommunityContentById(id);
-      return data;
+      return mapContentFromApi(data);
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في جلب المحتوى"
@@ -56,7 +125,7 @@ export const createCommunityContentAsync = createAsyncThunk(
   async (contentData, { rejectWithValue }) => {
     try {
       const data = await createCommunityContent(contentData);
-      return data;
+      return mapContentFromApi(data);
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في إنشاء المحتوى"
@@ -73,7 +142,7 @@ export const updateCommunityContentAsync = createAsyncThunk(
   async ({ id, data }, { rejectWithValue }) => {
     try {
       const updated = await updateCommunityContent(id, data);
-      return updated;
+      return mapContentFromApi(updated);
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في تحديث المحتوى"
@@ -386,7 +455,12 @@ const mediContentSlice = createSlice({
       })
       .addCase(fetchPendingContentAsync.fulfilled, (state, action) => {
         state.loadingPending = false;
-        state.pendingContent = action.payload || [];
+        // تحويل كل محتوى معلق باستخدام دالة mapping
+        if (Array.isArray(action.payload)) {
+          state.pendingContent = action.payload.map(mapContentFromApi).filter(Boolean);
+        } else {
+          state.pendingContent = [];
+        }
         state.error = null;
       })
       .addCase(fetchPendingContentAsync.rejected, (state, action) => {

@@ -34,41 +34,27 @@ export default function Footer() {
     setUser(storedUser);
   }, []);
 
-  // Hide footer on login/register pages
-  const hideFooter = ["/login", "/register"].some((p) =>
+  // Hide footer on login page
+  const hideFooter = ["/login"].some((p) =>
     pathname.startsWith(p)
   );
 
   if (hideFooter) return null;
 
-  // Navigation links based on user role
+  // Navigation links - مسؤول الجامعة فقط
   const getNavigationLinks = () => {
     const links = [
-      { name: t("Sidebar.home"), href: "/", icon: <Home size={16} /> }
+      { name: t("Sidebar.home") || "الرئيسية", href: "/", icon: <Home size={16} /> },
+      { name: "إدارة المستخدمين", href: "/users", icon: <Users size={16} /> },
+      { name: "الطلاب", href: "/users/students", icon: <Users size={16} /> },
+      { name: "المشرفين", href: "/users/supervisors", icon: <Users size={16} /> },
+      { name: "البنية الأكاديمية", href: "/academic-structure", icon: <BookOpen size={16} /> },
+      { name: "الحالات السريرية", href: "/university-cases", icon: <FileText size={16} /> },
+      { name: "المواعيد", href: "/university-appointments", icon: <Calendar size={16} /> },
+      { name: t("Sidebar.evaluations") || "التقييمات", href: "/evaluations", icon: <Star size={16} /> },
+      { name: "سجلات التدقيق", href: "/audit-logs", icon: <File size={16} /> },
+      { name: "الإشعارات", href: "/notifications", icon: <MessageCircle size={16} /> }
     ];
-
-    if (user?.role === "supervisor") {
-      links.push(
-        { name: t("Sidebar.clinicalCases"), href: "/ClinicalCases" },
-        { name: t("Sidebar.sessions"), href: "/sessions" },
-        { name: t("Sidebar.appointments"), href: "/appointments" },
-        { name: t("Sidebar.instructions"), href: "/supervisor" },
-        { name: t("Sidebar.evaluations"), href: "/evaluations" },
-        { name: t("Sidebar.studentsmanag"), href: "/studentsmanag" }
-      );
-    }
-
-    if (user?.role === "college_admin") {
-      links.push(
-        { name: t("Sidebar.patients"), href: "/patients" },
-        { name: t("Sidebar.appointments"), href: "/appointments" },
-        { name: t("Sidebar.treatments"), href: "/treatments" },
-        { name: t("Sidebar.reports"), href: "/reports" },
-        { name: t("Sidebar.content"), href: "/Medicontent" },
-        { name: t("Sidebar.studentsmanag"), href: "/studentsmanag" },
-        { name: "المواد الدراسية", href: "/subjects" }
-      );
-    }
 
     return links;
   };
@@ -125,6 +111,7 @@ export default function Footer() {
                 width={40}
                 height={40}
                 className="rounded-full"
+                style={{ width: "auto", height: "auto" }}
               />
               <span className="font-semibold text-lg text-slate-900 dark:text-white">
                 {t("Root.title")}

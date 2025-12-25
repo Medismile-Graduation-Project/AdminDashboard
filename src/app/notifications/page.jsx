@@ -38,6 +38,14 @@ import AnimatedWrapper from "@/components/AnimatedWrapper";
 import toast from "react-hot-toast";
 import RoleGuard from "@/components/RoleGuard";
 
+export default function NotificationsPage() {
+  return (
+    <RoleGuard>
+      <NotificationsContent />
+    </RoleGuard>
+  );
+}
+
 function NotificationsContent() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();

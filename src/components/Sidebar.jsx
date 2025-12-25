@@ -5,21 +5,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
-import {
-  Menu,
-  X,
-  Home,
-  FileText,
-  Users,
-  Calendar,
-  BarChart2,
-  BookOpen,
-  Star,
-  File,
-  HelpCircle,
-  Bell,
-} from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { getUser } from "@/lib/auth";
+import { menuItems } from "@/lib/roleConfig";
 
 const Sidebar = () => {
   const { t } = useTranslation();
@@ -28,84 +17,58 @@ const Sidebar = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const isRtl = i18n.language === "ar";
-  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    setUser(storedUser);
-
     const handleResize = () => setIsMobile(window.innerWidth < 992);
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const noSidebarPages = ["/login", "/register"];
+  const noSidebarPages = ["/login"];
   if (noSidebarPages.includes(pathname)) return null;
 
-  let menuItems = [{ name: t("Sidebar.home"), href: "/", icon: <Home size={18} /> }];
 
-  if (user?.role === "supervisor") {
-    menuItems.push(
-      { name: t("Sidebar.clinicalCases"), href: "/ClinicalCases", icon: <FileText size={18} /> },
-      { name: t("Sidebar.sessions"), href: "/sessions", icon: <Calendar size={18} /> },
-      { name: t("Sidebar.appointments"), href: "/appointments", icon: <Calendar size={18} /> },
-      { name: t("Sidebar.instructions"), href: "/supervisor", icon: <BookOpen size={18} /> },
-      { name: t("Sidebar.evaluations"), href: "/evaluations", icon: <Star size={18} /> },
-      { name: t("Sidebar.studentsmanag"), href: "/studentsmanag", icon: <Users size={18} /> },
-      { name: t("Sidebar.notifications"), href: "/notifications", icon: <Bell size={18} /> },
-      { name: t("Sidebar.support"), href: "/support", icon: <HelpCircle size={18} /> }
+  const renderMenu = () => {
+    // تحديد اللغة للعرض
+    const displayName = (item) => {
+      if (isRtl) return item.name;
+      return item.nameEn || item.name;
+    };
+
+    return (
+      <ul className="flex flex-col gap-2">
+        {menuItems.map((item, index) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const Icon = item.icon;
+          const itemName = displayName(item);
+          const itemKey = item.href || `menu-item-${index}`;
+
+          return (
+            <li key={itemKey}>
+              <Link
+                href={item.href}
+                className={`flex items-center gap-4 p-4 rounded-lg transition-colors text-base font-medium text-start
+                  ${
+                    isActive
+                      ? "bg-sky-600 text-white dark:bg-sky-600"
+                      : "text-slate-700 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-dark-light hover:text-sky-700 dark:hover:text-sky-50"
+                  }`}
+                onClick={() => isMobile && setIsDropdownOpen(false)}
+              >
+                {Icon && (
+                  <div className={`flex-shrink-0 ${isActive ? "text-white" : "text-sky-600 dark:text-sky-400"}`}>
+                    <Icon size={18} />
+                  </div>
+                )}
+                <span>{itemName}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     );
-  }
-
-  if (user?.role === "college_admin") {
-    menuItems.push(
-      { name: t("Sidebar.patients"), href: "/patients", icon: <Users size={18} /> },
-      { name: t("Sidebar.appointments"), href: "/appointments", icon: <Calendar size={18} /> },
-      { name: t("Sidebar.treatments"), href: "/treatments", icon: <BookOpen size={18} /> },
-      { name: t("Sidebar.reports"), href: "/reports", icon: <BarChart2 size={18} /> },
-      { name: t("Sidebar.content"), href: "/Medicontent", icon: <File size={18} /> },
-      { name: t("Sidebar.studentsmanag"), href: "/studentsmanag", icon: <Users size={18} /> },
-      { name: "المواد الدراسية", href: "/subjects", icon: <BookOpen size={18} /> },
-      { name: t("Sidebar.notifications"), href: "/notifications", icon: <Bell size={18} /> },
-      { name: t("Sidebar.support"), href: "/support", icon: <HelpCircle size={18} /> }
-    );
-  }
-
-  // إضافة الدعم لجميع الأدوار الأخرى أيضاً
-  if (user && !menuItems.find((item) => item.href === "/support")) {
-    menuItems.push(
-      { name: t("Sidebar.support"), href: "/support", icon: <HelpCircle size={18} /> }
-    );
-  }
-
-
-  const renderMenu = () => (
-    <ul className="flex flex-col gap-2">
-      {menuItems.map((item) => {
-        const isActive = pathname.startsWith(item.href);
-        return (
-          <li key={item.name}>
-            <Link
-              href={item.href}
-              className={`flex items-center gap-4 p-4 rounded-lg transition-colors text-base font-medium text-start
-                ${
-                  isActive
-                    ? "bg-sky-600 text-white dark:bg-sky-600"
-                    : "text-slate-700 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-dark-light hover:text-sky-700 dark:hover:text-sky-50"
-                }`}
-              onClick={() => isMobile && setIsDropdownOpen(false)}
-            >
-              <div className={`flex-shrink-0 ${isActive ? "text-white" : "text-sky-600 dark:text-sky-400"}`}>
-                {item.icon}
-              </div>
-              <span>{item.name}</span>
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
-  );
+  };
 
   return (
     <>

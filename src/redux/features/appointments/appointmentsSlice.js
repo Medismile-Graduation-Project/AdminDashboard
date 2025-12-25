@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { fetchAppointments } from "../../../services/appointmentsApi";
+import { fetchAppointments, fetchAppointmentById } from "../../../services/appointmentsApi";
 
 /**
  * دالة مساعدة لاستخراج اسم المستخدم من User object
@@ -124,9 +124,31 @@ export const fetchAppointmentsAsync = createAsyncThunk(
       
       return [];
     } catch (error) {
-      console.error("❌ Error fetching appointments:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("❌ Error fetching appointments:", error);
+      }
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في جلب المواعيد"
+      );
+    }
+  }
+);
+
+/**
+ * جلب تفاصيل موعد محدد
+ */
+export const fetchAppointmentByIdAsync = createAsyncThunk(
+  "appointments/fetchAppointmentById",
+  async (appointmentId, { rejectWithValue }) => {
+    try {
+      const data = await fetchAppointmentById(appointmentId);
+      return mapAppointmentFromApi(data);
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("❌ Error fetching appointment by ID:", error);
+      }
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في جلب تفاصيل الموعد"
       );
     }
   }
@@ -136,12 +158,17 @@ const appointmentsSlice = createSlice({
   name: "appointments",
   initialState: {
     appointments: [],
+    selectedAppointment: null,
     loading: false,
+    loadingSelected: false,
     error: null,
   },
   reducers: {
     clearError: (state) => {
       state.error = null;
+    },
+    clearSelectedAppointment: (state) => {
+      state.selectedAppointment = null;
     },
   },
   extraReducers: (builder) => {
@@ -160,10 +187,25 @@ const appointmentsSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "حدث خطأ أثناء جلب المواعيد";
         state.appointments = [];
+      })
+      // جلب تفاصيل موعد
+      .addCase(fetchAppointmentByIdAsync.pending, (state) => {
+        state.loadingSelected = true;
+        state.error = null;
+      })
+      .addCase(fetchAppointmentByIdAsync.fulfilled, (state, action) => {
+        state.loadingSelected = false;
+        state.selectedAppointment = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchAppointmentByIdAsync.rejected, (state, action) => {
+        state.loadingSelected = false;
+        state.error = action.payload || "حدث خطأ أثناء جلب تفاصيل الموعد";
+        state.selectedAppointment = null;
       });
   },
 });
 
-export const { clearError } = appointmentsSlice.actions;
+export const { clearError, clearSelectedAppointment } = appointmentsSlice.actions;
 
 export default appointmentsSlice.reducer;

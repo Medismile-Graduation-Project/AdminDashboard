@@ -2,7 +2,6 @@ import { configureStore } from "@reduxjs/toolkit";
 import studentsReducer from "./features/students/studentsSlice";
 import universityReducer from "./features/university/universitySlice";
 import clinicalCasesReducer from "./features/clinicalCases/clinicalCasesSlice";
-import supervisorReducer from "./features/supervisor/supervisorSlice";
 import supervisorsReducer from "./features/supervisors/supervisorsSlice";
 import evaluationsReducer from "./features/evaluations/evaluationsSlice";
 import patientsReducer from "./features/patients/patientsSlice";
@@ -22,10 +21,9 @@ import subjectsReducer from "./features/subjects/subjectsSlice";
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-  students: studentsReducer,
-  university: universityReducer,
+    students: studentsReducer,
+    university: universityReducer,
     clinicalCases: clinicalCasesReducer,
-    supervisor: supervisorReducer,
     supervisors: supervisorsReducer,
     evaluations: evaluationsReducer,
     patients: patientsReducer,

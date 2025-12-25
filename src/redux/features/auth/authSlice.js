@@ -2,24 +2,112 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import apiClient from "../../../services/api";
 
 // Async Thunks
+/**
+ * تسجيل الدخول
+ * POST /api/accounts/auth/login/
+ * 
+ * حسب التوثيق:
+ * - البيانات المرسلة: { "email": "...", "password": "..." }
+ * - الاستجابة الناجحة (200): {
+ *     "status": "success",
+ *     "message": "تم تسجيل الدخول بنجاح.",
+ *     "data": {
+ *       "tokens": { "access": "...", "refresh": "..." },
+ *       "user": { "id": "...", "email": "...", "role": "...", ... }
+ *     }
+ *   }
+ * - الأخطاء: 400 (بيانات غير صحيحة أو حساب غير مفعل)
+ */
 export const loginAsync = createAsyncThunk(
   "auth/login",
   async ({ email, password }, { rejectWithValue }) => {
     try {
+      // إرسال الطلب حسب التوثيق
       const response = await apiClient.post("/accounts/auth/login/", {
         email,
         password,
       });
 
+      // التحقق من صيغة الاستجابة حسب التوثيق
+      // الصيغة المتوقعة: { status: "success", message: "...", data: { tokens: {...}, user: {...} } }
+      if (!response.data) {
+        throw new Error("استجابة غير صحيحة من الخادم");
+      }
+
+      // التحقق من وجود data
+      if (!response.data.data) {
+        throw new Error("بيانات المستخدم غير متوفرة في الاستجابة");
+      }
+
       const { tokens, user } = response.data.data;
+
+      // التحقق من وجود tokens و user
+      if (!tokens || !tokens.access || !tokens.refresh) {
+        throw new Error("Tokens غير متوفرة في الاستجابة");
+      }
+
+      if (!user || !user.id) {
+        throw new Error("بيانات المستخدم غير مكتملة");
+      }
 
       // حفظ tokens في localStorage
       localStorage.setItem("access_token", tokens.access);
       localStorage.setItem("refresh_token", tokens.refresh);
+
+      // إذا كان المستخدم مسؤول جامعة، نجلب Profile للحصول على university_id
+      if (user.role === "university_admin" || user.role === "college_admin") {
+        try {
+          // جلب Profile من API
+          // نستخدم access_token مباشرة (تم حفظه للتو)
+          const profileResponse = await apiClient.get(
+            `/accounts/university-admins/${user.id}/`,
+            {
+              headers: {
+                Authorization: `Bearer ${tokens.access}`,
+              },
+            }
+          );
+          
+          const profile = profileResponse.data?.data || profileResponse.data;
+          
+          // استخراج university_id من Profile
+          // قد يكون university object أو university_id مباشرة
+          let universityId = null;
+          if (profile?.university) {
+            if (typeof profile.university === 'object') {
+              universityId = profile.university.id || profile.university;
+            } else {
+              universityId = profile.university;
+            }
+          } else if (profile?.university_id) {
+            universityId = profile.university_id;
+          }
+          
+          // إضافة university_id إلى user object
+          if (universityId) {
+            user.university_id = universityId;
+            user.university = universityId; // للتوافق مع الكود الحالي
+          }
+          
+          if (process.env.NODE_ENV === "development") {
+            console.log("✅ University ID fetched from profile:", universityId);
+          }
+        } catch (profileError) {
+          // إذا فشل جلب Profile، نتابع بدون university_id
+          // (قد لا يكون Profile موجوداً بعد أو هناك خطأ في API)
+          if (process.env.NODE_ENV === "development") {
+            console.warn("⚠️ Could not fetch university profile:", profileError);
+          }
+        }
+      }
+
+      // حفظ user (مع university_id إذا كان موجوداً) في localStorage
       localStorage.setItem("user", JSON.stringify(user));
 
       // إرسال event لتحديث المكونات
-      window.dispatchEvent(new Event("user-login"));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("user-login"));
+      }
 
       return { tokens, user };
     } catch (error) {
@@ -55,32 +143,63 @@ export const loginAsync = createAsyncThunk(
   }
 );
 
+/**
+ * تسجيل الخروج
+ * POST /api/accounts/auth/logout/
+ * 
+ * حسب التوثيق:
+ * - Headers: Authorization: Bearer <access_token> (يتم إضافتها تلقائياً من apiClient)
+ * - البيانات المرسلة: { "refresh": "..." }
+ * - الاستجابة الناجحة (205): {
+ *     "status": "success",
+ *     "message": "تم تسجيل الخروج."
+ *   }
+ * - الأخطاء: 400 (Token غير صالح), 401 (غير مصرح)
+ */
 export const logoutAsync = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     const refreshToken = localStorage.getItem("refresh_token");
     
-    // محاولة تسجيل الخروج من API (اختياري - لا نمنع العملية إذا فشل)
+    // محاولة تسجيل الخروج من API
     if (refreshToken) {
       try {
-        await apiClient.post("/accounts/auth/logout/", {
+        const response = await apiClient.post("/accounts/auth/logout/", {
           refresh: refreshToken,
         });
-        console.log("✅ Logout API success");
+
+        // التحقق من صيغة الاستجابة حسب التوثيق
+        // الصيغة المتوقعة: { status: "success", message: "..." }
+        if (response.data && response.data.status === "success") {
+          console.log("✅ Logout API success:", response.data.message);
+        } else {
+          console.warn("⚠️ Logout API response format unexpected:", response.data);
+        }
       } catch (error) {
-        // حتى لو فشل logout في API (500, 404, etc.)، نكمل عملية التنظيف المحلية
-        console.warn("⚠️ Logout API error (continuing with local cleanup):", error.response?.status || error.message);
-        // لا نرمي خطأ هنا - نكمل التنظيف المحلي
+        // معالجة الأخطاء حسب التوثيق
+        // 400: Token غير صالح
+        // 401: غير مصرح (لم يتم تسجيل الدخول)
+        if (error.response?.status === 400) {
+          console.warn("⚠️ Logout API: Invalid refresh token");
+        } else if (error.response?.status === 401) {
+          console.warn("⚠️ Logout API: Unauthorized");
+        } else {
+          console.warn("⚠️ Logout API error:", error.response?.status || error.message);
+        }
+        // لا نرمي خطأ هنا - نكمل عملية التنظيف المحلية دائماً
       }
     }
 
     // تنظيف localStorage دائماً (حتى لو فشل API)
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
+    // هذا مهم لضمان تسجيل الخروج حتى لو كان هناك مشكلة في API
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user");
 
-    // إرسال event لتحديث المكونات
-    window.dispatchEvent(new Event("user-logout"));
+      // إرسال event لتحديث المكونات
+      window.dispatchEvent(new Event("user-logout"));
+    }
 
     // نعيد success دائماً لأننا نظفنا المحلي بنجاح
     return { success: true, message: "تم تسجيل الخروج بنجاح" };

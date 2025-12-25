@@ -20,7 +20,7 @@ export default function SupportPage() {
     subject: "",
     category: "technical",
     priority: "medium",
-    message: "",
+    description: "",
   });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -46,7 +46,7 @@ export default function SupportPage() {
     setError("");
 
     // التحقق من الحقول المطلوبة
-    if (!formData.subject || !formData.message) {
+    if (!formData.subject || !formData.description) {
       setError("يرجى ملء جميع الحقول المطلوبة");
       return;
     }
@@ -56,7 +56,7 @@ export default function SupportPage() {
         createTicketAsync({
           category: formData.category,
           subject: formData.subject,
-          message: formData.message,
+          description: formData.description,
           priority: formData.priority,
         })
       ).unwrap();
@@ -68,7 +68,7 @@ export default function SupportPage() {
           subject: "",
           category: "technical",
           priority: "medium",
-          message: "",
+          description: "",
         });
         
         // إخفاء رسالة النجاح بعد 5 ثوان
@@ -261,13 +261,13 @@ export default function SupportPage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  {t("support.form.message") || "الرسالة"} *
+                  {t("support.form.description") || "الوصف"} *
                 </label>
                 <textarea
                   required
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder={t("support.form.messagePlaceholder") || "اكتب تفاصيل طلبك هنا..."}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder={t("support.form.descriptionPlaceholder") || "اكتب تفاصيل طلبك هنا..."}
                   rows={6}
                   className="w-full border border-sky-200 dark:border-slate-700 rounded-lg p-3 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />

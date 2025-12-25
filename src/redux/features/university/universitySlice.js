@@ -4,10 +4,16 @@ import {
   updateUniversityDetails,
   fetchFaculties,
   createFaculty,
+  updateFaculty,
+  deleteFaculty,
   fetchPrograms,
   createProgram,
+  updateProgram,
+  deleteProgram,
   fetchAcademicYears,
   createAcademicYear,
+  updateAcademicYear,
+  deleteAcademicYear,
 } from "../../../services/universityApi";
 
 // جلب تفاصيل الجامعة
@@ -73,6 +79,37 @@ export const createFacultyAsync = createAsyncThunk(
   }
 );
 
+export const updateFacultyAsync = createAsyncThunk(
+  "university/updateFaculty",
+  async ({ universityId, facultyId, payload }, { rejectWithValue }) => {
+    try {
+      return await updateFaculty(universityId, facultyId, payload);
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error?.message ||
+          "فشل في تحديث الكلية"
+      );
+    }
+  }
+);
+
+export const deleteFacultyAsync = createAsyncThunk(
+  "university/deleteFaculty",
+  async ({ universityId, facultyId }, { rejectWithValue }) => {
+    try {
+      await deleteFaculty(universityId, facultyId);
+      return facultyId; // نعيد ID للكلية المحذوفة
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error?.message ||
+          "فشل في حذف الكلية"
+      );
+    }
+  }
+);
+
 // البرامج
 export const fetchProgramsAsync = createAsyncThunk(
   "university/fetchPrograms",
@@ -104,6 +141,37 @@ export const createProgramAsync = createAsyncThunk(
   }
 );
 
+export const updateProgramAsync = createAsyncThunk(
+  "university/updateProgram",
+  async ({ universityId, programId, payload }, { rejectWithValue }) => {
+    try {
+      return await updateProgram(universityId, programId, payload);
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error?.message ||
+          "فشل في تحديث البرنامج الأكاديمي"
+      );
+    }
+  }
+);
+
+export const deleteProgramAsync = createAsyncThunk(
+  "university/deleteProgram",
+  async ({ universityId, programId }, { rejectWithValue }) => {
+    try {
+      await deleteProgram(universityId, programId);
+      return programId; // نعيد ID للبرنامج المحذوف
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error?.message ||
+          "فشل في حذف البرنامج الأكاديمي"
+      );
+    }
+  }
+);
+
 // السنوات الأكاديمية
 export const fetchAcademicYearsAsync = createAsyncThunk(
   "university/fetchAcademicYears",
@@ -130,6 +198,37 @@ export const createAcademicYearAsync = createAsyncThunk(
         error?.response?.data?.message ||
           error?.message ||
           "فشل في إنشاء السنة الأكاديمية"
+      );
+    }
+  }
+);
+
+export const updateAcademicYearAsync = createAsyncThunk(
+  "university/updateAcademicYear",
+  async ({ universityId, yearId, payload }, { rejectWithValue }) => {
+    try {
+      return await updateAcademicYear(universityId, yearId, payload);
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error?.message ||
+          "فشل في تحديث السنة الأكاديمية"
+      );
+    }
+  }
+);
+
+export const deleteAcademicYearAsync = createAsyncThunk(
+  "university/deleteAcademicYear",
+  async ({ universityId, yearId }, { rejectWithValue }) => {
+    try {
+      await deleteAcademicYear(universityId, yearId);
+      return yearId; // نعيد ID للسنة المحذوفة
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error?.message ||
+          "فشل في حذف السنة الأكاديمية"
       );
     }
   }
@@ -206,6 +305,39 @@ const universitySlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+      .addCase(updateFacultyAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateFacultyAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        if (action.payload) {
+          const index = state.faculties.findIndex(
+            (f) => f.id === action.payload.id
+          );
+          if (index !== -1) {
+            state.faculties[index] = action.payload;
+          }
+        }
+      })
+      .addCase(updateFacultyAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(deleteFacultyAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteFacultyAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.faculties = state.faculties.filter(
+          (f) => f.id !== action.payload
+        );
+      })
+      .addCase(deleteFacultyAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
       .addCase(fetchProgramsAsync.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -230,6 +362,39 @@ const universitySlice = createSlice({
         }
       })
       .addCase(createProgramAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateProgramAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateProgramAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        if (action.payload) {
+          const index = state.programs.findIndex(
+            (p) => p.id === action.payload.id
+          );
+          if (index !== -1) {
+            state.programs[index] = action.payload;
+          }
+        }
+      })
+      .addCase(updateProgramAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(deleteProgramAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteProgramAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.programs = state.programs.filter(
+          (p) => p.id !== action.payload
+        );
+      })
+      .addCase(deleteProgramAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
@@ -259,6 +424,39 @@ const universitySlice = createSlice({
       .addCase(createAcademicYearAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(updateAcademicYearAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateAcademicYearAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        if (action.payload) {
+          const index = state.academicYears.findIndex(
+            (y) => y.id === action.payload.id
+          );
+          if (index !== -1) {
+            state.academicYears[index] = action.payload;
+          }
+        }
+      })
+      .addCase(updateAcademicYearAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(deleteAcademicYearAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteAcademicYearAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.academicYears = state.academicYears.filter(
+          (y) => y.id !== action.payload
+        );
+      })
+      .addCase(deleteAcademicYearAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
@@ -266,6 +464,9 @@ const universitySlice = createSlice({
 export const { clearUniversityError } = universitySlice.actions;
 
 export default universitySlice.reducer;
+
+
+
 
 
 

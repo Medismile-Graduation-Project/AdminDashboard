@@ -21,39 +21,49 @@ export const fetchNotifications = async (params = {}) => {
       delete queryParams.notification_type;
     }
     
-    console.log("🔔 Fetching notifications with params:", queryParams);
-    console.log("🔔 API Base URL:", apiClient.defaults.baseURL);
-    console.log("🔔 Full URL:", `${apiClient.defaults.baseURL}${NOTIFICATIONS_BASE_URL}`);
+    // فقط في development mode نطبع logs
+    if (process.env.NODE_ENV === "development") {
+      console.log("🔔 Fetching notifications with params:", queryParams);
+    }
     
     const response = await apiClient.get(NOTIFICATIONS_BASE_URL, { params: queryParams });
-    
-    console.log("🔔 Notifications API Response:", response.data);
     
     // الاستجابة قد تأتي بصيغ مختلفة:
     // 1. Pagination format: { count, next, previous, results: [...] }
     if (response.data && response.data.results && Array.isArray(response.data.results)) {
-      console.log("🔔 Found notifications in results:", response.data.results.length);
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔔 Found notifications in results:", response.data.results.length);
+      }
       return response.data.results;
     }
     
     // 2. Direct data format: { data: [...] }
     if (response.data && response.data.data && Array.isArray(response.data.data)) {
-      console.log("🔔 Found notifications in data:", response.data.data.length);
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔔 Found notifications in data:", response.data.data.length);
+      }
       return response.data.data;
     }
     
     // 3. Direct array
     if (Array.isArray(response.data)) {
-      console.log("🔔 Found notifications as direct array:", response.data.length);
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔔 Found notifications as direct array:", response.data.length);
+      }
       return response.data;
     }
     
-    console.warn("🔔 No notifications found in response");
+    if (process.env.NODE_ENV === "development") {
+      console.warn("🔔 No notifications found in response");
+    }
     return [];
   } catch (error) {
-    console.error("❌ Error fetching notifications:", error);
-    console.error("❌ Error response:", error?.response?.data);
-    console.error("❌ Error status:", error?.response?.status);
+    // فقط في development mode نطبع errors
+    if (process.env.NODE_ENV === "development") {
+      console.error("❌ Error fetching notifications:", error);
+      console.error("❌ Error response:", error?.response?.data);
+      console.error("❌ Error status:", error?.response?.status);
+    }
     throw error;
   }
 };
@@ -99,12 +109,16 @@ export const createNotification = async (notificationData) => {
 
 /**
  * تحديث إشعار (قبول/رفض)
- * PUT /api/v1/notifications/<notification_id>/
+ * PATCH /api/notifications/<notification_id>/
  * Body: { status: 'accepted' | 'rejected', response_message?: string }
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - الطريقة: PATCH
  */
 export const updateNotification = async (id, updateData) => {
   try {
-    const response = await apiClient.put(`${NOTIFICATIONS_BASE_URL}${id}/`, updateData);
+    const response = await apiClient.patch(`${NOTIFICATIONS_BASE_URL}${id}/`, updateData);
     
     if (response.data && response.data.data) {
       return response.data.data;
@@ -118,31 +132,16 @@ export const updateNotification = async (id, updateData) => {
 };
 
 /**
- * تحديث جزئي لإشعار
- * PATCH /api/v1/notifications/<notification_id>/
- */
-export const patchNotification = async (id, updateData) => {
-  try {
-    const response = await apiClient.patch(`${NOTIFICATIONS_BASE_URL}${id}/`, updateData);
-    
-    if (response.data && response.data.data) {
-      return response.data.data;
-    }
-    
-    return response.data;
-  } catch (error) {
-    console.error("Error patching notification:", error);
-    throw error;
-  }
-};
-
-/**
  * حذف إشعار
- * DELETE /api/v1/notifications/<notification_id>/delete/
+ * DELETE /api/notifications/<notification_id>/actions/delete/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - الاستجابة: { "message": "Notification deleted" }
  */
 export const deleteNotification = async (id) => {
   try {
-    await apiClient.delete(`${NOTIFICATIONS_BASE_URL}${id}/delete/`);
+    await apiClient.delete(`${NOTIFICATIONS_BASE_URL}${id}/actions/delete/`);
     return id;
   } catch (error) {
     console.error("Error deleting notification:", error);
@@ -152,11 +151,15 @@ export const deleteNotification = async (id) => {
 
 /**
  * تبديل حالة القراءة لإشعار
- * POST /api/v1/notifications/<notification_id>/toggle-read/
+ * POST /api/notifications/<notification_id>/actions/toggle-read/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - الاستجابة: { status: "success", data: {...} }
  */
 export const toggleNotificationRead = async (id) => {
   try {
-    const response = await apiClient.post(`${NOTIFICATIONS_BASE_URL}${id}/toggle-read/`);
+    const response = await apiClient.post(`${NOTIFICATIONS_BASE_URL}${id}/actions/toggle-read/`);
     
     if (response.data && response.data.data) {
       return response.data.data;
@@ -171,22 +174,38 @@ export const toggleNotificationRead = async (id) => {
 
 /**
  * جلب عدد الإشعارات غير المقروءة
- * GET /api/v1/notifications/unread-count/
- * Query Parameters: recipient_id
+ * GET /api/notifications/actions/unread-count/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - الاستجابة: { "unread_count": 5 }
+ * 
+ * @param {Object} params - Query parameters (اختياري)
+ * @returns {number} عدد الإشعارات غير المقروءة
  */
 export const fetchUnreadCount = async (params = {}) => {
   try {
-    console.log("🔔 Fetching unread count with params:", params);
-    const response = await apiClient.get(`${NOTIFICATIONS_BASE_URL}unread-count/`, { params });
+    if (process.env.NODE_ENV === "development") {
+      console.log("🔔 Fetching unread count with params:", params);
+    }
+    const response = await apiClient.get(`${NOTIFICATIONS_BASE_URL}actions/unread-count/`, { params });
     
-    console.log("🔔 Unread count response:", response.data);
+    if (process.env.NODE_ENV === "development") {
+      console.log("🔔 Unread count response:", response.data);
+    }
     
+    // حسب التوثيق: { "unread_count": 5 }
+    if (response.data && response.data.unread_count !== undefined) {
+      return response.data.unread_count;
+    }
+    
+    // صيغ بديلة محتملة
     if (response.data && response.data.count !== undefined) {
       return response.data.count;
     }
     
-    if (response.data && response.data.data && response.data.data.count !== undefined) {
-      return response.data.data.count;
+    if (response.data && response.data.data && response.data.data.unread_count !== undefined) {
+      return response.data.data.unread_count;
     }
     
     // إذا كانت الاستجابة رقم مباشر
@@ -196,8 +215,11 @@ export const fetchUnreadCount = async (params = {}) => {
     
     return 0;
   } catch (error) {
-    console.error("❌ Error fetching unread count:", error);
-    console.error("❌ Error response:", error?.response?.data);
+    // فقط في development mode نطبع errors
+    if (process.env.NODE_ENV === "development") {
+      console.error("❌ Error fetching unread count:", error);
+      console.error("❌ Error response:", error?.response?.data);
+    }
     // في حالة الخطأ، نعيد 0 بدلاً من throw error
     return 0;
   }
@@ -205,12 +227,15 @@ export const fetchUnreadCount = async (params = {}) => {
 
 /**
  * تعليم جميع الإشعارات كمقروءة
- * POST /api/v1/notifications/mark-all-read/
- * Body: { recipient_id?: UUID }
+ * POST /api/notifications/actions/mark-all-read/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - الاستجابة: { "message": "All notifications marked as read" }
  */
 export const markAllNotificationsAsRead = async (data = {}) => {
   try {
-    const response = await apiClient.post(`${NOTIFICATIONS_BASE_URL}mark-all-read/`, data);
+    const response = await apiClient.post(`${NOTIFICATIONS_BASE_URL}actions/mark-all-read/`, data);
     
     if (response.data && response.data.data) {
       return response.data.data;
@@ -224,59 +249,16 @@ export const markAllNotificationsAsRead = async (data = {}) => {
 };
 
 /**
- * طلب تحديث موعد
- * POST /api/v1/notifications/appointments/<appointment_id>/request-update/
- * Body: { user_id, proposed_changes, message?, title? }
- */
-export const requestAppointmentUpdate = async (appointmentId, requestData) => {
-  try {
-    const response = await apiClient.post(
-      `${NOTIFICATIONS_BASE_URL}appointments/${appointmentId}/request-update/`,
-      requestData
-    );
-    
-    if (response.data && response.data.data) {
-      return response.data.data;
-    }
-    
-    return response.data;
-  } catch (error) {
-    console.error("Error requesting appointment update:", error);
-    throw error;
-  }
-};
-
-/**
- * طلب إلغاء موعد
- * POST /api/v1/notifications/appointments/<appointment_id>/request-cancel/
- * Body: { user_id, message?, title? }
- */
-export const requestAppointmentCancel = async (appointmentId, requestData) => {
-  try {
-    const response = await apiClient.post(
-      `${NOTIFICATIONS_BASE_URL}appointments/${appointmentId}/request-cancel/`,
-      requestData
-    );
-    
-    if (response.data && response.data.data) {
-      return response.data.data;
-    }
-    
-    return response.data;
-  } catch (error) {
-    console.error("Error requesting appointment cancel:", error);
-    throw error;
-  }
-};
-
-/**
  * تحديث FCM Token
- * POST /api/v1/notifications/fcm-token/
- * Body: { user_id, fcm_token }
+ * POST /api/notifications/device/fcm-token/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - البيانات: { "fcm_token": "..." }
  */
 export const updateFcmToken = async (fcmData) => {
   try {
-    const response = await apiClient.post(`${NOTIFICATIONS_BASE_URL}fcm-token/`, fcmData);
+    const response = await apiClient.post(`${NOTIFICATIONS_BASE_URL}device/fcm-token/`, fcmData);
     
     if (response.data && response.data.data) {
       return response.data.data;

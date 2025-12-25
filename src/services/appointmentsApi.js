@@ -9,7 +9,7 @@ const APPOINTMENTS_BASE_URL = "/appointments/";
 
 /**
  * جلب جميع المواعيد
- * GET /api/v1/appointments/
+ * GET /api/appointments/
  * Query Parameters: status, patient_id, user_id, case_id
  * يعيد: Array of appointments أو {status: "success", message: "...", data: [...]}
  */
@@ -33,10 +33,40 @@ export const fetchAppointments = async (params = {}) => {
       return response.data.results;
     }
     
-    console.warn("Unexpected appointments API response format:", response.data);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Unexpected appointments API response format:", response.data);
+    }
     return [];
   } catch (error) {
-    console.error("Error fetching appointments:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error fetching appointments:", error);
+    }
+    throw error;
+  }
+};
+
+/**
+ * جلب تفاصيل موعد محدد
+ * GET /api/appointments/<appointment_id>/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - مسؤول الجامعة: يمكنه عرض تفاصيل مواعيد جامعته
+ */
+export const fetchAppointmentById = async (appointmentId) => {
+  try {
+    const response = await apiClient.get(`${APPOINTMENTS_BASE_URL}${appointmentId}/`);
+    
+    // الاستجابة قد تأتي بصيغة {status: "success", data: {...}}
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
+    return response.data;
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error fetching appointment by ID:", error);
+    }
     throw error;
   }
 };

@@ -112,24 +112,44 @@ export const deleteCommunityContent = async (id) => {
 
 /**
  * جلب المنشورات المعلقة
- * GET /api/v1/community/moderation/pending/
+ * GET /api/community/moderation/pending/
+ * 
+ * ملاحظة: إذا فشل الطلب (500)، نعيد مصفوفة فارغة بدلاً من رمي خطأ
  */
 export const fetchPendingContent = async () => {
-  const response = await apiClient.get(`${COMMUNITY_BASE_URL}moderation/pending/`);
-  
-  if (Array.isArray(response.data)) {
-    return response.data;
+  try {
+    const response = await apiClient.get(`${COMMUNITY_BASE_URL}moderation/pending/`);
+    
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    
+    if (response.data?.results && Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    
+    if (response.data?.data && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    
+    return [];
+  } catch (error) {
+    // إذا كان الخطأ 500 أو خطأ من الخادم، نعيد مصفوفة فارغة
+    if (error?.response?.status === 500 || error?.response?.status >= 500) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("⚠️ Pending content API returned 500, using empty array");
+      }
+      return [];
+    }
+    
+    // للأخطاء الأخرى، نطبع في development فقط
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error fetching pending content:", error);
+    }
+    
+    // نعيد مصفوفة فارغة بدلاً من رمي الخطأ
+    return [];
   }
-  
-  if (response.data?.results && Array.isArray(response.data.results)) {
-    return response.data.results;
-  }
-  
-  if (response.data?.data && Array.isArray(response.data.data)) {
-    return response.data.data;
-  }
-  
-  return [];
 };
 
 /**

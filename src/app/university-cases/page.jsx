@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, Eye, Filter, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
@@ -9,19 +10,52 @@ import { fetchCases } from "../../redux/features/clinicalCases/clinicalCasesSlic
 import RoleGuard from "@/components/RoleGuard";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 
+export default function UniversityCasesPage() {
+  return (
+    <RoleGuard>
+      <UniversityCasesContent />
+    </RoleGuard>
+  );
+}
+
 function UniversityCasesContent() {
   const { t, i18n } = useTranslation();
+  const router = useRouter();
   const dispatch = useDispatch();
   const { cases, loading, error } = useSelector((state) => state.clinicalCases);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // جلب الحالات عند تحميل الصفحة
+  // Filters state
+  const [filters, setFilters] = useState({
+    status: "",
+    priority: "",
+    search: "",
+  });
+
+  // جلب الحالات عند تحميل الصفحة أو تغيير الفلاتر
   // الـ backend يفترض أن يفلتر حسب الجامعة تلقائياً للدور university_admin
   useEffect(() => {
-    dispatch(fetchCases({}));
-  }, [dispatch]);
+    const params = {};
+    if (filters.status) params.status = filters.status;
+    if (filters.priority) params.priority = filters.priority;
+    
+    dispatch(fetchCases(params));
+  }, [dispatch, filters.status, filters.priority]);
+
+  // Filter cases locally by search term
+  const filteredCases = cases.filter((c) => {
+    if (!filters.search) return true;
+    const searchTerm = filters.search.toLowerCase();
+    return (
+      (c.title && c.title.toLowerCase().includes(searchTerm)) ||
+      (c.patient_name && c.patient_name.toLowerCase().includes(searchTerm)) ||
+      (c.student_name && c.student_name.toLowerCase().includes(searchTerm)) ||
+      (c.supervisor_name && c.supervisor_name.toLowerCase().includes(searchTerm)) ||
+      (c.description && c.description.toLowerCase().includes(searchTerm))
+    );
+  });
 
   // Helper function لتنسيق الحالة
   const getStatusBadge = (status) => {
@@ -74,12 +108,73 @@ function UniversityCasesContent() {
         <div className="max-w-[1400px] mx-auto">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
-              حالات الجامعة السريرية
-            </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              عرض فقط - جميع حالات جامعتك
-            </p>
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
+                حالات الجامعة السريرية
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                عرض فقط - جميع حالات جامعتك ({filteredCases.length})
+              </p>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-white dark:bg-dark-light rounded-lg shadow-lg p-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="بحث..."
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                  <option value="">جميع الحالات</option>
+                  <option value="new">جديدة</option>
+                  <option value="pending_assignment">في انتظار الإسناد</option>
+                  <option value="assigned">مسندة</option>
+                  <option value="in_progress">قيد التنفيذ</option>
+                  <option value="completed">مكتملة</option>
+                  <option value="closed">مغلقة</option>
+                </select>
+              </div>
+
+              {/* Priority Filter */}
+              <div>
+                <select
+                  value={filters.priority}
+                  onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                  <option value="">جميع الأولويات</option>
+                  <option value="low">منخفضة</option>
+                  <option value="medium">متوسطة</option>
+                  <option value="high">عالية</option>
+                  <option value="urgent">عاجلة</option>
+                </select>
+              </div>
+
+              {/* Reset Filters */}
+              <div>
+                <button
+                  onClick={() => setFilters({ status: "", priority: "", search: "" })}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  إعادة تعيين
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Error */}
@@ -114,11 +209,12 @@ function UniversityCasesContent() {
                     <th className="px-6 py-4 font-semibold">الحالة</th>
                     <th className="px-6 py-4 font-semibold">الأولوية</th>
                     <th className="px-6 py-4 font-semibold">التاريخ</th>
+                    <th className="px-6 py-4 font-semibold">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {cases && cases.length > 0 ? (
-                    cases.map((c, idx) => (
+                  {filteredCases && filteredCases.length > 0 ? (
+                    filteredCases.map((c, idx) => (
                       <motion.tr
                         key={c.id}
                         initial={{ opacity: 0, y: 10 }}
@@ -145,15 +241,27 @@ function UniversityCasesContent() {
                               })
                             : "-"}
                         </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => router.push(`/university-cases/${c.id}`)}
+                            className="px-3 py-1 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors flex items-center gap-1"
+                            title="عرض التفاصيل"
+                          >
+                            <Eye size={16} />
+                            <span>عرض</span>
+                          </button>
+                        </td>
                       </motion.tr>
                     ))
                   ) : (
                     <tr>
                       <td
-                        colSpan="7"
+                        colSpan="8"
                         className="text-center py-6 text-slate-500 dark:text-slate-400"
                       >
-                        لا توجد حالات
+                        {cases.length === 0
+                          ? "لا توجد حالات"
+                          : "لا توجد حالات تطابق البحث"}
                       </td>
                     </tr>
                   )}
@@ -165,8 +273,8 @@ function UniversityCasesContent() {
           {/* Mobile Cards */}
           {!loading && (
             <div className="sm:hidden grid gap-4 mt-4">
-              {cases && cases.length > 0 ? (
-                cases.map((c) => (
+              {filteredCases && filteredCases.length > 0 ? (
+                filteredCases.map((c) => (
                   <motion.div
                     key={c.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -187,11 +295,20 @@ function UniversityCasesContent() {
                       {getStatusBadge(c.status)}
                       {getPriorityBadge(c.priority)}
                     </div>
+                    <button
+                      onClick={() => router.push(`/university-cases/${c.id}`)}
+                      className="mt-3 w-full px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Eye size={16} />
+                      <span>عرض التفاصيل</span>
+                    </button>
                   </motion.div>
                 ))
               ) : (
                 <p className="text-center py-6 text-slate-500 dark:text-slate-400">
-                  لا توجد حالات
+                  {cases.length === 0
+                    ? "لا توجد حالات"
+                    : "لا توجد حالات تطابق البحث"}
                 </p>
               )}
             </div>
@@ -202,13 +319,7 @@ function UniversityCasesContent() {
   );
 }
 
-export default function UniversityCasesPage() {
-  return (
-    <RoleGuard allowedRoles={["university_admin"]}>
-      <UniversityCasesContent />
-    </RoleGuard>
-  );
-}
+
 
 
 

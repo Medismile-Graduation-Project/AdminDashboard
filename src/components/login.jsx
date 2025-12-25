@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { loginAsync } from "../redux/features/auth/authSlice";
+import { loginAsync, logoutAsync } from "../redux/features/auth/authSlice";
 import toast from "react-hot-toast";
 
 const EnvelopeIcon = dynamic(() =>
@@ -27,9 +27,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
     // إذا كان المستخدم مسجلاً دخوله بالفعل، نعيد توجيهه بعيداً عن صفحة تسجيل الدخول
+    if (hasChecked) return; // منع إعادة التحقق
+    
     try {
       const storedUser =
         typeof window !== "undefined"
@@ -41,21 +44,19 @@ export default function LoginPage() {
           : null;
 
       if (storedUser && accessToken) {
-        const role = storedUser.role;
-        if (role === "supervisor") {
-          router.push("/ClinicalCases");
-        } else if (role === "university_admin") {
-          router.push("/patients");
-        } else {
-          router.push("/");
-        }
+        // هذا المشروع خاص فقط بإدارة الجامعة
+        // جميع المستخدمين يوجهون للصفحة الرئيسية
+        setHasChecked(true);
+        router.push("/");
       } else {
+        setHasChecked(true);
         setIsLoading(false);
       }
     } catch {
+      setHasChecked(true);
       setIsLoading(false);
     }
-  }, [router]);
+  }, [hasChecked, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,15 +73,19 @@ export default function LoginPage() {
       if (result?.user) {
         toast.success("تم تسجيل الدخول بنجاح");
         
-        // التوجيه حسب الدور (حسب توثيق API)
+        // التوجيه حسب الدور
+        // ملاحظة: هذا المشروع خاص فقط بمسؤول الجامعة (university_admin)
         const role = result.user.role;
-        if (role === "supervisor") {
-          router.push("/ClinicalCases");
-        } else if (role === "university_admin") {
-          router.push("/patients");
-        } else {
-          // للأدوار الأخرى (patient, student, tech_support)
+        
+        if (role === "university_admin" || role === "college_admin") {
+          // مسؤول الجامعة → الصفحة الرئيسية (Dashboard)
           router.push("/");
+        } else {
+          // إذا كان المستخدم ليس مسؤول جامعة، نوجهه للـ login مرة أخرى
+          // (لأن هذا المشروع خاص فقط بمسؤول الجامعة)
+          toast.error("هذا الحساب غير مصرح له بالوصول");
+          dispatch(logoutAsync());
+          router.push("/login");
         }
       }
     } catch (err) {
@@ -154,15 +159,6 @@ export default function LoginPage() {
                          text-white font-semibold py-2 rounded-lg transition-all duration-200"
             >
               {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => router.push("/register")}
-              className="w-full border border-blue-500 text-blue-500 
-                         hover:bg-sky-200 font-semibold py-2 rounded-lg transition-all duration-200"
-            >
-              إنشاء حساب جديد
             </button>
           </form>
         </div>

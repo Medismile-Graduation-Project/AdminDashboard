@@ -3,6 +3,8 @@ import {
   fetchSupervisors,
   createSupervisor,
   fetchSupervisorById,
+  updateSupervisor,
+  deleteSupervisor,
 } from "../../../services/supervisorsApi";
 
 /**
@@ -118,6 +120,40 @@ export const fetchSupervisorDetailAsync = createAsyncThunk(
   }
 );
 
+/**
+ * تحديث مشرف
+ */
+export const updateSupervisorAsync = createAsyncThunk(
+  "supervisors/updateSupervisor",
+  async ({ id, data }, { rejectWithValue }) => {
+    try {
+      const updated = await updateSupervisor(id, data);
+      return mapSupervisorFromApi(updated);
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في تحديث المشرف"
+      );
+    }
+  }
+);
+
+/**
+ * حذف مشرف
+ */
+export const deleteSupervisorAsync = createAsyncThunk(
+  "supervisors/deleteSupervisor",
+  async (userId, { rejectWithValue }) => {
+    try {
+      await deleteSupervisor(userId);
+      return userId;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في حذف المشرف"
+      );
+    }
+  }
+);
+
 const supervisorsSlice = createSlice({
   name: "supervisors",
   initialState: {
@@ -181,6 +217,40 @@ const supervisorsSlice = createSlice({
       .addCase(fetchSupervisorDetailAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "حدث خطأ أثناء جلب تفاصيل المشرف";
+      })
+      // تحديث مشرف
+      .addCase(updateSupervisorAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateSupervisorAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        if (updated) {
+          const index = state.supervisors.findIndex((s) => s.id === updated.id);
+          if (index !== -1) {
+            state.supervisors[index] = updated;
+          }
+        }
+        state.error = null;
+      })
+      .addCase(updateSupervisorAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "حدث خطأ أثناء تحديث المشرف";
+      })
+      // حذف مشرف
+      .addCase(deleteSupervisorAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteSupervisorAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.supervisors = state.supervisors.filter((s) => s.id !== action.payload);
+        state.error = null;
+      })
+      .addCase(deleteSupervisorAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "حدث خطأ أثناء حذف المشرف";
       });
   },
 });
@@ -188,6 +258,8 @@ const supervisorsSlice = createSlice({
 export const { clearError, clearSelectedSupervisor } = supervisorsSlice.actions;
 
 export default supervisorsSlice.reducer;
+
+
 
 
 

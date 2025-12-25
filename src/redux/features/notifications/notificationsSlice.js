@@ -1,3 +1,4 @@
+
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import * as notificationsApi from "../../../services/notificationsApi";
 
@@ -69,16 +70,28 @@ export const fetchNotificationsAsync = createAsyncThunk(
   "notifications/fetchNotifications",
   async (params = {}, { rejectWithValue }) => {
     try {
-      console.log("🔔 Redux: Fetching notifications with params:", params);
+      // فقط في development mode نطبع logs
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔔 Redux: Fetching notifications with params:", params);
+      }
       const data = await notificationsApi.fetchNotifications(params);
-      console.log("🔔 Redux: Received notifications data:", data);
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔔 Redux: Received notifications data:", data);
+      }
       const mapped = Array.isArray(data) ? data.map(mapNotificationFromApi) : [];
-      console.log("🔔 Redux: Mapped notifications:", mapped.length);
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔔 Redux: Mapped notifications:", mapped.length);
+      }
       return mapped;
     } catch (error) {
-      console.error("❌ Redux: Error fetching notifications:", error);
+      // فقط في development mode نطبع errors
+      if (process.env.NODE_ENV === "development") {
+        console.error("❌ Redux: Error fetching notifications:", error);
+      }
       const errorMessage = error?.response?.data?.message || error?.response?.data?.detail || error?.message || "فشل في جلب الإشعارات";
-      console.error("❌ Redux: Error message:", errorMessage);
+      if (process.env.NODE_ENV === "development") {
+        console.error("❌ Redux: Error message:", errorMessage);
+      }
       return rejectWithValue(errorMessage);
     }
   }
@@ -202,40 +215,6 @@ export const markAllNotificationsAsReadAsync = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في تعليم جميع الإشعارات كمقروءة"
-      );
-    }
-  }
-);
-
-/**
- * طلب تحديث موعد
- */
-export const requestAppointmentUpdateAsync = createAsyncThunk(
-  "notifications/requestAppointmentUpdate",
-  async ({ appointmentId, requestData }, { rejectWithValue }) => {
-    try {
-      const data = await notificationsApi.requestAppointmentUpdate(appointmentId, requestData);
-      return mapNotificationFromApi(data);
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data?.message || error?.response?.data?.errors || error?.message || "فشل في طلب تحديث الموعد"
-      );
-    }
-  }
-);
-
-/**
- * طلب إلغاء موعد
- */
-export const requestAppointmentCancelAsync = createAsyncThunk(
-  "notifications/requestAppointmentCancel",
-  async ({ appointmentId, requestData }, { rejectWithValue }) => {
-    try {
-      const data = await notificationsApi.requestAppointmentCancel(appointmentId, requestData);
-      return mapNotificationFromApi(data);
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data?.message || error?.response?.data?.errors || error?.message || "فشل في طلب إلغاء الموعد"
       );
     }
   }
@@ -402,32 +381,6 @@ const notificationsSlice = createSlice({
         state.unreadCount = 0;
       })
       .addCase(markAllNotificationsAsReadAsync.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // requestAppointmentUpdateAsync
-      .addCase(requestAppointmentUpdateAsync.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(requestAppointmentUpdateAsync.fulfilled, (state, action) => {
-        state.loading = false;
-        state.notifications.unshift(action.payload);
-      })
-      .addCase(requestAppointmentUpdateAsync.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // requestAppointmentCancelAsync
-      .addCase(requestAppointmentCancelAsync.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(requestAppointmentCancelAsync.fulfilled, (state, action) => {
-        state.loading = false;
-        state.notifications.unshift(action.payload);
-      })
-      .addCase(requestAppointmentCancelAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
