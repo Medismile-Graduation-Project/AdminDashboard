@@ -38,13 +38,14 @@ import AnimatedWrapper from "@/components/AnimatedWrapper";
 import toast from "react-hot-toast";
 import RoleGuard from "@/components/RoleGuard";
 
-export default function NotificationsPage() {
-  return (
-    <RoleGuard>
-      <NotificationsContent />
-    </RoleGuard>
-  );
-}
+// 🔕 معلق مؤقتاً
+// export default function NotificationsPage() {
+//   return (
+//     <RoleGuard>
+//       <NotificationsContent />
+//     </RoleGuard>
+//   );
+// }
 
 function NotificationsContent() {
   const { t, i18n } = useTranslation();
@@ -964,11 +965,12 @@ function NotificationsContent() {
   );
 }
 
-export default function NotificationsPage() {
-  // صفحة الإشعارات متاحة لجميع الأدوار
-  return (
-    <RoleGuard allowedRoles={["supervisor", "university_admin", "student", "patient", "tech_support"]}>
-      <NotificationsContent />
-    </RoleGuard>
-  );
-}
+// 🔕 معلق مؤقتاً
+// export default function NotificationsPage() {
+//   // صفحة الإشعارات متاحة لجميع الأدوار
+//   return (
+//     <RoleGuard allowedRoles={["supervisor", "university_admin", "student", "patient", "tech_support"]}>
+//       <NotificationsContent />
+//     </RoleGuard>
+//   );
+// }

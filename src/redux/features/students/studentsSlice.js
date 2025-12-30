@@ -22,7 +22,12 @@ const getFullName = (student) => {
   if (firstName) return firstName;
   if (lastName) return lastName;
   if (student.username) return student.username;
-  if (student.email) return student.email;
+  
+  // إذا لم يكن هناك اسم، نستخدم جزء من الإيميل
+  if (student.email) {
+    const emailPart = student.email.split("@")[0];
+    return emailPart;
+  }
   
   return "-";
 };
@@ -42,32 +47,37 @@ const mapStudentFromApi = (apiStudent) => {
   
   return {
     id: safeValue(apiStudent.user_id || apiStudent.id),
+    user_id: safeValue(apiStudent.user_id || apiStudent.id),
     // اسم الطالب (من first_name + last_name)
     studentName: getFullName(apiStudent),
     // رقم الطالب
     studentNumber: safeValue(apiStudent.student_id, ""),
+    student_id: safeValue(apiStudent.student_id, ""),
     // الجامعة
     university: safeValue(apiStudent.university_name, ""),
     // السنة الدراسية
     year: safeValue(apiStudent.year_of_study) 
       ? `السنة ${apiStudent.year_of_study}` 
       : "",
+    year_of_study: safeValue(apiStudent.year_of_study),
     // التخصص
     specialty: safeValue(apiStudent.specialization, ""),
+    specialization: safeValue(apiStudent.specialization, ""),
     // البريد الإلكتروني
     email: safeValue(apiStudent.email, ""),
-    // رقم الهاتف - الحقل اختياري وقد لا يكون موجوداً في الاستجابة
-    phoneNumber: apiStudent.phone_number && 
-                 apiStudent.phone_number !== null && 
-                 apiStudent.phone_number.toString().trim() !== "" 
-                 ? apiStudent.phone_number.toString().trim() 
-                 : "",
+    // رقم الهاتف
+    phoneNumber: safeValue(apiStudent.phone_number, ""),
+    phone_number: safeValue(apiStudent.phone_number, ""),
     // العنوان
     address: safeValue(apiStudent.address, ""),
     // تاريخ الميلاد
     dateOfBirth: safeValue(apiStudent.date_of_birth, ""),
+    date_of_birth: safeValue(apiStudent.date_of_birth, ""),
     // الجنس
     gender: safeValue(apiStudent.gender, ""),
+    first_name: safeValue(apiStudent.first_name, ""),
+    last_name: safeValue(apiStudent.last_name, ""),
+    username: safeValue(apiStudent.username, ""),
     // بيانات API الأصلية (للاستخدام في التحديث)
     _apiData: {
       user_id: safeValue(apiStudent.user_id || apiStudent.id),

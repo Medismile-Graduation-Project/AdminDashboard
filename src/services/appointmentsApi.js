@@ -1,4 +1,6 @@
 import apiClient from "./api";
+// 🔕 الإشعارات معلقة مؤقتاً
+// import { createNotification } from "./notificationsApi";
 
 /**
  * API service للمواعيد (Appointments)
@@ -10,7 +12,19 @@ const APPOINTMENTS_BASE_URL = "/appointments/";
 /**
  * جلب جميع المواعيد
  * GET /api/appointments/
- * Query Parameters: status, patient_id, user_id, case_id
+ * الصلاحيات: IsAuthenticated
+ * 
+ * ملاحظات:
+ * - مسؤول الجامعة (university_admin): يجلب جميع المواعيد ضمن جامعته تلقائياً
+ *   (Backend يفلتر حسب university_id من Token)
+ * - المشرف (supervisor): يجلب مواعيده فقط
+ * 
+ * Query Parameters (اختيارية):
+ * - status: حالة الموعد (scheduled, confirmed, completed, cancelled, etc.)
+ * - patient_id: معرف المريض
+ * - user_id: معرف المستخدم (المشرف)
+ * - case_id: معرف الحالة السريرية
+ * 
  * يعيد: Array of appointments أو {status: "success", message: "...", data: [...]}
  */
 export const fetchAppointments = async (params = {}) => {
@@ -70,6 +84,40 @@ export const fetchAppointmentById = async (appointmentId) => {
     throw error;
   }
 };
+
+/**
+ * 🔕 الإشعارات معلقة مؤقتاً
+ * إنشاء إشعار عند إنشاء موعد جديد
+ * @param {Object} params - { appointment, recipientId, senderId? }
+ */
+// export const createAppointmentNotification = async ({ appointment, recipientId, senderId = null }) => {
+//   try {
+//     if (!appointment || !recipientId) {
+//       if (process.env.NODE_ENV === "development") {
+//         console.warn("⚠️ Missing parameters for appointment notification");
+//       }
+//       return null;
+//     }
+
+//     const notification = await createNotification({
+//       notification_type: "appointment_request",
+//       priority: "high",
+//       recipient_id: recipientId,
+//       sender_id: senderId,
+//       appointment_id: appointment.id,
+//       title: "موعد جديد",
+//       message: `تم إنشاء موعد جديد في ${appointment.date || "تاريخ غير محدد"}`,
+//     });
+
+//     return notification;
+//   } catch (error) {
+//     if (process.env.NODE_ENV === "development") {
+//       console.error("❌ Error creating appointment notification:", error);
+//     }
+//     // لا نرمي الخطأ حتى لا نؤثر على عملية إنشاء الموعد
+//     return null;
+//   }
+// };
 
 
 

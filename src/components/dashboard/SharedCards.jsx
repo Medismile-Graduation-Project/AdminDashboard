@@ -19,20 +19,20 @@ export default function SharedCards({ cards = [] }) {
                    "grid-cols-1 md:grid-cols-2 lg:grid-cols-4";
 
   return (
-    <div className={`grid ${gridCols} gap-4`}>
+    <div className={`grid ${gridCols} gap-5`}>
       {cards.map((card) => {
         const Icon = card.icon;
         const label = isRtl ? card.label : card.labelEn || card.label;
         
         // تحديد لون Card حسب color property
         const colorClasses = {
-          sky: "bg-sky-200 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700",
-          blue: "bg-blue-200 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700",
-          indigo: "bg-indigo-200 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700",
-          amber: "bg-amber-200 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700",
-          orange: "bg-orange-200 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700",
-          purple: "bg-purple-200 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700",
-          green: "bg-green-200 dark:bg-green-900/30 border-green-300 dark:border-green-700",
+          sky: "bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-800",
+          blue: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
+          indigo: "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800",
+          amber: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800",
+          orange: "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800",
+          purple: "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800",
+          green: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
         };
 
         const iconColorClasses = {
@@ -51,23 +51,23 @@ export default function SharedCards({ cards = [] }) {
         return (
           <div
             key={card.id}
-            className={`p-4 ${bgColor} rounded-lg shadow border-2 transition-transform hover:scale-105`}
+            className={`p-5 sm:p-6 ${bgColor} rounded-xl shadow-sm border transition-all duration-200 hover:shadow-md hover:scale-[1.02]`}
           >
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                 {label}
               </p>
               {Icon && (
-                <div className={iconColor}>
+                <div className={`${iconColor} p-2 rounded-lg bg-white/50 dark:bg-slate-800/50`}>
                   <Icon size={20} />
                 </div>
               )}
             </div>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+            <p className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
               {card.value !== undefined && card.value !== null ? card.value : 0}
             </p>
             {card.subtitle && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                 {card.subtitle}
               </p>
             )}

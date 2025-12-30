@@ -47,11 +47,32 @@ export const fetchEvaluations = async (params = {}) => {
 
 /**
  * جلب تفاصيل تقييم محدد
- * GET /api/v1/evaluations/<uuid:pk>/
+ * GET /api/evaluations/<id>/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - مسؤول الجامعة: يمكنه عرض تقييمات طلاب جامعته فقط
+ *   (Backend يتحقق تلقائياً من أن التقييم يخص جامعته)
+ * 
+ * @param {string} evaluationId - ID التقييم
+ * يعيد: Evaluation object
  */
 export const fetchEvaluationById = async (evaluationId) => {
-  const response = await apiClient.get(`${EVALUATIONS_BASE_URL}${evaluationId}/`);
-  return response.data;
+  try {
+    const response = await apiClient.get(`${EVALUATIONS_BASE_URL}${evaluationId}/`);
+    
+    // الاستجابة قد تأتي بصيغة {data: {...}}
+    if (response.data?.data) {
+      return response.data.data;
+    }
+    
+    return response.data;
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error fetching evaluation by ID:", error);
+    }
+    throw error;
+  }
 };
 
 /**
@@ -84,14 +105,45 @@ export const updateEvaluation = async (evaluationId, evaluationData) => {
 };
 
 /**
- * جلب متوسط تقييمات طالب معين
+ * جلب إحصائيات التقييمات لطالب محدد
+ * GET /api/evaluations/students/<student_id>/statistics/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - مسؤول الجامعة: يمكنه عرض إحصائيات طلاب جامعته فقط
+ *   (Backend يتحقق تلقائياً من أن الطالب يخص جامعته)
+ * 
+ * @param {string} studentId - ID الطالب
+ * يعيد: Statistics object (مثل: {average_score, total_evaluations, ...})
+ */
+export const fetchStudentStatistics = async (studentId) => {
+  try {
+    const response = await apiClient.get(
+      `${EVALUATIONS_BASE_URL}students/${studentId}/statistics/`
+    );
+    
+    // الاستجابة قد تأتي بصيغة {data: {...}}
+    if (response.data?.data) {
+      return response.data.data;
+    }
+    
+    return response.data;
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error fetching student statistics:", error);
+    }
+    throw error;
+  }
+};
+
+/**
+ * @deprecated استخدم fetchStudentStatistics بدلاً منها
+ * جلب متوسط تقييمات طالب معين (قديم)
  * GET /api/v1/evaluations/students/<uuid:student_id>/average-ratings/
  */
 export const fetchStudentAverageRatings = async (studentId) => {
-  const response = await apiClient.get(
-    `${EVALUATIONS_BASE_URL}students/${studentId}/average-ratings/`
-  );
-  return response.data;
+  // إعادة توجيه للـ endpoint الجديد
+  return fetchStudentStatistics(studentId);
 };
 
 /**

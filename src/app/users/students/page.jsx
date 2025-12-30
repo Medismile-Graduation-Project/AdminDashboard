@@ -16,6 +16,7 @@ import AnimatedWrapper from "@/components/AnimatedWrapper";
 import RoleGuard from "@/components/RoleGuard";
 import toast from "react-hot-toast";
 import { useRtl } from "@/hooks/useRtl";
+import { fetchUniversityDetails, fetchUniversityAdminProfile } from "@/services/universityApi";
 
 export default function StudentsPage() {
   return (
@@ -53,6 +54,8 @@ function StudentsPageContent() {
     university: "",
     address: "",
     phone_number: "",
+    date_of_birth: "",
+    gender: "",
   });
 
   useEffect(() => {
@@ -62,12 +65,34 @@ function StudentsPageContent() {
       setUser(storedUser);
 
       // تعبئة university_id افتراضياً من المستخدم
-      const uniId = storedUser?.university_id || storedUser?.university || "";
+      let uniId = storedUser?.university_id || storedUser?.university || "";
+      
+      console.log("🔍 [StudentsPage] Initial university_id from localStorage:", uniId);
+      console.log("🔍 [StudentsPage] storedUser:", storedUser);
+      
+      // تنظيف university ID - إزالة أي : أو رموز غير صالحة
+      if (uniId && typeof uniId === 'string') {
+        const originalUniId = uniId;
+        uniId = uniId.replace(/^:/, '').trim();
+        if (originalUniId !== uniId) {
+          console.warn("⚠️ [StudentsPage] Cleaned university_id:", originalUniId, "->", uniId);
+        }
+      }
+      
+      // التحقق من أن الـ ID ليس :1 أو 1 فقط
+      if (uniId && (uniId === '1' || uniId === ':1' || uniId.length < 10)) {
+        console.error("❌ [StudentsPage] Invalid university_id format:", uniId);
+        uniId = ""; // إعادة تعيين إلى فارغ
+      }
+      
       if (uniId) {
+        console.log("✅ [StudentsPage] Setting university_id to formData:", uniId);
         setFormData((prev) => ({
           ...prev,
           university: uniId,
         }));
+      } else {
+        console.warn("⚠️ [StudentsPage] No valid university_id found");
       }
     }
   }, []);
@@ -97,28 +122,41 @@ function StudentsPageContent() {
       student_id: "",
       year_of_study: "",
       specialization: "",
-      university: user?.university_id || user?.university || "",
+      university: (() => {
+        let uniId = user?.university_id || user?.university || "";
+        // تنظيف university ID - إزالة أي : أو رموز غير صالحة
+        if (uniId && typeof uniId === 'string') {
+          uniId = uniId.replace(/^:/, '').trim();
+        }
+        return uniId;
+      })(),
       address: "",
       phone_number: "",
+      date_of_birth: "",
+      gender: "",
     });
     setShowForm(true);
   };
 
   const handleEdit = (student) => {
     setEditingStudent(student);
+    // جلب البيانات من _apiData إذا كانت موجودة
+    const apiData = student._apiData || student;
     setFormData({
-      username: student.username || "",
-      email: student.email || "",
+      username: apiData.username || "",
+      email: apiData.email || student.email || "",
       password: "",
       password_confirm: "",
-      first_name: student.first_name || "",
-      last_name: student.last_name || "",
-      student_id: student.student_id || "",
-      year_of_study: student.year_of_study || "",
-      specialization: student.specialization || "",
-      university: student.university || user?.university_id || user?.university || "",
-      address: student.address || "",
-      phone_number: student.phone_number || "",
+      first_name: apiData.first_name || student.first_name || "",
+      last_name: apiData.last_name || student.last_name || "",
+      student_id: apiData.student_id || student.student_id || "",
+      year_of_study: apiData.year_of_study || student.year_of_study || "",
+      specialization: apiData.specialization || student.specialization || "",
+      university: apiData.university || student.university || user?.university_id || user?.university || "",
+      address: apiData.address || student.address || "",
+      phone_number: apiData.phone_number || student.phone_number || "",
+      date_of_birth: apiData.date_of_birth || student.date_of_birth || "",
+      gender: apiData.gender || student.gender || "",
     });
     setShowForm(true);
   };
@@ -140,13 +178,137 @@ function StudentsPageContent() {
     setSubmitLoading(true);
 
     try {
+      // التحقق من الحقول المطلوبة
+      // first_name و last_name يمكن أن تكونا فارغتين حسب API
+      // university_id يتم الحصول عليه تلقائياً من user object
+      if (
+        !formData.username ||
+        !formData.email
+      ) {
+        toast.error("يرجى ملء جميع الحقول المطلوبة (اسم المستخدم، البريد الإلكتروني)");
+        setSubmitLoading(false);
+        return;
+      }
+
+      // التحقق من password و password_confirm عند الإنشاء فقط
+      if (!editingStudent) {
+        if (!formData.password || !formData.password_confirm) {
+          toast.error("يرجى إدخال كلمة المرور وتأكيدها");
+          setSubmitLoading(false);
+          return;
+        }
+        if (formData.password !== formData.password_confirm) {
+          toast.error("كلمات المرور غير متطابقة");
+          setSubmitLoading(false);
+          return;
+        }
+      }
+
       if (editingStudent) {
+        // عند التعديل، نستخدم البيانات القابلة للتعديل فقط
+        const submitData = {
+          email: formData.email,
+          phone_number: formData.phone_number || null,
+          address: formData.address || null,
+          date_of_birth: formData.date_of_birth || null,
+          gender: formData.gender || null,
+          student_id: formData.student_id || null,
+          year_of_study: formData.year_of_study ? parseInt(formData.year_of_study) : null,
+          specialization: formData.specialization || null,
+        };
+        
+        // إضافة كلمة المرور فقط إذا كانت موجودة
+        if (formData.password) {
+          submitData.password = formData.password;
+          submitData.password_confirm = formData.password_confirm;
+        }
+        
         await dispatch(
-          updateStudentAsync({ id: editingStudent.user_id || editingStudent.id, data: formData })
+          updateStudentAsync({ userId: editingStudent.user_id || editingStudent.id, studentData: submitData })
         ).unwrap();
         toast.success("تم تحديث الطالب بنجاح");
       } else {
-        await dispatch(createStudentAsync(formData)).unwrap();
+        // عند الإنشاء، نحتاج فقط للحقول المطلوبة حسب API الجديد
+        // جلب university_id من Profile مباشرة (الاعتماد على Profile فقط)
+        let universityId = null;
+        
+        if (user?.id && (user?.role === "university_admin" || user?.role === "college_admin")) {
+          try {
+            const profile = await fetchUniversityAdminProfile();
+            
+            // استخراج university_id من Profile
+            if (profile?.university) {
+              if (typeof profile.university === 'object') {
+                universityId = profile.university.id || profile.university;
+              } else {
+                universityId = profile.university;
+              }
+            } else if (profile?.university_id) {
+              universityId = profile.university_id;
+            }
+            
+            // إذا تم جلب university_id، نحدث user object في localStorage
+            if (universityId && user) {
+              user.university_id = universityId;
+              user.university = universityId;
+              localStorage.setItem("user", JSON.stringify(user));
+              setUser(user); // تحديث state أيضاً
+            }
+          } catch (error) {
+            console.error("Error fetching university admin profile:", error);
+            toast.error("فشل في جلب بيانات الجامعة. يرجى المحاولة مرة أخرى.");
+            setSubmitLoading(false);
+            return;
+          }
+        }
+
+        // التحقق من أن university_id موجود
+        if (!universityId) {
+          toast.error("لم يتم العثور على معرف الجامعة. يرجى إعادة تسجيل الدخول.");
+          setSubmitLoading(false);
+          return;
+        }
+
+        // تنظيف university ID (إزالة مسافات فقط)
+        const cleanUniversityId = typeof universityId === 'string' ? universityId.trim() : universityId;
+
+        // جلب اسم الجامعة من API
+        let universityName = "";
+        try {
+          const uniData = await fetchUniversityDetails(cleanUniversityId);
+          universityName = uniData?.name || "";
+        } catch (error) {
+          console.error("Error fetching university name:", error);
+          toast.error("فشل في جلب اسم الجامعة");
+          setSubmitLoading(false);
+          return;
+        }
+
+        if (!universityName) {
+          toast.error("لم يتم العثور على اسم الجامعة");
+          setSubmitLoading(false);
+          return;
+        }
+
+        const submitData = {
+          email: formData.email,
+          username: formData.username,
+          password: formData.password, // مطلوب حسب API
+          password_confirm: formData.password_confirm, // مطلوب حسب API
+          first_name: formData.first_name || "", // السماح بالقيم الفارغة
+          last_name: formData.last_name || "", // السماح بالقيم الفارغة
+          university: cleanUniversityId, // استخدام الـ ID النظيف
+          university_name: universityName,
+          // الحقول الاختيارية
+          ...(formData.student_id && { student_id: formData.student_id }),
+          ...(formData.year_of_study && { year_of_study: parseInt(formData.year_of_study) || null }),
+          ...(formData.specialization && { specialization: formData.specialization }),
+        };
+
+        console.log("📤 [StudentsPage] Sending submitData:", submitData);
+        console.log("📤 [StudentsPage] University ID:", submitData.university);
+
+        await dispatch(createStudentAsync(submitData)).unwrap();
         toast.success("تم إنشاء الطالب بنجاح");
       }
 
@@ -165,12 +327,16 @@ function StudentsPageContent() {
   };
 
   const filteredStudents = students.filter((student) => {
+    if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
+    const name = student.studentName || student.email?.split("@")[0] || "";
     return (
-      student.first_name?.toLowerCase().includes(searchLower) ||
-      student.last_name?.toLowerCase().includes(searchLower) ||
+      name.toLowerCase().includes(searchLower) ||
       student.email?.toLowerCase().includes(searchLower) ||
-      student.student_id?.toString().includes(searchLower)
+      student.phone_number?.toLowerCase().includes(searchLower) ||
+      student.student_id?.toString().includes(searchLower) ||
+      student.specialization?.toLowerCase().includes(searchLower) ||
+      student.year_of_study?.toString().includes(searchLower)
     );
   });
 
@@ -178,20 +344,20 @@ function StudentsPageContent() {
 
   return (
     <AnimatedWrapper>
-      <div className={`p-6 space-y-6 ${isRtl ? "text-right" : "text-left"}`}>
+      <div className={`p-6 sm:p-8 space-y-6 ${isRtl ? "text-right" : "text-left"}`}>
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
               إدارة الطلاب
             </h1>
-            <p className="text-slate-600 dark:text-slate-400">
+            <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
               إدارة حسابات الطلاب في الجامعة
             </p>
           </div>
           <button
             onClick={handleAdd}
-            className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors flex items-center gap-2"
+            className="px-5 py-2.5 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-all duration-200 flex items-center gap-2 font-semibold text-sm shadow-sm hover:shadow-md whitespace-nowrap"
           >
             <PlusCircle size={20} />
             إضافة طالب جديد
@@ -200,13 +366,13 @@ function StudentsPageContent() {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+          <Search className={`absolute ${isRtl ? "right-3" : "left-3"} top-1/2 transform -translate-y-1/2 text-slate-400`} size={20} />
           <input
             type="text"
             placeholder="ابحث عن طالب..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+            className={`w-full ${isRtl ? "pr-10 pl-4" : "pl-10 pr-4"} py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all`}
           />
         </div>
 
@@ -215,7 +381,7 @@ function StudentsPageContent() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4"
             onClick={() => {
               setShowForm(false);
               setEditingStudent(null);
@@ -225,10 +391,10 @@ function StudentsPageContent() {
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-dark-light rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white dark:bg-dark-light rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-700"
             >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+              <div className="p-6 sm:p-8">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
                     {editingStudent ? "تعديل طالب" : "إضافة طالب جديد"}
                   </h2>
@@ -237,16 +403,17 @@ function StudentsPageContent() {
                       setShowForm(false);
                       setEditingStudent(null);
                     }}
-                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    aria-label="Close"
                   >
                     <X size={24} />
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         اسم المستخدم *
                       </label>
                       <input
@@ -255,11 +422,11 @@ function StudentsPageContent() {
                         value={formData.username}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         البريد الإلكتروني *
                       </label>
                       <input
@@ -268,13 +435,13 @@ function StudentsPageContent() {
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                       />
                     </div>
                     {!editingStudent && (
                       <>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                             كلمة المرور *
                           </label>
                           <input
@@ -282,12 +449,12 @@ function StudentsPageContent() {
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            required={!editingStudent}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                            required
+                            className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                             تأكيد كلمة المرور *
                           </label>
                           <input
@@ -295,40 +462,38 @@ function StudentsPageContent() {
                             name="password_confirm"
                             value={formData.password_confirm}
                             onChange={handleChange}
-                            required={!editingStudent}
-                            className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                            required
+                            className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                           />
                         </div>
                       </>
                     )}
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                        الاسم الأول *
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                        الاسم الأول
                       </label>
                       <input
                         type="text"
                         name="first_name"
                         value={formData.first_name}
                         onChange={handleChange}
-                        required
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                        اسم العائلة *
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                        اسم العائلة
                       </label>
                       <input
                         type="text"
                         name="last_name"
                         value={formData.last_name}
                         onChange={handleChange}
-                        required
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         رقم الطالب
                       </label>
                       <input
@@ -336,11 +501,11 @@ function StudentsPageContent() {
                         name="student_id"
                         value={formData.student_id}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         السنة الدراسية
                       </label>
                       <input
@@ -350,11 +515,11 @@ function StudentsPageContent() {
                         onChange={handleChange}
                         min="1"
                         max="5"
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         التخصص
                       </label>
                       <input
@@ -362,11 +527,11 @@ function StudentsPageContent() {
                         name="specialization"
                         value={formData.specialization}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         رقم الهاتف
                       </label>
                       <input
@@ -374,11 +539,11 @@ function StudentsPageContent() {
                         name="phone_number"
                         value={formData.phone_number}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         العنوان
                       </label>
                       <input
@@ -386,26 +551,26 @@ function StudentsPageContent() {
                         name="address"
                         value={formData.address}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
                       />
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4">
+                  <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
                     <button
                       type="button"
                       onClick={() => {
                         setShowForm(false);
                         setEditingStudent(null);
                       }}
-                      className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      className="px-5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 font-semibold text-sm"
                     >
                       إلغاء
                     </button>
                     <button
                       type="submit"
                       disabled={submitLoading}
-                      className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      className="px-5 py-2.5 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-all duration-200 flex items-center gap-2 disabled:opacity-50 font-semibold text-sm shadow-sm hover:shadow-md"
                     >
                       {submitLoading ? (
                         <>
@@ -426,7 +591,7 @@ function StudentsPageContent() {
           </motion.div>
         )}
 
-        {/* Students List */}
+        {/* Students Table */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="animate-spin text-sky-600" size={32} />
@@ -436,53 +601,92 @@ function StudentsPageContent() {
             {searchTerm ? "لا توجد نتائج للبحث" : "لا يوجد طلاب"}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredStudents.map((student) => (
-              <motion.div
-                key={student.user_id || student.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-white dark:bg-dark-light rounded-lg shadow border border-slate-200 dark:border-slate-700"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white">
-                      {student.first_name} {student.last_name}
-                    </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{student.email}</p>
-                    {student.student_id && (
-                      <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                        رقم الطالب: {student.student_id}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(student)}
-                      className="p-2 text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded"
-                    >
-                      <Pencil size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(student.user_id || student.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-                {student.specialization && (
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    التخصص: {student.specialization}
-                  </p>
-                )}
-                {student.year_of_study && (
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    السنة: {student.year_of_study}
-                  </p>
-                )}
-              </motion.div>
-            ))}
+          <div className="bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
+                      الاسم
+                    </th>
+                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
+                      البريد الإلكتروني
+                    </th>
+                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
+                      رقم الهاتف
+                    </th>
+                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
+                      السنة الدراسية
+                    </th>
+                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
+                      التخصص
+                    </th>
+                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
+                      الإجراءات
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-dark-light divide-y divide-slate-200 dark:divide-slate-700">
+                  {filteredStudents.map((student) => {
+                    const name = student.studentName || student.email?.split("@")[0] || "-";
+                    return (
+                      <motion.tr
+                        key={student.user_id || student.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {name}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-600 dark:text-slate-400">
+                            {student.email || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-600 dark:text-slate-400">
+                            {student.phone_number || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-600 dark:text-slate-400">
+                            {student.year_of_study ? `السنة ${student.year_of_study}` : "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-600 dark:text-slate-400">
+                            {student.specialization || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className={`flex items-center gap-2 ${isRtl ? "justify-start" : "justify-end"}`}>
+                            <button
+                              onClick={() => handleEdit(student)}
+                              className="p-2 text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-all duration-200"
+                              title="تعديل"
+                              aria-label="Edit"
+                            >
+                              <Pencil size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(student.user_id || student.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+                              title="حذف"
+                              aria-label="Delete"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

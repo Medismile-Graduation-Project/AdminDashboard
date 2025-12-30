@@ -43,19 +43,19 @@ export default function UnauthorizedPage() {
 
           {/* Title */}
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
-            غير مصرح بالوصول
+            {t("Unauthorized.title")}
           </h1>
 
           {/* Description */}
           <p className="text-slate-600 dark:text-slate-400 mb-6">
-            عذراً، ليس لديك صلاحية للوصول إلى هذه الصفحة أو المورد.
+            {t("Unauthorized.description")}
             <br />
-            إذا كنت تعتقد أن هذا خطأ، يرجى الاتصال بالدعم الفني.
+            {t("Unauthorized.contactSupport")}
           </p>
 
           {/* Auto redirect message */}
           <p className="text-sm text-slate-500 dark:text-slate-500 mb-8">
-            سيتم إعادة توجيهك إلى الصفحة الرئيسية خلال 5 ثوانٍ...
+            {t("Unauthorized.autoRedirect")}
           </p>
 
           {/* Actions */}
@@ -65,7 +65,7 @@ export default function UnauthorizedPage() {
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors font-medium"
             >
               <Home size={20} />
-              الصفحة الرئيسية
+              {t("Unauthorized.homeButton")}
             </Link>
 
             <button
@@ -73,7 +73,7 @@ export default function UnauthorizedPage() {
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors font-medium"
             >
               <ArrowLeft size={20} />
-              العودة للخلف
+              {t("Unauthorized.backButton")}
             </button>
           </div>
 
@@ -83,7 +83,7 @@ export default function UnauthorizedPage() {
               href="/support"
               className="text-sky-600 dark:text-sky-400 hover:underline text-sm"
             >
-              اتصل بالدعم الفني
+              {t("Unauthorized.contactSupportLink")}
             </Link>
           </div>
         </div>

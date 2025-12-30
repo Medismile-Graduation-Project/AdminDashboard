@@ -181,6 +181,24 @@ export const fetchCaseById = createAsyncThunk(
   }
 );
 
+/**
+ * جلب تاريخ الحالة السريرية
+ * GET /api/cases/<id>/history/
+ */
+export const fetchCaseHistory = createAsyncThunk(
+  "cases/fetchCaseHistory",
+  async (caseId, { rejectWithValue }) => {
+    try {
+      const data = await casesApi.fetchCaseHistory(caseId);
+      return { caseId, history: Array.isArray(data) ? data : [] };
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في جلب تاريخ الحالة"
+      );
+    }
+  }
+);
+
 export const createCase = createAsyncThunk(
   "cases/createCase",
   async (caseData, { rejectWithValue }) => {
@@ -474,6 +492,23 @@ const clinicalCasesSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchCaseById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // fetchCaseHistory
+      .addCase(fetchCaseHistory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchCaseHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        // حفظ التاريخ في selectedCase إذا كان موجود
+        if (state.selectedCase && state.selectedCase.id === action.payload.caseId) {
+          state.selectedCase.history = action.payload.history;
+        }
+        state.error = null;
+      })
+      .addCase(fetchCaseHistory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

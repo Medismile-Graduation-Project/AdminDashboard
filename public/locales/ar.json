@@ -27,6 +27,8 @@
   "Home": {
     "greeting": "مرحبا {{name}}!",
     "logout": "تسجيل الخروج",
+    "description": "نظرة عامة على الجامعة والإحصائيات",
+    "guest": "ضيف",
     "cards": {
       "totalPatients": "إجمالي المرضى",
       "activeStudents": "الطلاب النشطون",
@@ -647,6 +649,115 @@
     "responsePlaceholder": "اكتب رسالة الرد...",
     "content": "المحتوى",
     "case": "الحالة"
+  },
+  "AcademicStructure": {
+    "title": "البنية الأكاديمية",
+    "description": "إدارة الجامعات، الكليات، البرامج الأكاديمية، والسنوات الأكاديمية",
+    "tabs": {
+      "universities": "الجامعات",
+      "faculties": "الكليات",
+      "programs": "البرامج الأكاديمية",
+      "years": "السنوات الأكاديمية",
+      "courses": "المقررات"
+    }
+  },
+  "Users": {
+    "title": "إدارة المستخدمين",
+    "description": "إدارة الطلاب والمشرفين في الجامعة",
+    "students": "الطلاب",
+    "supervisors": "المشرفين",
+    "manageStudents": "إدارة الطلاب في الجامعة",
+    "manageSupervisors": "إدارة المشرفين في الجامعة",
+    "quickActions": "إجراءات سريعة",
+    "addStudent": "إضافة طالب جديد",
+    "addSupervisor": "إضافة مشرف جديد"
+  },
+  "Unauthorized": {
+    "title": "غير مصرح بالوصول",
+    "description": "عذراً، ليس لديك صلاحية للوصول إلى هذه الصفحة أو المورد.",
+    "contactSupport": "إذا كنت تعتقد أن هذا خطأ، يرجى الاتصال بالدعم الفني.",
+    "autoRedirect": "سيتم إعادة توجيهك إلى الصفحة الرئيسية خلال 5 ثوانٍ...",
+    "homeButton": "الصفحة الرئيسية",
+    "backButton": "العودة للخلف",
+    "contactSupportLink": "اتصل بالدعم الفني"
+  },
+  "Profile": {
+    "title": "الملف الشخصي",
+    "pleaseLogin": "الرجاء تسجيل الدخول للوصول إلى الملف الشخصي.",
+    "loadError": "فشل في جلب الملف الشخصي",
+    "user": "مستخدم",
+    "universityAdmin": "مسؤول جامعة",
+    "contactInfo": "معلومات الاتصال",
+    "phoneNumber": "رقم الهاتف",
+    "address": "العنوان",
+    "dateOfBirth": "تاريخ الميلاد",
+    "gender": "الجنس",
+    "male": "ذكر",
+    "female": "أنثى",
+    "workInfo": "معلومات العمل",
+    "university": "الجامعة",
+    "department": "القسم",
+    "position": "المنصب",
+    "accountInfo": "معلومات الحساب",
+    "email": "البريد الإلكتروني",
+    "userId": "معرف المستخدم",
+    "createdAt": "تاريخ الإنشاء",
+    "updatedAt": "آخر تحديث"
+  },
+  "AuditLogs": {
+    "title": "سجلات التدقيق",
+    "refresh": "تحديث",
+    "actionDistribution": "توزيع الإجراءات",
+    "dailyActivity": "النشاط اليومي",
+    "actionCount": "عدد الإجراءات",
+    "filters": "الفلاتر",
+    "search": "بحث",
+    "searchPlaceholder": "ابحث في الوصف...",
+    "actionType": "نوع الإجراء",
+    "contentType": "نوع المحتوى",
+    "fromDate": "من تاريخ",
+    "toDate": "إلى تاريخ",
+    "reset": "إعادة تعيين",
+    "all": "الكل",
+    "actions": {
+      "create": "إنشاء",
+      "update": "تحديث",
+      "delete": "حذف",
+      "view": "عرض"
+    },
+    "contentTypes": {
+      "case": "حالة",
+      "appointment": "موعد",
+      "evaluation": "تقييم",
+      "report": "تقرير",
+      "user": "مستخدم"
+    },
+    "table": {
+      "date": "التاريخ",
+      "user": "المستخدم",
+      "action": "الإجراء",
+      "contentType": "نوع المحتوى",
+      "description": "الوصف",
+      "ipAddress": "IP Address"
+    },
+    "unknown": "غير معروف",
+    "notSpecified": "غير محدد",
+    "noDescription": "لا يوجد وصف",
+    "notAvailable": "غير متوفر",
+    "noLogs": "لا توجد سجلات تدقيق",
+    "topUsers": "أكثر المستخدمين نشاطاً",
+    "actionsCount": "إجراء"
+  },
+  "Settings": {
+    "title": "إعدادات الحساب",
+    "fullName": "الاسم الكامل",
+    "email": "البريد الإلكتروني",
+    "currentPassword": "كلمة المرور الحالية",
+    "newPassword": "كلمة المرور الجديدة",
+    "saveChanges": "حفظ التغييرات",
+    "pleaseLogin": "الرجاء تسجيل الدخول للوصول إلى الإعدادات.",
+    "wrongPassword": "كلمة المرور الحالية غير صحيحة.",
+    "savedSuccessfully": "تم حفظ التغييرات بنجاح ✅"
   },
   "Footer": {
     "description": "نظام إدارة شامل للعيادات الطبية والطلاب والمشرفين. نوفر حلول متكاملة لإدارة الحالات السريرية والمواعيد والتقارير.",

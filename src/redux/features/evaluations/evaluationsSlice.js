@@ -4,7 +4,8 @@ import {
   createEvaluation as createEvaluationApi,
   updateEvaluation as updateEvaluationApi,
   fetchEvaluationById,
-  fetchStudentAverageRatings,
+  fetchStudentStatistics,
+  fetchStudentAverageRatings, // @deprecated - للتوافق مع الكود القديم
   submitEvaluation,
   finalizeEvaluation,
 } from "../../../services/evaluationsApi";
@@ -141,6 +142,24 @@ export const fetchEvaluationsAsync = createAsyncThunk(
 );
 
 /**
+ * جلب تفاصيل تقييم محدد
+ * GET /api/evaluations/<id>/
+ */
+export const fetchEvaluationByIdAsync = createAsyncThunk(
+  "evaluations/fetchEvaluationById",
+  async (evaluationId, { rejectWithValue }) => {
+    try {
+      const data = await fetchEvaluationById(evaluationId);
+      return mapEvaluationFromApi(data);
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في جلب تفاصيل التقييم"
+      );
+    }
+  }
+);
+
+/**
  * إنشاء تقييم جديد
  */
 export const createEvaluationAsync = createAsyncThunk(
@@ -209,13 +228,33 @@ export const finalizeEvaluationAsync = createAsyncThunk(
 );
 
 /**
- * جلب متوسط تقييمات طالب
+ * جلب إحصائيات التقييمات لطالب محدد
+ * GET /api/evaluations/students/<student_id>/statistics/
+ */
+export const fetchStudentStatisticsAsync = createAsyncThunk(
+  "evaluations/fetchStudentStatistics",
+  async (studentId, { rejectWithValue }) => {
+    try {
+      const data = await fetchStudentStatistics(studentId);
+      return { studentId, statistics: data };
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في جلب إحصائيات التقييمات"
+      );
+    }
+  }
+);
+
+/**
+ * @deprecated استخدم fetchStudentStatisticsAsync بدلاً منها
+ * جلب متوسط تقييمات طالب (قديم)
  */
 export const fetchStudentAverageRatingsAsync = createAsyncThunk(
   "evaluations/fetchStudentAverageRatings",
   async (studentId, { rejectWithValue }) => {
     try {
-      const data = await fetchStudentAverageRatings(studentId);
+      // استخدام الـ endpoint الجديد
+      const data = await fetchStudentStatistics(studentId);
       return data;
     } catch (error) {
       return rejectWithValue(
@@ -229,7 +268,8 @@ const evaluationsSlice = createSlice({
   name: "evaluations",
   initialState: {
     reviews: [], // قائمة التقييمات
-    averageRatings: null, // متوسط التقييمات (لطالب معين)
+    averageRatings: null, // متوسط التقييمات (لطالب معين) - قديم
+    studentStatistics: {}, // إحصائيات التقييمات للطلاب {studentId: statistics}
     loading: false,
     error: null,
     search: "",
@@ -270,6 +310,29 @@ const evaluationsSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "حدث خطأ أثناء جلب التقييمات";
         state.reviews = [];
+      })
+      // جلب تفاصيل تقييم محدد
+      .addCase(fetchEvaluationByIdAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchEvaluationByIdAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        if (action.payload) {
+          // تحديث التقييم في القائمة إذا كان موجوداً
+          const index = state.reviews.findIndex((r) => r.id === action.payload.id);
+          if (index !== -1) {
+            state.reviews[index] = action.payload;
+          } else {
+            // أو إضافته إذا لم يكن موجوداً
+            state.reviews.push(action.payload);
+          }
+        }
+        state.error = null;
+      })
+      .addCase(fetchEvaluationByIdAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "حدث خطأ أثناء جلب تفاصيل التقييم";
       })
       // إنشاء تقييم
       .addCase(createEvaluationAsync.pending, (state) => {
@@ -341,7 +404,22 @@ const evaluationsSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "حدث خطأ أثناء تثبيت التقييم";
       })
-      // جلب متوسط التقييمات
+      // جلب إحصائيات التقييمات لطالب
+      .addCase(fetchStudentStatisticsAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchStudentStatisticsAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const { studentId, statistics } = action.payload;
+        state.studentStatistics[studentId] = statistics;
+        state.error = null;
+      })
+      .addCase(fetchStudentStatisticsAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "حدث خطأ أثناء جلب إحصائيات التقييمات";
+      })
+      // جلب متوسط التقييمات (قديم - للتوافق)
       .addCase(fetchStudentAverageRatingsAsync.pending, (state) => {
         state.loading = true;
         state.error = null;

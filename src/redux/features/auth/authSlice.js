@@ -4,7 +4,7 @@ import apiClient from "../../../services/api";
 // Async Thunks
 /**
  * تسجيل الدخول
- * POST /api/accounts/auth/login/
+ * POST /api/accounts/login/university-admin/
  * 
  * حسب التوثيق:
  * - البيانات المرسلة: { "email": "...", "password": "..." }
@@ -23,7 +23,7 @@ export const loginAsync = createAsyncThunk(
   async ({ email, password }, { rejectWithValue }) => {
     try {
       // إرسال الطلب حسب التوثيق
-      const response = await apiClient.post("/accounts/auth/login/", {
+      const response = await apiClient.post("/accounts/login/university-admin/", {
         email,
         password,
       });
@@ -34,12 +34,38 @@ export const loginAsync = createAsyncThunk(
         throw new Error("استجابة غير صحيحة من الخادم");
       }
 
-      // التحقق من وجود data
-      if (!response.data.data) {
+      // معالجة مرنة للصيغ المختلفة
+      let tokens, user;
+      
+      // الصيغة 1: { status: "success", data: { tokens: {...}, user: {...} } }
+      if (response.data.data && response.data.data.tokens && response.data.data.user) {
+        tokens = response.data.data.tokens;
+        user = response.data.data.user;
+      }
+      // الصيغة 2: { tokens: {...}, user: {...} } (مباشرة في response.data)
+      else if (response.data.tokens && response.data.user) {
+        tokens = response.data.tokens;
+        user = response.data.user;
+      }
+      // الصيغة 3: { data: { tokens: {...}, user: {...} } } (بدون status)
+      else if (response.data.data) {
+        if (response.data.data.tokens && response.data.data.user) {
+          tokens = response.data.data.tokens;
+          user = response.data.data.user;
+        } else {
+          // Debug: طباعة الاستجابة الفعلية
+          if (process.env.NODE_ENV === "development") {
+            console.log("🔍 Login API Response:", JSON.stringify(response.data, null, 2));
+          }
+          throw new Error("بيانات المستخدم غير متوفرة في الاستجابة");
+        }
+      } else {
+        // Debug: طباعة الاستجابة الفعلية
+        if (process.env.NODE_ENV === "development") {
+          console.log("🔍 Login API Response:", JSON.stringify(response.data, null, 2));
+        }
         throw new Error("بيانات المستخدم غير متوفرة في الاستجابة");
       }
-
-      const { tokens, user } = response.data.data;
 
       // التحقق من وجود tokens و user
       if (!tokens || !tokens.access || !tokens.refresh) {
@@ -60,7 +86,7 @@ export const loginAsync = createAsyncThunk(
           // جلب Profile من API
           // نستخدم access_token مباشرة (تم حفظه للتو)
           const profileResponse = await apiClient.get(
-            `/accounts/university-admins/${user.id}/`,
+            `/accounts/me/university-admin/`,
             {
               headers: {
                 Authorization: `Bearer ${tokens.access}`,
@@ -145,7 +171,7 @@ export const loginAsync = createAsyncThunk(
 
 /**
  * تسجيل الخروج
- * POST /api/accounts/auth/logout/
+ * POST /api/accounts/logout/university-admin/
  * 
  * حسب التوثيق:
  * - Headers: Authorization: Bearer <access_token> (يتم إضافتها تلقائياً من apiClient)
@@ -164,7 +190,7 @@ export const logoutAsync = createAsyncThunk(
     // محاولة تسجيل الخروج من API
     if (refreshToken) {
       try {
-        const response = await apiClient.post("/accounts/auth/logout/", {
+        const response = await apiClient.post("/accounts/logout/university-admin/", {
           refresh: refreshToken,
         });
 
@@ -212,30 +238,24 @@ export const registerSupervisorAsync = createAsyncThunk(
     {
       username,
       email,
-      password,
-      password_confirm,
       first_name,
       last_name,
-      university_id,
-      license_number,
-      specialization,
+      university,
+      university_name,
     },
     { rejectWithValue }
   ) => {
     try {
-      const response = await apiClient.post("/accounts/supervisors/create/", {
-        username,
+      const response = await apiClient.post("/accounts/create/supervisor/", {
         email,
-        password,
-        password_confirm,
+        username,
         first_name,
         last_name,
-        university_id,
-        license_number,
-        specialization,
+        university,
+        university_name,
       });
 
-      return response.data.data;
+      return response.data?.data || response.data;
     } catch (error) {
       // معالجة أفضل للأخطاء
       let errorMessage = "فشل إنشاء الحساب";

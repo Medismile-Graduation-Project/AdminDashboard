@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useRtl } from "@/hooks/useRtl";
 import { useDispatch, useSelector } from "react-redux";
-import { Mail, Phone, MessageCircle, Send, HelpCircle, FileText, Clock, CheckCircle } from "lucide-react";
+import { Mail, Phone, MessageCircle, Send, HelpCircle, FileText, Clock, CheckCircle, RefreshCw } from "lucide-react";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import { motion } from "framer-motion";
-import { createTicketAsync, clearError } from "@/redux/features/support/supportSlice";
+import { createTicketAsync, fetchTicketsAsync, clearError } from "@/redux/features/support/supportSlice";
 import toast from "react-hot-toast";
 
 export default function SupportPage() {
   const { t, i18n } = useTranslation();
+  const isRtl = useRtl();
   const dispatch = useDispatch();
-  const { loading, error: supportError } = useSelector((state) => state.support);
+  const { loading, error: supportError, tickets } = useSelector((state) => state.support);
   
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
@@ -24,6 +26,7 @@ export default function SupportPage() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [showTickets, setShowTickets] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -39,7 +42,10 @@ export default function SupportPage() {
     }
   }, [supportError, dispatch]);
 
-  const isRtl = i18n.language === "ar";
+  // جلب التذاكر عند تحميل الصفحة
+  useEffect(() => {
+    dispatch(fetchTicketsAsync());
+  }, [dispatch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,10 +60,10 @@ export default function SupportPage() {
     try {
       const result = await dispatch(
         createTicketAsync({
-          category: formData.category,
           subject: formData.subject,
           description: formData.description,
           priority: formData.priority,
+          ...(formData.category && { category: formData.category }), // اختياري
         })
       ).unwrap();
 
@@ -70,6 +76,9 @@ export default function SupportPage() {
           priority: "medium",
           description: "",
         });
+        
+        // إعادة جلب التذاكر بعد إنشاء تذكرة جديدة
+        dispatch(fetchTicketsAsync());
         
         // إخفاء رسالة النجاح بعد 5 ثوان
         setTimeout(() => setSubmitted(false), 5000);
@@ -133,14 +142,14 @@ export default function SupportPage() {
 
   return (
     <AnimatedWrapper>
-      <div className={`p-4 sm:p-6 lg:p-8 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
-        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+      <div className={`p-6 sm:p-8 min-h-screen ${isRtl ? "text-right" : "text-left"}`}>
+        <div className="max-w-6xl mx-auto space-y-8">
           {/* العنوان الرئيسي */}
-          <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent mb-2">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
               {t("support.title") || "الدعم التقني"}
             </h1>
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+            <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
               {t("support.subtitle") || "نحن هنا لمساعدتك في أي وقت"}
             </p>
           </div>
@@ -156,23 +165,23 @@ export default function SupportPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`${channel.color} text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105`}
+                className={`${channel.color} text-white p-5 rounded-xl shadow-sm hover:shadow-md transition-all duration-200`}
               >
-                <div className="flex items-center gap-4 mb-3">
+                <div className={`flex items-center gap-3 mb-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                   {channel.icon}
-                  <h3 className="text-xl font-semibold">{channel.title}</h3>
+                  <h3 className="text-lg font-bold">{channel.title}</h3>
                 </div>
-                <p className="text-white/90 mb-3 text-sm">{channel.description}</p>
-                <p className="text-white font-medium">{channel.contact}</p>
+                <p className="text-white/90 mb-3 text-sm leading-relaxed">{channel.description}</p>
+                <p className="text-white font-semibold">{channel.contact}</p>
               </motion.a>
             ))}
           </div>
 
           {/* نموذج طلب الدعم */}
-          <div className="bg-white dark:bg-dark-light rounded-2xl shadow-lg p-5 sm:p-6 border-2 border-sky-200/50 dark:border-dark-lighter">
-            <div className="flex items-center gap-3 mb-6">
-              <HelpCircle className="text-sky-600 dark:text-sky-400" size={28} />
-              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
+          <div className="bg-white dark:bg-dark-light rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200 dark:border-slate-700">
+            <div className={`flex items-center gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse" : ""}`}>
+              <HelpCircle className="text-sky-600 dark:text-sky-400 flex-shrink-0" size={24} />
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                 {t("support.formTitle") || "إرسال طلب دعم"}
               </h2>
             </div>
@@ -181,10 +190,10 @@ export default function SupportPage() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex items-center gap-3"
+                className={`mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex items-center gap-3 ${isRtl ? "flex-row-reverse" : ""}`}
               >
-                <CheckCircle className="text-green-600 dark:text-green-400" size={24} />
-                <p className="text-green-700 dark:text-green-400 font-medium">
+                <CheckCircle className="text-green-600 dark:text-green-400 flex-shrink-0" size={20} />
+                <p className="text-green-700 dark:text-green-400 font-semibold text-sm">
                   {t("support.successMessage") || "تم إرسال طلبك بنجاح! سنتواصل معك قريباً."}
                 </p>
               </motion.div>
@@ -196,16 +205,16 @@ export default function SupportPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
               >
-                <p className="text-red-700 dark:text-red-400 font-medium text-sm">
+                <p className="text-red-700 dark:text-red-400 font-semibold text-sm">
                   {error || supportError}
                 </p>
               </motion.div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     {t("support.form.subject") || "الموضوع"} *
                   </label>
                   <input
@@ -214,19 +223,19 @@ export default function SupportPage() {
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                     placeholder={t("support.form.subjectPlaceholder") || "أدخل موضوع الطلب"}
-                    className="w-full border border-sky-200 dark:border-slate-700 rounded-lg p-3 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     {t("support.form.category") || "الفئة"} *
                   </label>
                   <select
                     required
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full border border-sky-200 dark:border-slate-700 rounded-lg p-3 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
                   >
                     {categories.map((cat) => (
                       <option key={cat.value} value={cat.value}>
@@ -238,7 +247,7 @@ export default function SupportPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
                   {t("support.form.priority") || "الأولوية"} *
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -247,10 +256,10 @@ export default function SupportPage() {
                       key={priority.value}
                       type="button"
                       onClick={() => setFormData({ ...formData, priority: priority.value })}
-                      className={`p-3 rounded-lg border-2 transition-all ${
+                      className={`p-3 rounded-lg border-2 transition-all duration-200 font-semibold text-sm ${
                         formData.priority === priority.value
-                          ? `${priority.color} border-current`
-                          : "border-sky-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-500"
+                          ? `${priority.color} border-current shadow-sm`
+                          : "border-slate-300 dark:border-slate-600 bg-white dark:bg-dark text-slate-700 dark:text-slate-300 hover:border-sky-500 hover:bg-slate-50 dark:hover:bg-slate-800"
                       }`}
                     >
                       {priority.label}
@@ -260,7 +269,7 @@ export default function SupportPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   {t("support.form.description") || "الوصف"} *
                 </label>
                 <textarea
@@ -269,14 +278,14 @@ export default function SupportPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder={t("support.form.descriptionPlaceholder") || "اكتب تفاصيل طلبك هنا..."}
                   rows={6}
-                  className="w-full border border-sky-200 dark:border-slate-700 rounded-lg p-3 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200 resize-none"
                 />
               </div>
 
               {user && (
-                <div className="p-3 rounded-lg bg-sky-50 dark:bg-slate-700/50 border border-sky-200 dark:border-slate-600">
+                <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    <strong>{t("support.form.userInfo") || "معلومات المستخدم:"}</strong>{" "}
+                    <strong className="font-semibold">{t("support.form.userInfo") || "معلومات المستخدم:"}</strong>{" "}
                     {user.first_name && user.last_name
                       ? `${user.first_name} ${user.last_name}`
                       : user.username || user.email}
@@ -286,31 +295,126 @@ export default function SupportPage() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Clock className="animate-spin" size={20} />
-                    {t("support.form.sending") || "جاري الإرسال..."}
-                  </>
-                ) : (
-                  <>
-                    <Send size={20} />
-                    {t("support.form.submit") || "إرسال الطلب"}
-                  </>
-                )}
-              </button>
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`px-6 py-2.5 bg-sky-600 hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-700 text-white rounded-lg font-semibold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
+                >
+                  {loading ? (
+                    <>
+                      <Clock className="animate-spin" size={18} />
+                      {t("support.form.sending") || "جاري الإرسال..."}
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      {t("support.form.submit") || "إرسال الطلب"}
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
 
+          {/* قائمة طلبات الدعم */}
+          <div className="bg-white dark:bg-dark-light rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200 dark:border-slate-700">
+            <div className={`flex items-center justify-between mb-6 pb-4 border-b border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse" : ""}`}>
+              <div className={`flex items-center gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+                <FileText className="text-sky-600 dark:text-sky-400 flex-shrink-0" size={24} />
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                  {t("support.tickets.title") || "طلبات الدعم"}
+                </h2>
+              </div>
+              <button
+                onClick={() => dispatch(fetchTicketsAsync())}
+                className={`px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-all duration-200 text-sm font-semibold shadow-sm hover:shadow-md flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}
+              >
+                <RefreshCw size={16} />
+                {t("support.tickets.refresh") || "تحديث"}
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Clock className="animate-spin text-sky-600 dark:text-sky-400" size={32} />
+              </div>
+            ) : tickets && tickets.length > 0 ? (
+              <div className="space-y-3">
+                {tickets.map((ticket, index) => (
+                  <motion.div
+                    key={ticket.id || index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
+                  >
+                    <div className={`flex items-start justify-between mb-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+                      <h3 className="font-bold text-slate-900 dark:text-white flex-1">
+                        {ticket.subject || "بدون موضوع"}
+                      </h3>
+                      <span
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold flex-shrink-0 ${
+                          ticket.priority === "urgent"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                            : ticket.priority === "high"
+                            ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+                            : ticket.priority === "medium"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        }`}
+                      >
+                        {ticket.priority === "urgent"
+                          ? "عاجل"
+                          : ticket.priority === "high"
+                          ? "عالية"
+                          : ticket.priority === "medium"
+                          ? "متوسطة"
+                          : "منخفضة"}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-2 leading-relaxed">
+                      {ticket.description || ticket.body || "لا يوجد وصف"}
+                    </p>
+                    <div className={`flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 ${isRtl ? "flex-row-reverse" : ""}`}>
+                      <span className="font-medium">
+                        {ticket.status === "open"
+                          ? "مفتوح"
+                          : ticket.status === "in_progress"
+                          ? "قيد المعالجة"
+                          : ticket.status === "resolved"
+                          ? "محلول"
+                          : ticket.status === "closed"
+                          ? "مغلق"
+                          : ticket.status || "غير محدد"}
+                      </span>
+                      {ticket.created_at && (
+                        <span className="font-medium">
+                          {new Date(ticket.created_at).toLocaleDateString("ar-SA")}
+                        </span>
+                      )}
+                      {ticket.category && (
+                        <span className="px-2.5 py-1 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded-full font-semibold">
+                          {ticket.category}
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                <FileText className="mx-auto mb-4 text-slate-400 dark:text-slate-500" size={48} />
+                <p className="font-medium">{t("support.tickets.noTickets") || "لا توجد طلبات دعم"}</p>
+              </div>
+            )}
+          </div>
+
           {/* الأسئلة الشائعة */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-sky-200 dark:border-slate-700">
-            <div className="flex items-center gap-3 mb-6">
-              <FileText className="text-blue-600 dark:text-blue-400" size={28} />
-              <h2 className="text-2xl font-bold text-blue-900 dark:text-white">
+          <div className="bg-white dark:bg-dark-light rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200 dark:border-slate-700">
+            <div className={`flex items-center gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse" : ""}`}>
+              <FileText className="text-sky-600 dark:text-sky-400 flex-shrink-0" size={24} />
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                 {t("support.faq.title") || "الأسئلة الشائعة"}
               </h2>
             </div>
@@ -339,21 +443,21 @@ export default function SupportPage() {
                   initial={{ opacity: 0, x: isRtl ? 20 : -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="p-4 rounded-lg bg-sky-50 dark:bg-slate-700/50 border border-sky-200 dark:border-slate-600"
+                  className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                 >
-                  <h3 className="font-semibold text-blue-900 dark:text-white mb-2">{faq.q}</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm">{faq.a}</p>
+                  <h3 className="font-bold text-slate-900 dark:text-white mb-2">{faq.q}</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{faq.a}</p>
                 </motion.div>
               ))}
             </div>
           </div>
 
           {/* معلومات إضافية */}
-          <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-sky-50 dark:from-slate-800 dark:to-slate-900 rounded-xl border border-sky-200 dark:border-slate-700">
-            <p className="text-slate-600 dark:text-slate-400 mb-2">
+          <div className="text-center p-6 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <p className="text-slate-600 dark:text-slate-400 mb-2 text-sm sm:text-base">
               {t("support.helpText") || "هل تحتاج مساعدة إضافية؟"}
             </p>
-            <p className="text-slate-700 dark:text-slate-300 font-medium">
+            <p className="text-slate-700 dark:text-slate-300 font-semibold text-sm sm:text-base">
               {t("support.contactText") || "لا تتردد في التواصل معنا - نحن هنا لمساعدتك!"}
             </p>
           </div>

@@ -10,14 +10,30 @@ const REPORTS_BASE_URL = "/reports/";
 /**
  * جلب قائمة التقارير
  * GET /api/reports/
- * Query Parameters: student_id, university_id, report_type, is_active
  * 
  * حسب التوثيق:
- * - مسؤول الجامعة/الدعم التقني: جميع التقارير
+ * - الصلاحيات: IsAuthenticated + Bearer Token (role = university_admin)
+ * - مسؤول الجامعة (university_admin): يرى فقط تقارير جامعته
+ *   ⚠️ مهم: Backend يتحقق تلقائياً من university_id من Token
+ *   ⚠️ لا يجب تمرير university_id كـ query parameter - Backend يستخرجه من Token
+ * - tech_support: يرى جميع التقارير
+ * 
+ * Query Parameters (اختيارية):
+ * - student_id: معرف الطالب
+ * - report_type: نوع التقرير (academic, clinical, progress, summary)
+ * - is_active: حالة التقرير (true/false)
+ * 
+ * ⚠️ ملاحظة مهمة: لا تمرر university_id في params - Backend يتحقق تلقائياً من Token
+ * 
+ * يعيد: Array of report objects (مفلترة تلقائياً حسب جامعة المستخدم)
  */
 export const fetchReports = async (params = {}) => {
   try {
-    const response = await apiClient.get(REPORTS_BASE_URL, { params });
+    // ⚠️ لا تمرر university_id - Backend يستخرجه من Token تلقائياً
+    // إزالة university_id من params إذا كان موجوداً (للتأكد)
+    const { university_id, ...cleanParams } = params;
+    
+    const response = await apiClient.get(REPORTS_BASE_URL, { params: cleanParams });
     
     // الاستجابة قد تأتي بصيغ مختلفة:
     // 1. Array مباشر
@@ -49,10 +65,17 @@ export const fetchReports = async (params = {}) => {
 
 /**
  * جلب تقرير محدد
- * GET /api/reports/<report_id>/
+ * GET /api/reports/{id}/
  * 
  * حسب التوثيق:
- * - الصلاحيات: IsAuthenticated
+ * - الصلاحيات: IsAuthenticated + Bearer Token (role = university_admin)
+ * - مسؤول الجامعة: يمكنه عرض تقرير واحد فقط إذا كان التقرير تابعًا لجامعته
+ *   ⚠️ مهم: Backend يتحقق تلقائياً من أن التقرير يخص جامعته من Token
+ *   ⚠️ إذا حاول المستخدم الوصول لتقرير من جامعة أخرى، يعيد Backend خطأ 403/404
+ * 
+ * @param {string} id - ID التقرير (UUID)
+ * @returns {Promise<Object>} Report object
+ * @throws {Error} إذا كان التقرير لا يخص جامعة المستخدم أو غير موجود
  */
 export const fetchReportById = async (id) => {
   try {

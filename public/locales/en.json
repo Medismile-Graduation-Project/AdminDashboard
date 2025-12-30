@@ -27,6 +27,8 @@
   "Home": {
     "greeting": "Hello {{name}}!",
     "logout": "Logout",
+    "description": "Overview of the university and statistics",
+    "guest": "Guest",
     "cards": {
       "totalPatients": "Total Patients",
       "activeStudents": "Active Students",
@@ -647,6 +649,115 @@
     "updateResponse": "Update Response",
     "optional": "Optional",
     "responsePlaceholder": "Enter response message..."
+  },
+  "AcademicStructure": {
+    "title": "Academic Structure",
+    "description": "Manage universities, faculties, academic programs, and academic years",
+    "tabs": {
+      "universities": "Universities",
+      "faculties": "Faculties",
+      "programs": "Academic Programs",
+      "years": "Academic Years",
+      "courses": "Courses"
+    }
+  },
+  "Users": {
+    "title": "User Management",
+    "description": "Manage students and supervisors in the university",
+    "students": "Students",
+    "supervisors": "Supervisors",
+    "manageStudents": "Manage students in the university",
+    "manageSupervisors": "Manage supervisors in the university",
+    "quickActions": "Quick Actions",
+    "addStudent": "Add New Student",
+    "addSupervisor": "Add New Supervisor"
+  },
+  "Unauthorized": {
+    "title": "Unauthorized Access",
+    "description": "Sorry, you do not have permission to access this page or resource.",
+    "contactSupport": "If you believe this is an error, please contact technical support.",
+    "autoRedirect": "You will be redirected to the home page in 5 seconds...",
+    "homeButton": "Home",
+    "backButton": "Go Back",
+    "contactSupportLink": "Contact Technical Support"
+  },
+  "Profile": {
+    "title": "Profile",
+    "pleaseLogin": "Please log in to access your profile.",
+    "loadError": "Failed to load profile",
+    "user": "User",
+    "universityAdmin": "University Admin",
+    "contactInfo": "Contact Information",
+    "phoneNumber": "Phone Number",
+    "address": "Address",
+    "dateOfBirth": "Date of Birth",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "workInfo": "Work Information",
+    "university": "University",
+    "department": "Department",
+    "position": "Position",
+    "accountInfo": "Account Information",
+    "email": "Email",
+    "userId": "User ID",
+    "createdAt": "Created At",
+    "updatedAt": "Last Updated"
+  },
+  "AuditLogs": {
+    "title": "Audit Logs",
+    "refresh": "Refresh",
+    "actionDistribution": "Action Distribution",
+    "dailyActivity": "Daily Activity",
+    "actionCount": "Action Count",
+    "filters": "Filters",
+    "search": "Search",
+    "searchPlaceholder": "Search in description...",
+    "actionType": "Action Type",
+    "contentType": "Content Type",
+    "fromDate": "From Date",
+    "toDate": "To Date",
+    "reset": "Reset",
+    "all": "All",
+    "actions": {
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete",
+      "view": "View"
+    },
+    "contentTypes": {
+      "case": "Case",
+      "appointment": "Appointment",
+      "evaluation": "Evaluation",
+      "report": "Report",
+      "user": "User"
+    },
+    "table": {
+      "date": "Date",
+      "user": "User",
+      "action": "Action",
+      "contentType": "Content Type",
+      "description": "Description",
+      "ipAddress": "IP Address"
+    },
+    "unknown": "Unknown",
+    "notSpecified": "Not Specified",
+    "noDescription": "No Description",
+    "notAvailable": "Not Available",
+    "noLogs": "No audit logs found",
+    "topUsers": "Most Active Users",
+    "actionsCount": "actions"
+  },
+  "Settings": {
+    "title": "Account Settings",
+    "fullName": "Full Name",
+    "email": "Email",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "saveChanges": "Save Changes",
+    "pleaseLogin": "Please log in to access settings.",
+    "wrongPassword": "Current password is incorrect.",
+    "savedSuccessfully": "Changes saved successfully ✅"
   },
   "Footer": {
     "description": "Comprehensive management system for medical clinics, students, and supervisors. We provide integrated solutions for managing clinical cases, appointments, and reports.",

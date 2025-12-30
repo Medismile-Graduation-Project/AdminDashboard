@@ -205,22 +205,12 @@ export default function UniversityAdminDashboard() {
   }
 
   return (
-    <div className={`p-6 space-y-8 ${isRtl ? "text-right" : "text-left"}`}>
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-          {t("Home.greeting", {
-            name: user?.first_name || user?.username || "مدير الجامعة",
-          }) ||
-            `مرحباً ${user?.first_name || user?.username || "مدير الجامعة"}`}
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">
-          نظرة عامة على الجامعة والإحصائيات
-        </p>
-      </div>
+    <div className={`space-y-8 ${isRtl ? "text-right" : "text-left"}`}>
 
       {/* Dashboard Cards */}
-      <SharedCards cards={cardsWithValues} />
+      <div className="mb-6">
+        <SharedCards cards={cardsWithValues} />
+      </div>
 
       {/* Charts Section */}
       <div className="space-y-6">
@@ -232,8 +222,8 @@ export default function UniversityAdminDashboard() {
         >
           {/* توزيع الطلاب حسب السنة */}
           {studentsByYear.length > 0 && (
-            <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow flex-1 min-w-[300px]">
-              <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
+            <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
+              <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
                 توزيع الطلاب حسب السنة الدراسية
               </h2>
               <ResponsiveContainer width="100%" height={250}>
@@ -251,8 +241,8 @@ export default function UniversityAdminDashboard() {
 
           {/* توزيع المشرفين حسب القسم */}
           {supervisorsByDepartment.length > 0 && (
-            <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow flex-1 min-w-[300px]">
-              <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
+            <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
+              <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
                 توزيع المشرفين حسب القسم
               </h2>
               <ResponsiveContainer width="100%" height={250}>
@@ -275,8 +265,8 @@ export default function UniversityAdminDashboard() {
 
           {/* توزيع المستخدمين (Pie Chart) */}
           {(userDistribution[0].value > 0 || userDistribution[1].value > 0) && (
-            <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow flex-1 min-w-[300px]">
-              <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
+            <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
+              <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
                 توزيع المستخدمين
               </h2>
               <ResponsiveContainer width="100%" height={250}>
@@ -313,8 +303,8 @@ export default function UniversityAdminDashboard() {
           >
             {/* توزيع الإجراءات */}
             {auditStatistics.action_counts.length > 0 && (
-              <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow flex-1 min-w-[300px]">
-                <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
+              <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
+                <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
                   توزيع الإجراءات
                 </h2>
                 <ResponsiveContainer width="100%" height={250}>
@@ -332,8 +322,8 @@ export default function UniversityAdminDashboard() {
 
             {/* النشاط اليومي */}
             {auditStatistics.daily_activity.length > 0 && (
-              <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow flex-1 min-w-[300px]">
-                <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
+              <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
+                <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
                   النشاط اليومي (آخر 30 يوم)
                 </h2>
                 <ResponsiveContainer width="100%" height={250}>
@@ -365,27 +355,29 @@ export default function UniversityAdminDashboard() {
         }`}
       >
         {/* Notifications */}
-        <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow flex-1 min-w-[250px]">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
-            <BellIcon className="h-5 w-5" /> الإشعارات
+        <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[250px]">
+          <h2 className="text-lg font-bold mb-5 flex items-center gap-2.5 text-slate-900 dark:text-white">
+            <BellIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" /> 
+            <span>الإشعارات</span>
           </h2>
           <ul
-            className={`list-disc space-y-2 ${
-              isRtl ? "pr-5 text-right" : "pl-5 text-left"
+            className={`space-y-3 ${
+              isRtl ? "text-right" : "text-left"
             }`}
           >
             {notifications.length > 0 ? (
               notifications.map((note, idx) => (
-                <li key={idx} className="text-sky-700 dark:text-sky-300">
-                  <Link href={note.href || "#"} className="hover:underline">
-                    {note.message}
+                <li key={idx} className="pb-3 border-b border-slate-100 dark:border-slate-700 last:border-0 last:pb-0">
+                  <Link href={note.href || "#"} className="block group">
+                    <p className="text-sky-700 dark:text-sky-300 group-hover:text-sky-900 dark:group-hover:text-sky-100 transition-colors text-sm font-medium mb-1">
+                      {note.message}
+                    </p>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{note.time}</span>
                   </Link>
-                  {" - "}
-                  <span className="text-sm text-sky-500">{note.time}</span>
                 </li>
               ))
             ) : (
-              <li className="text-slate-500 dark:text-slate-400">
+              <li className="text-slate-500 dark:text-slate-400 text-sm py-2">
                 لا توجد إشعارات جديدة
               </li>
             )}
@@ -394,11 +386,11 @@ export default function UniversityAdminDashboard() {
 
         {/* Quick Actions */}
         {quickActions && quickActions.length > 0 && (
-          <div className="p-4 bg-white dark:bg-dark-light rounded-lg shadow flex-1 min-w-[250px]">
-            <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
+          <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[250px]">
+            <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
               إجراءات سريعة
             </h2>
-            <ul className={`space-y-2 ${isRtl ? "text-right" : "text-left"}`}>
+            <ul className={`space-y-2.5 ${isRtl ? "text-right" : "text-left"}`}>
               {quickActions.map((action, idx) => {
                 const ActionIcon = action.icon;
                 const actionName = isRtl ? action.name : action.nameEn || action.name;
@@ -406,10 +398,10 @@ export default function UniversityAdminDashboard() {
                   <li key={idx}>
                     <Link
                       href={action.href}
-                      className="flex items-center gap-2 text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 hover:underline transition-colors"
+                      className="flex items-center gap-3 py-2 px-3 rounded-lg text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-all duration-200 group"
                     >
-                      {ActionIcon && <ActionIcon size={16} />}
-                      <span>{actionName}</span>
+                      {ActionIcon && <ActionIcon size={18} className="group-hover:scale-110 transition-transform" />}
+                      <span className="text-sm font-medium">{actionName}</span>
                     </Link>
                   </li>
                 );

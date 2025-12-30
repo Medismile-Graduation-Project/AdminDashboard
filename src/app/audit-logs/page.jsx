@@ -134,41 +134,41 @@ function AuditLogsContent() {
 
   return (
     <AnimatedWrapper>
-      <div className={`p-6 space-y-6 ${isRtl ? "text-right" : "text-left"}`}>
+      <div className={`p-6 sm:p-8 space-y-8 ${isRtl ? "text-right" : "text-left"}`}>
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Activity className="h-8 w-8 text-sky-600 dark:text-sky-400" />
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-              سجلات التدقيق
+        <div className={`flex items-center justify-between ${isRtl ? "flex-row-reverse" : ""}`}>
+          <div className={`flex items-center gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+            <Activity className="h-8 w-8 text-sky-600 dark:text-sky-400 flex-shrink-0" />
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+              {t("AuditLogs.title")}
             </h1>
           </div>
           <button
             onClick={loadData}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+            className={`flex items-center gap-2 px-5 py-2.5 bg-sky-600 text-white rounded-lg hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-700 transition-all duration-200 font-semibold text-sm shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
           >
             <RefreshCw size={18} />
-            تحديث
+            {t("AuditLogs.refresh")}
           </button>
         </div>
 
         {/* Statistics Charts */}
         {statistics && canAccess("audit.statistics") && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Action Counts Chart */}
             {statistics.action_counts && (
-              <div className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow">
-                <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
-                  توزيع الإجراءات
+              <div className="p-5 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
+                  {t("AuditLogs.actionDistribution")}
                 </h2>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={statistics.action_counts}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="action" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="action" stroke="#64748b" />
+                    <YAxis stroke="#64748b" />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="count" fill="#0ea5e9" name="عدد الإجراءات" />
+                    <Bar dataKey="count" fill="#0ea5e9" name={t("AuditLogs.actionCount")} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -176,15 +176,15 @@ function AuditLogsContent() {
 
             {/* Daily Activity Chart */}
             {statistics.daily_activity && (
-              <div className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow">
-                <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
-                  النشاط اليومي
+              <div className="p-5 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
+                  {t("AuditLogs.dailyActivity")}
                 </h2>
                 <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={statistics.daily_activity}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="date" stroke="#64748b" />
+                    <YAxis stroke="#64748b" />
                     <Tooltip />
                     <Legend />
                     <Line
@@ -192,7 +192,7 @@ function AuditLogsContent() {
                       dataKey="count"
                       stroke="#0ea5e9"
                       strokeWidth={3}
-                      name="عدد الإجراءات"
+                      name={t("AuditLogs.actionCount")}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -202,94 +202,94 @@ function AuditLogsContent() {
         )}
 
         {/* Filters */}
-        <div className="p-4 bg-slate-100 dark:bg-dark-light rounded-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter size={20} className="text-slate-600 dark:text-slate-400" />
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">الفلاتر</h2>
+        <div className="p-5 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className={`flex items-center gap-3 mb-5 pb-4 border-b border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse" : ""}`}>
+            <Filter size={20} className="text-sky-600 dark:text-sky-400 flex-shrink-0" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t("AuditLogs.filters")}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Search */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                بحث
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                {t("AuditLogs.search")}
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Search className={`absolute top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 ${isRtl ? "right-3" : "left-3"}`} />
                 <input
                   type="text"
                   value={filters.search}
                   onChange={(e) => handleFilterChange("search", e.target.value)}
-                  placeholder="ابحث في الوصف..."
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  placeholder={t("AuditLogs.searchPlaceholder")}
+                  className={`w-full ${isRtl ? "pr-10 pl-4" : "pl-10 pr-4"} py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200`}
                 />
               </div>
             </div>
 
             {/* Action */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                نوع الإجراء
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                {t("AuditLogs.actionType")}
               </label>
               <select
                 value={filters.action}
                 onChange={(e) => handleFilterChange("action", e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
               >
-                <option value="">الكل</option>
-                <option value="create">إنشاء</option>
-                <option value="update">تحديث</option>
-                <option value="delete">حذف</option>
-                <option value="view">عرض</option>
+                <option value="">{t("AuditLogs.all")}</option>
+                <option value="create">{t("AuditLogs.actions.create")}</option>
+                <option value="update">{t("AuditLogs.actions.update")}</option>
+                <option value="delete">{t("AuditLogs.actions.delete")}</option>
+                <option value="view">{t("AuditLogs.actions.view")}</option>
               </select>
             </div>
 
             {/* Content Type */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                نوع المحتوى
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                {t("AuditLogs.contentType")}
               </label>
               <select
                 value={filters.content_type}
                 onChange={(e) => handleFilterChange("content_type", e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
               >
-                <option value="">الكل</option>
-                <option value="case">حالة</option>
-                <option value="appointment">موعد</option>
-                <option value="evaluation">تقييم</option>
-                <option value="report">تقرير</option>
-                <option value="user">مستخدم</option>
+                <option value="">{t("AuditLogs.all")}</option>
+                <option value="case">{t("AuditLogs.contentTypes.case")}</option>
+                <option value="appointment">{t("AuditLogs.contentTypes.appointment")}</option>
+                <option value="evaluation">{t("AuditLogs.contentTypes.evaluation")}</option>
+                <option value="report">{t("AuditLogs.contentTypes.report")}</option>
+                <option value="user">{t("AuditLogs.contentTypes.user")}</option>
               </select>
             </div>
 
             {/* Start Date */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                من تاريخ
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                {t("AuditLogs.fromDate")}
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Calendar className={`absolute top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 ${isRtl ? "right-3" : "left-3"}`} />
                 <input
                   type="date"
                   value={filters.start_date}
                   onChange={(e) => handleFilterChange("start_date", e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className={`w-full ${isRtl ? "pr-10 pl-4" : "pl-10 pr-4"} py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200`}
                 />
               </div>
             </div>
 
             {/* End Date */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                إلى تاريخ
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                {t("AuditLogs.toDate")}
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Calendar className={`absolute top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 ${isRtl ? "right-3" : "left-3"}`} />
                 <input
                   type="date"
                   value={filters.end_date}
                   onChange={(e) => handleFilterChange("end_date", e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className={`w-full ${isRtl ? "pr-10 pl-4" : "pl-10 pr-4"} py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200`}
                 />
               </div>
             </div>
@@ -298,37 +298,37 @@ function AuditLogsContent() {
             <div className="flex items-end">
               <button
                 onClick={handleResetFilters}
-                className="w-full px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                className="w-full px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-all duration-200 font-semibold text-sm shadow-sm hover:shadow-md"
               >
-                إعادة تعيين
+                {t("AuditLogs.reset")}
               </button>
             </div>
           </div>
         </div>
 
         {/* Logs Table */}
-        <div className="bg-white dark:bg-dark rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-100 dark:bg-dark-light">
+            <table className={`w-full ${isRtl ? "text-right" : "text-left"}`} dir={isRtl ? "rtl" : "ltr"}>
+              <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-900 dark:text-white">
-                    التاريخ
+                  <th className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
+                    {t("AuditLogs.table.date")}
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-900 dark:text-white">
-                    المستخدم
+                  <th className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
+                    {t("AuditLogs.table.user")}
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-900 dark:text-white">
-                    الإجراء
+                  <th className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
+                    {t("AuditLogs.table.action")}
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-900 dark:text-white">
-                    نوع المحتوى
+                  <th className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
+                    {t("AuditLogs.table.contentType")}
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-900 dark:text-white">
-                    الوصف
+                  <th className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
+                    {t("AuditLogs.table.description")}
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-900 dark:text-white">
-                    IP Address
+                  <th className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
+                    {t("AuditLogs.table.ipAddress")}
                   </th>
                 </tr>
               </thead>
@@ -337,49 +337,49 @@ function AuditLogsContent() {
                   logs.map((log) => (
                     <tr
                       key={log.id}
-                      className="hover:bg-slate-50 dark:hover:bg-dark-light transition-colors"
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200"
                     >
-                      <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                      <td className="px-6 py-4 text-sm font-medium text-slate-700 dark:text-slate-300">
                         {formatDate(log.created_at)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <User size={16} className="text-slate-400" />
-                          <span>
+                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
+                        <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
+                          <User size={16} className="text-sky-600 dark:text-sky-400 flex-shrink-0" />
+                          <span className="font-medium">
                             {log.user?.first_name || ""} {log.user?.last_name || ""}
                           </span>
-                          <span className="text-slate-400">
-                            ({log.user?.email || log.user?.username || "غير معروف"})
+                          <span className="text-slate-400 text-xs">
+                            ({log.user?.email || log.user?.username || t("AuditLogs.unknown")})
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-4">
                         <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getActionColor(
+                          className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${getActionColor(
                             log.action
                           )}`}
                         >
                           {log.action}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <FileText size={16} className="text-slate-400" />
-                          {log.content_type || "غير محدد"}
+                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
+                        <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
+                          <FileText size={16} className="text-sky-600 dark:text-sky-400 flex-shrink-0" />
+                          <span className="font-medium">{log.content_type || t("AuditLogs.notSpecified")}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-                        {log.description || "لا يوجد وصف"}
+                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
+                        <span className="font-medium">{log.description || t("AuditLogs.noDescription")}</span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
-                        {log.ip_address || "غير متوفر"}
+                      <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 font-mono">
+                        {log.ip_address || t("AuditLogs.notAvailable")}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-                      لا توجد سجلات تدقيق
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                      <p className="font-medium">{t("AuditLogs.noLogs")}</p>
                     </td>
                   </tr>
                 )}
@@ -390,24 +390,24 @@ function AuditLogsContent() {
 
         {/* Top Users */}
         {statistics?.top_users && canAccess("audit.statistics") && (
-          <div className="p-4 bg-sky-200 dark:bg-dark-light rounded-lg shadow">
-            <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">
-              أكثر المستخدمين نشاطاً
+          <div className="p-5 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+            <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white pb-4 border-b border-slate-200 dark:border-slate-700">
+              {t("AuditLogs.topUsers")}
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {statistics.top_users.slice(0, 5).map((user, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-white dark:bg-dark rounded-lg"
+                  className={`flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse" : ""}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-slate-500 dark:text-slate-400">#{index + 1}</span>
-                    <span className="text-slate-900 dark:text-white">
-                      {user.user__email || user.email || "غير معروف"}
+                  <div className={`flex items-center gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">#{index + 1}</span>
+                    <span className="text-slate-900 dark:text-white font-semibold">
+                      {user.user__email || user.email || t("AuditLogs.unknown")}
                     </span>
                   </div>
-                  <span className="text-sky-600 dark:text-sky-400 font-semibold">
-                    {user.count} إجراء
+                  <span className="text-sky-600 dark:text-sky-400 font-bold">
+                    {user.count} {t("AuditLogs.actionsCount")}
                   </span>
                 </div>
               ))}

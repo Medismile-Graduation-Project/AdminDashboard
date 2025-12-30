@@ -98,12 +98,13 @@ export default function LoginPage() {
   if (isLoading) return null;
 
   return (
-    <div dir="rtl">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-sky-200">
-          <div className="text-center mb-6">
-            <div className="text-4xl font-bold mb-2">
-              <div className="mx-auto w-18 h-18 rounded-full bg-white p-1 flex items-center justify-center">
+    <div dir="rtl" className="min-h-screen bg-sky-50 dark:bg-slate-900">
+      <div className="flex min-h-screen items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-md bg-white dark:bg-dark-light p-8 sm:p-10 rounded-2xl shadow-xl border border-sky-200 dark:border-slate-700">
+          {/* Logo and Header Section */}
+          <div className="text-center mb-8">
+            <div className="mb-6">
+              <div className="mx-auto w-20 h-20 rounded-full bg-white dark:bg-slate-800 p-1.5 flex items-center justify-center shadow-md border border-sky-100 dark:border-slate-700">
                 <Image
                   src="/Screenshot_٢٠٢٥٠٩٠٨-١٢٣٢٥٥.jpg"
                   alt="MediSmile Logo"
@@ -113,50 +114,74 @@ export default function LoginPage() {
                 />
               </div>
             </div>
-            <h2 className="text-xl font-semibold text-blue-900">أهلاً بك</h2>
-            <p className="text-blue-500 text-sm mt-2">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+              أهلاً بك
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
               الوصول إلى رعاية الأسنان التقنية والتعليم
             </p>
           </div>
 
+          {/* Error Message */}
           {(error || authError) && (
-            <p className="text-red-600 text-sm mb-3 text-center">
-              {error || authError}
-            </p>
+            <div className="mb-6 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <p className="text-red-600 dark:text-red-400 text-sm text-center font-medium">
+                {error || authError}
+              </p>
+            </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email Input */}
             <div className="relative">
-              <EnvelopeIcon className="h-5 w-5 absolute top-3 right-3 text-blue-500" />
+              <label htmlFor="email" className="sr-only">
+                البريد الإلكتروني
+              </label>
+              <EnvelopeIcon className="h-5 w-5 absolute top-1/2 right-3 transform -translate-y-1/2 text-sky-500 dark:text-sky-400 pointer-events-none" />
               <input
+                id="email"
                 type="email"
                 placeholder="البريد الإلكتروني"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pr-10 px-4 py-2 border border-sky-200 rounded-lg 
-                           focus:outline-none focus:ring-2 focus:ring-blue-600 
-                           bg-sky-50 text-slate-900 transition"
+                className="w-full pr-11 pl-4 py-3 border border-sky-200 dark:border-slate-600 rounded-lg 
+                           focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500
+                           bg-sky-50 dark:bg-slate-800 text-slate-900 dark:text-white 
+                           placeholder:text-slate-400 dark:placeholder:text-slate-500
+                           transition-all duration-200"
               />
             </div>
 
+            {/* Password Input */}
             <div className="relative">
-              <LockClosedIcon className="h-5 w-5 absolute top-3 right-3 text-blue-500" />
+              <label htmlFor="password" className="sr-only">
+                كلمة المرور
+              </label>
+              <LockClosedIcon className="h-5 w-5 absolute top-1/2 right-3 transform -translate-y-1/2 text-sky-500 dark:text-sky-400 pointer-events-none" />
               <input
+                id="password"
                 type="password"
                 placeholder="كلمة المرور"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pr-10 px-4 py-2 border border-sky-200 rounded-lg 
-                           focus:outline-none focus:ring-2 focus:ring-blue-600 
-                           bg-sky-50 text-slate-900 transition"
+                className="w-full pr-11 pl-4 py-3 border border-sky-200 dark:border-slate-600 rounded-lg 
+                           focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500
+                           bg-sky-50 dark:bg-slate-800 text-slate-900 dark:text-white 
+                           placeholder:text-slate-400 dark:placeholder:text-slate-500
+                           transition-all duration-200"
               />
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed
-                         text-white font-semibold py-2 rounded-lg transition-all duration-200"
+              className="w-full bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600
+                         disabled:bg-sky-300 dark:disabled:bg-sky-800 disabled:cursor-not-allowed
+                         text-white font-semibold py-3 px-4 rounded-lg 
+                         transition-all duration-200 shadow-sm hover:shadow-md
+                         focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
             >
               {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
             </button>

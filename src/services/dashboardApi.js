@@ -15,13 +15,13 @@ import apiClient from "./api";
 
 /**
  * جلب جميع الطلاب في الجامعة
- * GET /api/accounts/students/
+ * GET /api/accounts/university/students/
  * الصلاحيات: IsAuthenticated + IsUniversityAdmin
  * يعيد: {status: "success", data: [...]}
  */
 export const fetchStudentsData = async () => {
   try {
-    const response = await apiClient.get("/accounts/students/");
+    const response = await apiClient.get("/accounts/university/students/");
     
     if (response.data?.data && Array.isArray(response.data.data)) {
       return response.data.data;
@@ -42,13 +42,13 @@ export const fetchStudentsData = async () => {
 
 /**
  * جلب جميع المشرفين في الجامعة
- * GET /api/accounts/supervisors/
+ * GET /api/accounts/university/supervisors/
  * الصلاحيات: IsAuthenticated + IsUniversityAdmin
  * يعيد: {status: "success", data: [...]}
  */
 export const fetchSupervisorsData = async () => {
   try {
-    const response = await apiClient.get("/accounts/supervisors/");
+    const response = await apiClient.get("/accounts/university/supervisors/");
     
     if (response.data?.data && Array.isArray(response.data.data)) {
       return response.data.data;
@@ -274,12 +274,12 @@ export const fetchReportsCount = async () => {
 // ============================================
 
 /**
- * جلب المحتوى المعلق عليه
- * GET /api/community/moderation/pending/
+ * جلب الموافقات والرفض
+ * GET /api/community/approvals/
  */
-export const fetchPendingContent = async () => {
+export const fetchApprovals = async () => {
   try {
-    const response = await apiClient.get("/community/moderation/pending/");
+    const response = await apiClient.get("/community/approvals/");
     
     if (response.data?.data && Array.isArray(response.data.data)) {
       return response.data.data;
@@ -296,14 +296,22 @@ export const fetchPendingContent = async () => {
     // إذا كان الخطأ 500 أو خطأ من الخادم، نعيد مصفوفة فارغة
     if (error?.response?.status === 500 || error?.response?.status >= 500) {
       if (process.env.NODE_ENV === "development") {
-        console.warn("⚠️ Pending content API returned 500, using empty array");
+        console.warn("⚠️ Approvals API returned 500, using empty array");
       }
     } else if (process.env.NODE_ENV === "development") {
-      console.error("Error fetching pending content:", error);
+      console.error("Error fetching approvals:", error);
     }
     
     return [];
   }
+};
+
+/**
+ * @deprecated استخدم fetchApprovals بدلاً منها
+ * جلب المحتوى المعلق عليه (قديم)
+ */
+export const fetchPendingContent = async () => {
+  return fetchApprovals();
 };
 
 // ============================================
@@ -341,7 +349,7 @@ export const fetchUniversityAdminDashboardStats = async () => {
       fetchStudentsData(),
       fetchSupervisorsData(),
       fetchActiveCasesCount(),
-      fetchPendingContent().then((content) => content.length),
+      fetchApprovals().then((approvals) => approvals.length),
       fetchEvaluationsCount(),
       fetchReportsCount(),
       fetchAuditStatistics(),

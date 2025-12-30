@@ -14,11 +14,15 @@ const CASES_BASE_URL = "/cases/";
  * حسب التوثيق:
  * - الصلاحيات: IsAuthenticated
  * - الفلترة حسب الدور:
- *   - مسؤول الجامعة: جميع حالات جامعته (يتم الفلترة تلقائياً من Backend)
+ *   - مسؤول الجامعة: جميع حالات جامعته (يتم الفلترة تلقائياً من Backend حسب university_id من Token)
+ *   - المشرف: حالاته المسندة إليه
+ *   - الطالب: حالاته المسندة إليه
  * - Query Parameters: status, priority, is_public
  * 
+ * ملاحظة: Backend يفلتر تلقائياً حسب university_id من Token، لذا لا حاجة لإرسال university_id في params
+ * 
  * @param {Object} params - Query parameters: { status, priority, is_public }
- * يعيد: Array of Case objects أو {status: "success", data: [...]}
+ * @returns {Promise<Array>} Array of Case objects
  */
 export const fetchCases = async (params = {}) => {
   try {
@@ -60,11 +64,12 @@ export const fetchCases = async (params = {}) => {
 };
 
 /**
- * جلب حالة سريرية محددة
- * GET /api/cases/<case_id>/
+ * جلب حالة سريرية محددة بالتفصيل
+ * GET /api/cases/<id>/
  * 
  * حسب التوثيق:
  * - الصلاحيات: IsAuthenticated
+ * - مسؤول الجامعة: يمكنه عرض تفاصيل حالات جامعته
  * - يتضمن: history, assignment_requests, sessions
  * 
  * @param {string} caseId - UUID للحالة
@@ -87,9 +92,60 @@ export const fetchCaseById = async (caseId) => {
 };
 
 /**
+ * جلب تاريخ الحالة السريرية
+ * GET /api/cases/<id>/history/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - مسؤول الجامعة: يمكنه عرض تاريخ حالات جامعته
+ * 
+ * @param {string} caseId - UUID للحالة
+ * يعيد: Array of history entries أو {status: "success", data: [...]}
+ */
+export const fetchCaseHistory = async (caseId) => {
+  try {
+    const response = await apiClient.get(`${CASES_BASE_URL}${caseId}/history/`);
+    
+    // الاستجابة قد تأتي بصيغة {status: "success", data: [...]}
+    if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    
+    // أو مباشرة كـ array
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    
+    // أو في results (pagination)
+    if (response.data && response.data.results && Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error("Error fetching case history:", error);
+    throw error;
+  }
+};
+
+/**
  * إنشاء حالة سريرية جديدة
- * POST /api/v1/cases/
- * @param {Object} caseData - بيانات الحالة { title, description, priority, is_public, patient_id }
+ * POST /api/cases/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - مسؤول الجامعة: يمكنه إنشاء حالات ضمن جامعته
+ * 
+ * الحقول المطلوبة:
+ * - title: string (مطلوب)
+ * - description: string (مطلوب)
+ * 
+ * الحقول الاختيارية:
+ * - priority: string (low, medium, high)
+ * - is_public: boolean
+ * - patient_id: string (UUID)
+ * 
+ * @param {Object} caseData - بيانات الحالة { title, description, priority?, is_public?, patient_id? }
  * يعيد: Case object أو {status: "success", data: {...}}
  */
 export const createCase = async (caseData) => {

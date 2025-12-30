@@ -105,3 +105,15 @@ if (!user.university_id) {
 - لكن Frontend يحتاج `university_id` لبعض العمليات (مثل Academic Structure)
 - الحل الحالي (جلب Profile عند الحاجة) يعمل لكنه غير فعال
 
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,6 +1,7 @@
 
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import * as notificationsApi from "../../../services/notificationsApi";
+// 🔕 معلق مؤقتاً - جميع الـ endpoints معلقة
+// import * as notificationsApi from "../../../services/notificationsApi";
 
 /**
  * دالة مساعدة لاستخراج اسم المستخدم من User object
@@ -64,161 +65,171 @@ const mapNotificationFromApi = (apiNotification) => {
 };
 
 /**
+ * 🔕 معلق مؤقتاً
  * جلب جميع الإشعارات
  */
-export const fetchNotificationsAsync = createAsyncThunk(
-  "notifications/fetchNotifications",
-  async (params = {}, { rejectWithValue }) => {
-    try {
-      // فقط في development mode نطبع logs
-      if (process.env.NODE_ENV === "development") {
-        console.log("🔔 Redux: Fetching notifications with params:", params);
-      }
-      const data = await notificationsApi.fetchNotifications(params);
-      if (process.env.NODE_ENV === "development") {
-        console.log("🔔 Redux: Received notifications data:", data);
-      }
-      const mapped = Array.isArray(data) ? data.map(mapNotificationFromApi) : [];
-      if (process.env.NODE_ENV === "development") {
-        console.log("🔔 Redux: Mapped notifications:", mapped.length);
-      }
-      return mapped;
-    } catch (error) {
-      // فقط في development mode نطبع errors
-      if (process.env.NODE_ENV === "development") {
-        console.error("❌ Redux: Error fetching notifications:", error);
-      }
-      const errorMessage = error?.response?.data?.message || error?.response?.data?.detail || error?.message || "فشل في جلب الإشعارات";
-      if (process.env.NODE_ENV === "development") {
-        console.error("❌ Redux: Error message:", errorMessage);
-      }
-      return rejectWithValue(errorMessage);
-    }
-  }
-);
+// export const fetchNotificationsAsync = createAsyncThunk(
+//   "notifications/fetchNotifications",
+//   async (params = {}, { rejectWithValue }) => {
+//     try {
+//       // فقط في development mode نطبع logs
+//       if (process.env.NODE_ENV === "development") {
+//         console.log("🔔 Redux: Fetching notifications with params:", params);
+//       }
+//       const data = await notificationsApi.fetchNotifications(params);
+//       if (process.env.NODE_ENV === "development") {
+//         console.log("🔔 Redux: Received notifications data:", data);
+//       }
+//       const mapped = Array.isArray(data) ? data.map(mapNotificationFromApi) : [];
+//       if (process.env.NODE_ENV === "development") {
+//         console.log("🔔 Redux: Mapped notifications:", mapped.length);
+//       }
+//       return mapped;
+//     } catch (error) {
+//       // فقط في development mode نطبع errors
+//       if (process.env.NODE_ENV === "development") {
+//         console.error("❌ Redux: Error fetching notifications:", error);
+//       }
+//       const errorMessage = error?.response?.data?.message || error?.response?.data?.detail || error?.message || "فشل في جلب الإشعارات";
+//       if (process.env.NODE_ENV === "development") {
+//         console.error("❌ Redux: Error message:", errorMessage);
+//       }
+//       return rejectWithValue(errorMessage);
+//     }
+//   }
+// );
 
 /**
+ * 🔕 معلق مؤقتاً
  * جلب إشعار محدد
  */
-export const fetchNotificationByIdAsync = createAsyncThunk(
-  "notifications/fetchNotificationById",
-  async (id, { rejectWithValue }) => {
-    try {
-      const data = await notificationsApi.fetchNotificationById(id);
-      return mapNotificationFromApi(data);
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data?.message || error?.message || "فشل في جلب الإشعار"
-      );
-    }
-  }
-);
+// export const fetchNotificationByIdAsync = createAsyncThunk(
+//   "notifications/fetchNotificationById",
+//   async (id, { rejectWithValue }) => {
+//     try {
+//       const data = await notificationsApi.fetchNotificationById(id);
+//       return mapNotificationFromApi(data);
+//     } catch (error) {
+//       return rejectWithValue(
+//         error?.response?.data?.message || error?.message || "فشل في جلب الإشعار"
+//       );
+//     }
+//   }
+// );
 
 /**
+ * 🔕 معلق مؤقتاً
  * إنشاء إشعار جديد
  */
-export const createNotificationAsync = createAsyncThunk(
-  "notifications/createNotification",
-  async (notificationData, { rejectWithValue }) => {
-    try {
-      const data = await notificationsApi.createNotification(notificationData);
-      return mapNotificationFromApi(data);
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data?.message || error?.response?.data?.errors || error?.message || "فشل في إنشاء الإشعار"
-      );
-    }
-  }
-);
+// export const createNotificationAsync = createAsyncThunk(
+//   "notifications/createNotification",
+//   async (notificationData, { rejectWithValue }) => {
+//     try {
+//       const data = await notificationsApi.createNotification(notificationData);
+//       return mapNotificationFromApi(data);
+//     } catch (error) {
+//       return rejectWithValue(
+//         error?.response?.data?.message || error?.response?.data?.errors || error?.message || "فشل في إنشاء الإشعار"
+//       );
+//     }
+//   }
+// );
 
 /**
- * تحديث إشعار (قبول/رفض)
+ * 🔕 معلق مؤقتاً
+ * تحديث إشعار (mark read/accept/reject)
+ * Body: { status?: "accepted"|"rejected"|"pending"|"info", response_message?: string, is_read?: boolean }
  */
-export const updateNotificationAsync = createAsyncThunk(
-  "notifications/updateNotification",
-  async ({ id, status, response_message }, { rejectWithValue }) => {
-    try {
-      const updateData = { status };
-      if (response_message) {
-        updateData.response_message = response_message;
-      }
-      const data = await notificationsApi.updateNotification(id, updateData);
-      return mapNotificationFromApi(data);
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data?.message || error?.response?.data?.errors || error?.message || "فشل في تحديث الإشعار"
-      );
-    }
-  }
-);
+// export const updateNotificationAsync = createAsyncThunk(
+//   "notifications/updateNotification",
+//   async ({ id, status, response_message, is_read }, { rejectWithValue }) => {
+//     try {
+//       const updateData = {};
+//       if (status) updateData.status = status;
+//       if (response_message) updateData.response_message = response_message;
+//       if (is_read !== undefined) updateData.is_read = is_read;
+//       
+//       const data = await notificationsApi.updateNotification(id, updateData);
+//       return mapNotificationFromApi(data);
+//     } catch (error) {
+//       return rejectWithValue(
+//         error?.response?.data?.message || error?.response?.data?.errors || error?.message || "فشل في تحديث الإشعار"
+//       );
+//     }
+//   }
+// );
 
 /**
+ * 🔕 معلق مؤقتاً
  * حذف إشعار
  */
-export const deleteNotificationAsync = createAsyncThunk(
-  "notifications/deleteNotification",
-  async (id, { rejectWithValue }) => {
-    try {
-      await notificationsApi.deleteNotification(id);
-      return id;
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data?.message || error?.message || "فشل في حذف الإشعار"
-      );
-    }
-  }
-);
+// export const deleteNotificationAsync = createAsyncThunk(
+//   "notifications/deleteNotification",
+//   async (id, { rejectWithValue }) => {
+//     try {
+//       await notificationsApi.deleteNotification(id);
+//       return id;
+//     } catch (error) {
+//       return rejectWithValue(
+//         error?.response?.data?.message || error?.message || "فشل في حذف الإشعار"
+//       );
+//     }
+//   }
+// );
 
 /**
+ * 🔕 معلق مؤقتاً
  * تبديل حالة القراءة لإشعار
  */
-export const toggleNotificationReadAsync = createAsyncThunk(
-  "notifications/toggleNotificationRead",
-  async (id, { rejectWithValue }) => {
-    try {
-      const data = await notificationsApi.toggleNotificationRead(id);
-      return mapNotificationFromApi(data);
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data?.message || error?.message || "فشل في تبديل حالة القراءة"
-      );
-    }
-  }
-);
+// export const toggleNotificationReadAsync = createAsyncThunk(
+//   "notifications/toggleNotificationRead",
+//   async (id, { rejectWithValue }) => {
+//     try {
+//       const data = await notificationsApi.toggleNotificationRead(id);
+//       return mapNotificationFromApi(data);
+//     } catch (error) {
+//       return rejectWithValue(
+//         error?.response?.data?.message || error?.message || "فشل في تبديل حالة القراءة"
+//       );
+//     }
+//   }
+// );
 
 /**
+ * 🔕 معلق مؤقتاً
  * جلب عدد الإشعارات غير المقروءة
  */
-export const fetchUnreadCountAsync = createAsyncThunk(
-  "notifications/fetchUnreadCount",
-  async (params = {}, { rejectWithValue }) => {
-    try {
-      const count = await notificationsApi.fetchUnreadCount(params);
-      return count;
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data?.message || error?.message || "فشل في جلب عدد الإشعارات غير المقروءة"
-      );
-    }
-  }
-);
+// export const fetchUnreadCountAsync = createAsyncThunk(
+//   "notifications/fetchUnreadCount",
+//   async (params = {}, { rejectWithValue }) => {
+//     try {
+//       const count = await notificationsApi.fetchUnreadCount(params);
+//       return count;
+//     } catch (error) {
+//       return rejectWithValue(
+//         error?.response?.data?.message || error?.message || "فشل في جلب عدد الإشعارات غير المقروءة"
+//       );
+//     }
+//   }
+// );
 
 /**
+ * 🔕 معلق مؤقتاً
  * تعليم جميع الإشعارات كمقروءة
  */
-export const markAllNotificationsAsReadAsync = createAsyncThunk(
-  "notifications/markAllNotificationsAsRead",
-  async (data = {}, { rejectWithValue }) => {
-    try {
-      await notificationsApi.markAllNotificationsAsRead(data);
-      return true;
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data?.message || error?.message || "فشل في تعليم جميع الإشعارات كمقروءة"
-      );
-    }
-  }
-);
+// export const markAllNotificationsAsReadAsync = createAsyncThunk(
+//   "notifications/markAllNotificationsAsRead",
+//   async (data = {}, { rejectWithValue }) => {
+//     try {
+//       await notificationsApi.markAllNotificationsAsRead(data);
+//       return true;
+//     } catch (error) {
+//       return rejectWithValue(
+//         error?.response?.data?.message || error?.message || "فشل في تعليم جميع الإشعارات كمقروءة"
+//       );
+//     }
+//   }
+// );
 
 const initialState = {
   notifications: [],
@@ -263,127 +274,22 @@ const notificationsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder
-      // fetchNotificationsAsync
-      .addCase(fetchNotificationsAsync.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchNotificationsAsync.fulfilled, (state, action) => {
-        state.loading = false;
-        state.notifications = action.payload;
-      })
-      .addCase(fetchNotificationsAsync.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // fetchNotificationByIdAsync
-      .addCase(fetchNotificationByIdAsync.pending, (state) => {
-        state.loadingSelected = true;
-        state.error = null;
-      })
-      .addCase(fetchNotificationByIdAsync.fulfilled, (state, action) => {
-        state.loadingSelected = false;
-        state.selectedNotification = action.payload;
-      })
-      .addCase(fetchNotificationByIdAsync.rejected, (state, action) => {
-        state.loadingSelected = false;
-        state.error = action.payload;
-      })
-      // createNotificationAsync
-      .addCase(createNotificationAsync.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(createNotificationAsync.fulfilled, (state, action) => {
-        state.loading = false;
-        state.notifications.unshift(action.payload);
-      })
-      .addCase(createNotificationAsync.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // updateNotificationAsync
-      .addCase(updateNotificationAsync.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(updateNotificationAsync.fulfilled, (state, action) => {
-        state.loading = false;
-        const index = state.notifications.findIndex((n) => n.id === action.payload.id);
-        if (index !== -1) {
-          state.notifications[index] = action.payload;
-        }
-        if (state.selectedNotification?.id === action.payload.id) {
-          state.selectedNotification = action.payload;
-        }
-      })
-      .addCase(updateNotificationAsync.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // deleteNotificationAsync
-      .addCase(deleteNotificationAsync.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(deleteNotificationAsync.fulfilled, (state, action) => {
-        state.loading = false;
-        state.notifications = state.notifications.filter((n) => n.id !== action.payload);
-        if (state.selectedNotification?.id === action.payload) {
-          state.selectedNotification = null;
-        }
-      })
-      .addCase(deleteNotificationAsync.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // toggleNotificationReadAsync
-      .addCase(toggleNotificationReadAsync.pending, (state) => {
-        state.error = null;
-      })
-      .addCase(toggleNotificationReadAsync.fulfilled, (state, action) => {
-        const index = state.notifications.findIndex((n) => n.id === action.payload.id);
-        if (index !== -1) {
-          state.notifications[index] = action.payload;
-        }
-        if (state.selectedNotification?.id === action.payload.id) {
-          state.selectedNotification = action.payload;
-        }
-        // تحديث العدد غير المقروء
-        if (action.payload.is_read) {
-          state.unreadCount = Math.max(0, state.unreadCount - 1);
-        } else {
-          state.unreadCount += 1;
-        }
-      })
-      .addCase(toggleNotificationReadAsync.rejected, (state, action) => {
-        state.error = action.payload;
-      })
-      // fetchUnreadCountAsync
-      .addCase(fetchUnreadCountAsync.pending, (state) => {
-        state.error = null;
-      })
-      .addCase(fetchUnreadCountAsync.fulfilled, (state, action) => {
-        state.unreadCount = action.payload || 0;
-      })
-      .addCase(fetchUnreadCountAsync.rejected, (state, action) => {
-        state.error = action.payload;
-      })
-      // markAllNotificationsAsReadAsync
-      .addCase(markAllNotificationsAsReadAsync.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(markAllNotificationsAsReadAsync.fulfilled, (state) => {
-        state.loading = false;
-        state.notifications = state.notifications.map((n) => ({ ...n, is_read: true }));
-        state.unreadCount = 0;
-      })
-      .addCase(markAllNotificationsAsReadAsync.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      });
+    // 🔕 معلق مؤقتاً - جميع الـ async thunks معلقة
+    // builder
+    //   // fetchNotificationsAsync
+    //   .addCase(fetchNotificationsAsync.pending, (state) => {
+    //     state.loading = true;
+    //     state.error = null;
+    //   })
+    //   .addCase(fetchNotificationsAsync.fulfilled, (state, action) => {
+    //     state.loading = false;
+    //     state.notifications = action.payload;
+    //   })
+    //   .addCase(fetchNotificationsAsync.rejected, (state, action) => {
+    //     state.loading = false;
+    //     state.error = action.payload;
+    //   })
+    //   // ... باقي الـ cases معلقة
   },
 });
 

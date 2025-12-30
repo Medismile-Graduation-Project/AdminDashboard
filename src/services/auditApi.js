@@ -9,8 +9,21 @@ const AUDIT_BASE_URL = "/audit/logs/";
 
 /**
  * جلب سجلات التدقيق
- * GET /audit/logs/
- * Query Parameters: user_id, action, content_type, start_date, end_date, search
+ * GET /api/audit/logs/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - tech_support: يمكنه رؤية جميع السجلات (كامل)
+ * - مسؤول الجامعة (university_admin): يرى فقط سجلات جامعته (يتم الفلترة تلقائياً من Backend)
+ * 
+ * Query Parameters (اختيارية):
+ * - user_id: معرف المستخدم
+ * - action: نوع الإجراء
+ * - content_type: نوع المحتوى
+ * - start_date: تاريخ البداية
+ * - end_date: تاريخ النهاية
+ * - search: بحث نصي
+ * 
  * يعيد: Array of audit logs أو {status: "success", data: [...]}
  */
 export const fetchAuditLogs = async (params = {}) => {
@@ -86,7 +99,16 @@ export const fetchAuditStatistics = async (params = {}) => {
 
 /**
  * جلب تفاصيل سجل تدقيق محدد
- * GET /audit/logs/<log_id>/
+ * GET /api/audit/logs/<id>/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - tech_support: يمكنه رؤية أي سجل
+ * - مسؤول الجامعة (university_admin): يمكنه رؤية سجلات جامعته فقط
+ *   (Backend يتحقق تلقائياً من أن السجل يخص جامعته)
+ * 
+ * @param {string} logId - ID سجل التدقيق
+ * يعيد: Audit log object أو {status: "success", data: {...}}
  */
 export const fetchAuditLogById = async (logId) => {
   try {

@@ -2,8 +2,10 @@
 
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const [currentUser, setCurrentUser] = useState(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -36,7 +38,7 @@ export default function SettingsPage() {
     if (!currentUser) return;
 
     if (newPassword && currentPassword !== currentUser.password) {
-      setMessage("كلمة المرور الحالية غير صحيحة.");
+      setMessage(t("Settings.wrongPassword"));
       return;
     }
 
@@ -58,14 +60,14 @@ export default function SettingsPage() {
 
     window.dispatchEvent(new Event("user-login"));
 
-    setMessage("تم حفظ التغييرات بنجاح ✅");
+    setMessage(t("Settings.savedSuccessfully"));
   };
 
   if (!currentUser)
     return (
       <div className="flex justify-center items-center h-full mt-20">
         <p className="text-slate-600 dark:text-slate-400">
-          الرجاء تسجيل الدخول للوصول إلى الإعدادات.
+          {t("Settings.pleaseLogin")}
         </p>
       </div>
     );
@@ -73,7 +75,7 @@ export default function SettingsPage() {
   return (
     <AnimatedWrapper>
     <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 rounded-xl shadow p-4 sm:p-6 mt-4 sm:mt-6 border border-sky-200 dark:border-slate-700">
-      <h2 className="text-xl sm:text-2xl font-bold mb-4 text-blue-900 dark:text-white">إعدادات الحساب</h2>
+      <h2 className="text-xl sm:text-2xl font-bold mb-4 text-blue-900 dark:text-white">{t("Settings.title")}</h2>
 
       {message && (
         <p className="text-green-600 font-semibold mb-4">{message}</p>
@@ -102,7 +104,7 @@ export default function SettingsPage() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            الاسم الكامل
+            {t("Settings.fullName")}
           </label>
           <input
             type="text"
@@ -114,7 +116,7 @@ export default function SettingsPage() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            البريد الإلكتروني
+            {t("Settings.email")}
           </label>
           <input
             type="email"
@@ -126,7 +128,7 @@ export default function SettingsPage() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            كلمة المرور الحالية
+            {t("Settings.currentPassword")}
           </label>
           <input
             type="password"
@@ -138,7 +140,7 @@ export default function SettingsPage() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            كلمة المرور الجديدة
+            {t("Settings.newPassword")}
           </label>
           <input
             type="password"
@@ -152,7 +154,7 @@ export default function SettingsPage() {
           type="submit"
           className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2 transition"
         >
-          حفظ التغييرات
+          {t("Settings.saveChanges")}
         </button>
       </form>
     </div>

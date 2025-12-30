@@ -22,10 +22,15 @@ export default function Home() {
   return (
     <RoleGuard>
       <AnimatedWrapper>
-        <div className={`p-6 space-y-8 ${isRtl ? "text-right" : "text-left"}`}>
-          <h1 className="text-3xl font-bold text-dark dark:text-white">
-            {t("Home.greeting", { name: userName }) || `مرحباً ${userName}`}
-          </h1>
+        <div className={`p-6 sm:p-8 space-y-8 ${isRtl ? "text-right" : "text-left"}`}>
+          <div className="mb-6">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
+              {t("Home.greeting", { name: userName }) || `مرحباً ${userName}`}
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
+              {t("Home.description")}
+            </p>
+          </div>
 
           {/* Dashboard خاص بإدارة الجامعة فقط */}
           <UniversityAdminDashboard />

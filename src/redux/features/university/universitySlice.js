@@ -130,7 +130,12 @@ export const createProgramAsync = createAsyncThunk(
   "university/createProgram",
   async ({ universityId, payload }, { rejectWithValue }) => {
     try {
-      return await createProgram(universityId, payload);
+      // إضافة university إلى payload
+      const programPayload = {
+        ...payload,
+        university: universityId,
+      };
+      return await createProgram(programPayload);
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message ||
@@ -192,7 +197,12 @@ export const createAcademicYearAsync = createAsyncThunk(
   "university/createAcademicYear",
   async ({ universityId, payload }, { rejectWithValue }) => {
     try {
-      return await createAcademicYear(universityId, payload);
+      // إضافة university إلى payload
+      const yearPayload = {
+        ...payload,
+        university: universityId,
+      };
+      return await createAcademicYear(yearPayload);
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message ||

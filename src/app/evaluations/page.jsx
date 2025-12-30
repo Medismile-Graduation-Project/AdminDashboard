@@ -442,87 +442,89 @@ function EvaluationsContent() {
       >
         <div className="max-w-[1400px] mx-auto">
           {/* العنوان */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
-              {t("reviews.title") || "تقييمات المرضى"}
-            </h1>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
+                {t("reviews.title") || "تقييمات المرضى"}
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
+                إدارة وتتبع جميع التقييمات
+              </p>
+            </div>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowForm(true)}
-              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-sky-600 to-sky-700 
-                hover:from-sky-700 hover:to-sky-800 dark:from-sky-600 dark:to-sky-700 dark:hover:from-sky-700 dark:hover:to-sky-800 
-                text-white transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
+              className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-700 text-white transition-all duration-200 font-semibold text-sm shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
             >
-              <PlusCircle size={20} />
+              <PlusCircle size={18} />
               <span>{t("reviews.addEvaluation") || "إضافة تقييم"}</span>
             </motion.button>
           </div>
 
           {/* الإحصائيات */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-5 text-center hover:shadow-xl transition-all duration-300"
+              className="bg-white dark:bg-dark-light border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-5 text-center hover:shadow-md transition-all duration-200"
             >
-              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-sky-600 to-sky-700 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
+              <p className="text-3xl font-bold text-sky-600 dark:text-sky-400 mb-1">
                 {reviews.length}
               </p>
-              <p className="text-sm sm:text-base text-sky-700 dark:text-sky-300 mt-1">{t("reviews.total") || "المجموع"}</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t("reviews.total") || "المجموع"}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
-              className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-5 text-center hover:shadow-xl transition-all duration-300"
+              className="bg-white dark:bg-dark-light border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-5 text-center hover:shadow-md transition-all duration-200"
             >
-              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-sky-600 to-sky-700 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">{averageRating}</p>
-              <p className="text-sm sm:text-base text-sky-700 dark:text-sky-300 mt-1">{t("reviews.average") || "المتوسط"}</p>
+              <p className="text-3xl font-bold text-sky-600 dark:text-sky-400 mb-1">{averageRating}</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t("reviews.average") || "المتوسط"}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.2 }}
-              className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-5 text-center hover:shadow-xl transition-all duration-300"
+              className="bg-white dark:bg-dark-light border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-5 text-center hover:shadow-md transition-all duration-200"
             >
-              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-sky-600 to-sky-700 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
+              <p className="text-3xl font-bold text-sky-600 dark:text-sky-400 mb-1">
                 {reviews.filter((r) => r.status === "new").length}
               </p>
-              <p className="text-sm sm:text-base text-sky-700 dark:text-sky-300 mt-1">{t("reviews.new") || "جديدة"}</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t("reviews.new") || "جديدة"}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.3 }}
-              className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-5 text-center hover:shadow-xl transition-all duration-300"
+              className="bg-white dark:bg-dark-light border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-5 text-center hover:shadow-md transition-all duration-200"
             >
-              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-sky-600 to-sky-700 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
+              <p className="text-3xl font-bold text-sky-600 dark:text-sky-400 mb-1">
                 {reviews.filter((r) => r.status === "reviewed").length}
               </p>
-              <p className="text-sm sm:text-base text-sky-700 dark:text-sky-300 mt-1">
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                 {t("reviews.reviewed") || "مقروءة"}
               </p>
             </motion.div>
           </div>
 
           {/* الفلاتر */}
-          <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-6">
+          <div className={`flex flex-col md:flex-row gap-3 mb-6 ${isRtl ? "md:flex-row-reverse" : ""}`}>
             <input
               type="text"
               placeholder={t("reviews.search") || "ابحث عن التقييمات..."}
               value={search}
               onChange={(e) => dispatch(setSearch(e.target.value))}
-              className="flex-1 border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl px-4 py-2.5 outline-none bg-white dark:bg-dark-light 
-                text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 
-                transition-all duration-300 shadow-sm hover:shadow-md"
+              className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 outline-none bg-white dark:bg-dark-light 
+                text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
             />
             <select
               value={evaluatorTypeFilter}
               onChange={(e) => dispatch(setEvaluatorTypeFilter(e.target.value))}
-              className="border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
-                focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 transition-all duration-300 shadow-sm hover:shadow-md"
+              className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
+                focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
             >
               <option value="all">جميع الأنواع</option>
               <option value="patient">من مريض</option>
@@ -534,8 +536,8 @@ function EvaluationsContent() {
             <select
               value={statusFilter}
               onChange={(e) => dispatch(setStatusFilter(e.target.value))}
-              className="border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
-                focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 transition-all duration-300 shadow-sm hover:shadow-md"
+              className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
+                focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
             >
               <option value="all">{t("reviews.all") || "الكل"}</option>
               <option value="draft">مسودة</option>
@@ -546,8 +548,8 @@ function EvaluationsContent() {
               type="date"
               value={dateFilter}
               onChange={(e) => dispatch(setDateFilter(e.target.value))}
-              className="border-2 border-sky-200/50 dark:border-dark-lighter rounded-xl px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
-                focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 transition-all duration-300 shadow-sm hover:shadow-md"
+              className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
+                focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
             />
           </div>
 
@@ -569,30 +571,30 @@ function EvaluationsContent() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: idx * 0.05 }}
-                      className="bg-white dark:bg-dark-light border-2 border-sky-200/50 dark:border-dark-lighter shadow-lg rounded-2xl p-4 sm:p-6 
-                        flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-xl transition-all duration-300"
+                      className="bg-white dark:bg-dark-light border border-slate-200 dark:border-slate-700 shadow-sm rounded-xl p-5 
+                        flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition-all duration-200"
                     >
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h2 className="font-semibold text-lg text-slate-900 dark:text-white">
+                        <div className={`flex items-center gap-3 mb-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+                          <h2 className="font-bold text-lg text-slate-900 dark:text-white">
                             {review.name || "غير معروف"}
                           </h2>
-                          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 font-medium">
                             {review.evaluatorType || "-"}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
                           {review.date || "-"}
                         </p>
                         {review.comment && (
-                          <p className="mt-2 text-slate-700 dark:text-slate-300">
+                          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                             {review.comment}
                           </p>
                         )}
                       </div>
-                      <div className="flex flex-col items-start md:items-end gap-2">
+                      <div className={`flex flex-col gap-3 ${isRtl ? "items-start md:items-start" : "items-start md:items-end"}`}>
                         {/* النجوم - تحويل من 1-10 إلى 5 نجوم */}
-                        <div className="flex gap-1">
+                        <div className={`flex gap-1 ${isRtl ? "flex-row-reverse" : ""}`}>
                           {Array.from({ length: 5 }).map((_, i) => {
                             const starRating = review.starRating || Math.round((review.rating || 0) / 2);
                             return (
@@ -600,7 +602,7 @@ function EvaluationsContent() {
                                 key={i}
                                 className={`w-5 h-5 ${
                                   i < starRating
-                                    ? "fill-blue-500 text-blue-500 dark:fill-blue-400 dark:text-blue-400"
+                                    ? "fill-sky-500 text-sky-500 dark:fill-sky-400 dark:text-sky-400"
                                     : "text-slate-300 dark:text-slate-600"
                                 }`}
                               />
@@ -608,57 +610,59 @@ function EvaluationsContent() {
                           })}
                         </div>
                         {/* التقييم الرقمي (Score 0-100) */}
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                           {review.score !== undefined ? `${review.score}/100` : `${review.rating || 0}/10`}
                         </p>
                         {review.target_type && (
-                          <span className="text-xs px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">
                             {review.target_type === "case" ? "حالة" : review.target_type === "session" ? "جلسة" : "موعد"}
                           </span>
                         )}
                         {/* الحالة */}
                         <span
-                          className={`px-3 py-1 text-sm rounded-full ${
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-full ${
                             review.status === "draft"
-                              ? "bg-yellow-500 text-white dark:bg-yellow-600"
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                               : review.status === "submitted"
-                              ? "bg-blue-500 text-white dark:bg-blue-600"
+                              ? "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400"
                               : review.status === "final"
-                              ? "bg-green-500 text-white dark:bg-green-600"
-                              : "bg-gray-500 text-white dark:bg-gray-600"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300"
                           }`}
                         >
                           {review.status === "draft" ? "مسودة" : review.status === "submitted" ? "مقدم" : review.status === "final" ? "نهائي" : review.status || "جديد"}
                         </span>
                         
                         {/* أزرار الإجراءات */}
-                        {(user?.role === "supervisor" || user?.role === "university_admin") && review.status === "draft" && (
-                          <>
+                        <div className={`flex gap-2 mt-2 ${isRtl ? "flex-row-reverse" : ""}`}>
+                          {(user?.role === "supervisor" || user?.role === "university_admin") && review.status === "draft" && (
+                            <>
+                              <button
+                                onClick={() => handleEditEvaluation(review)}
+                                className="px-3 py-1.5 text-sm rounded-lg bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-white transition-all duration-200 flex items-center gap-1.5 font-medium shadow-sm hover:shadow-md"
+                              >
+                                <Edit size={14} />
+                                تعديل
+                              </button>
+                              <button
+                                onClick={() => handleSubmitEvaluationStatus(review.id)}
+                                className="px-3 py-1.5 text-sm rounded-lg bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600 text-white transition-all duration-200 flex items-center gap-1.5 font-medium shadow-sm hover:shadow-md"
+                              >
+                                <Send size={14} />
+                                تقديم
+                              </button>
+                            </>
+                          )}
+                          {(user?.role === "supervisor" || user?.role === "university_admin") && review.status === "submitted" && (
                             <button
-                              onClick={() => handleEditEvaluation(review)}
-                              className="mt-2 px-3 py-1.5 text-sm rounded-lg bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-white transition flex items-center gap-1"
+                              onClick={() => handleFinalizeEvaluation(review.id)}
+                              className="px-3 py-1.5 text-sm rounded-lg bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white transition-all duration-200 flex items-center gap-1.5 font-medium shadow-sm hover:shadow-md"
                             >
-                              <Edit size={14} />
-                              تعديل
+                              <CheckCircle size={14} />
+                              تثبيت
                             </button>
-                            <button
-                              onClick={() => handleSubmitEvaluationStatus(review.id)}
-                              className="mt-2 px-3 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition flex items-center gap-1"
-                            >
-                              <Send size={14} />
-                              تقديم
-                            </button>
-                          </>
-                        )}
-                        {(user?.role === "supervisor" || user?.role === "university_admin") && review.status === "submitted" && (
-                          <button
-                            onClick={() => handleFinalizeEvaluation(review.id)}
-                            className="mt-2 px-3 py-1.5 text-sm rounded-lg bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white transition flex items-center gap-1"
-                          >
-                            <CheckCircle size={14} />
-                            تثبيت
-                          </button>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   );
@@ -673,10 +677,10 @@ function EvaluationsContent() {
 
           {/* Modal لإضافة تقييم جديد */}
           {showForm && (
-            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-sky-200 dark:border-slate-700">
-                <div className="flex justify-between items-center p-3 sm:p-4 bg-gradient-to-r from-sky-200 to-blue-900 dark:from-slate-700 dark:to-slate-800 text-white">
-                  <h2 className="text-lg sm:text-xl font-bold text-white">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
+              <div className="bg-white dark:bg-dark-light rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
+                <div className={`flex justify-between items-center p-5 border-b border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse" : ""}`}>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                     {editingEvaluation 
                       ? (t("reviews.editEvaluation") || "تعديل تقييم")
                       : (t("reviews.addEvaluation") || "إضافة تقييم جديد")
@@ -688,23 +692,24 @@ function EvaluationsContent() {
                       setEditingEvaluation(null);
                     }}
                     disabled={submitLoading}
-                    className="p-1 rounded-full hover:bg-blue-800 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors disabled:opacity-50"
+                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors disabled:opacity-50"
+                    aria-label="Close"
                   >
-                    <X size={20} className="text-white" />
+                    <X size={20} className="text-slate-600 dark:text-slate-400" />
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmitEvaluation} className="p-4 sm:p-6 space-y-4">
+                <form onSubmit={handleSubmitEvaluation} className="p-5 sm:p-6 space-y-5">
                   {/* اختيار الطالب */}
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                    <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
                       الطالب <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="student_id"
                       value={formData.student_id}
                       onChange={handleFormChange}
-                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                       disabled={submitLoading}
                       required
                     >
@@ -719,7 +724,7 @@ function EvaluationsContent() {
 
                   {/* نوع الهدف */}
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                    <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
                       نوع الهدف <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -734,7 +739,7 @@ function EvaluationsContent() {
                           appointment_id: "",
                         }));
                       }}
-                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                       disabled={submitLoading}
                       required
                     >
@@ -747,14 +752,14 @@ function EvaluationsContent() {
                   {/* اختيار الحالة/الجلسة/الموعد حسب target_type */}
                   {formData.target_type === "case" && (
                     <div>
-                      <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
                         الحالة <span className="text-red-500">*</span>
                       </label>
                       <select
                         name="case_id"
                         value={formData.case_id}
                         onChange={handleFormChange}
-                        className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                         disabled={submitLoading}
                         required
                       >
@@ -770,7 +775,7 @@ function EvaluationsContent() {
 
                   {formData.target_type === "session" && (
                     <div>
-                      <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
                         الجلسة <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -779,7 +784,7 @@ function EvaluationsContent() {
                         value={formData.session_id}
                         onChange={handleFormChange}
                         placeholder="معرف الجلسة (UUID)"
-                        className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                         disabled={submitLoading}
                         required
                       />
@@ -788,14 +793,14 @@ function EvaluationsContent() {
 
                   {formData.target_type === "appointment" && (
                     <div>
-                      <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                      <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
                         الموعد <span className="text-red-500">*</span>
                       </label>
                       <select
                         name="appointment_id"
                         value={formData.appointment_id}
                         onChange={handleFormChange}
-                        className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                         disabled={submitLoading}
                         required
                       >
@@ -811,7 +816,7 @@ function EvaluationsContent() {
 
                   {/* النقاط (0-100) */}
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                    <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
                       النقاط <span className="text-red-500">*</span> (0-100)
                     </label>
                     <input
@@ -821,7 +826,7 @@ function EvaluationsContent() {
                       onChange={handleFormChange}
                       min="0"
                       max="100"
-                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                       disabled={submitLoading}
                       required
                     />
@@ -829,7 +834,7 @@ function EvaluationsContent() {
 
                   {/* Rubric (JSON) */}
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                    <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
                       Rubric (JSON - اختياري)
                     </label>
                     <textarea
@@ -838,14 +843,14 @@ function EvaluationsContent() {
                       onChange={handleFormChange}
                       rows="3"
                       placeholder='{"criteria": "value"}'
-                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition font-mono text-sm"
+                      className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200 font-mono text-sm resize-none"
                       disabled={submitLoading}
                     />
                   </div>
 
                   {/* التعليق */}
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                    <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
                       التعليق (اختياري)
                     </label>
                     <textarea
@@ -854,13 +859,13 @@ function EvaluationsContent() {
                       onChange={handleFormChange}
                       rows="3"
                       placeholder="أدخل تعليقك..."
-                      className="w-full p-2 sm:p-3 border border-sky-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition"
+                      className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200 resize-none"
                       disabled={submitLoading}
                     />
                   </div>
 
                   {/* أزرار الإجراءات */}
-                  <div className="flex justify-end gap-3 pt-4">
+                  <div className={`flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse justify-start" : "justify-end"}`}>
                     <button
                       type="button"
                       onClick={() => {
@@ -868,20 +873,20 @@ function EvaluationsContent() {
                         setEditingEvaluation(null);
                       }}
                       disabled={submitLoading}
-                      className="p-2 sm:p-3 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:ring-offset-2 transition disabled:opacity-50"
+                      className="px-5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 font-semibold text-sm disabled:opacity-50"
                     >
                       {t("students.cancel") || "إلغاء"}
                     </button>
                     <button
                       type="submit"
                       disabled={submitLoading}
-                      className="p-2 sm:p-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-xl flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:ring-offset-2 transition disabled:opacity-50"
+                      className="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-700 text-white rounded-lg flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all duration-200 font-semibold text-sm shadow-sm hover:shadow-md disabled:opacity-50"
                     >
                       {submitLoading ? (
                         <Loader2 size={16} className="animate-spin" />
                       ) : (
                         <Save size={16} />
-                      )}{" "}
+                      )}
                       {t("students.save") || "حفظ"}
                     </button>
                   </div>

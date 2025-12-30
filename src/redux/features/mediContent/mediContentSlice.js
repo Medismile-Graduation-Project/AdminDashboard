@@ -5,7 +5,8 @@ import {
   createCommunityContent,
   updateCommunityContent,
   deleteCommunityContent,
-  fetchPendingContent,
+  fetchApprovals,
+  fetchPendingContent, // @deprecated - للتوافق مع الكود القديم
   approveContent,
   rejectContent,
   fetchContentComments,
@@ -169,13 +170,33 @@ export const deleteCommunityContentAsync = createAsyncThunk(
 );
 
 /**
- * جلب المنشورات المعلقة
+ * جلب الموافقات والرفض
+ * GET /api/community/approvals/
+ */
+export const fetchApprovalsAsync = createAsyncThunk(
+  "mediContent/fetchApprovals",
+  async (params = {}, { rejectWithValue }) => {
+    try {
+      const data = await fetchApprovals(params);
+      return data;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في جلب الموافقات والرفض"
+      );
+    }
+  }
+);
+
+/**
+ * @deprecated استخدم fetchApprovalsAsync بدلاً منها
+ * جلب المنشورات المعلقة (قديم)
  */
 export const fetchPendingContentAsync = createAsyncThunk(
   "mediContent/fetchPendingContent",
   async (_, { rejectWithValue }) => {
     try {
-      const data = await fetchPendingContent();
+      // استخدام الـ endpoint الجديد مع فلترة pending
+      const data = await fetchApprovals({ status: "pending" });
       return data;
     } catch (error) {
       return rejectWithValue(
@@ -292,8 +313,10 @@ const initialState = {
   content: [],
   // المحتوى المحدد
   selectedContent: null,
-  // المنشورات المعلقة
+  // المنشورات المعلقة (قديم - للتوافق)
   pendingContent: [],
+  // الموافقات والرفض
+  approvals: [],
   // المحتوى الرائج
   trendingContent: [],
   // التعليقات (مخزنة حسب contentId)
@@ -448,7 +471,27 @@ const mediContentSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "حدث خطأ أثناء حذف المحتوى";
       })
-      // جلب المنشورات المعلقة
+      // جلب الموافقات والرفض
+      .addCase(fetchApprovalsAsync.pending, (state) => {
+        state.loadingPending = true;
+        state.error = null;
+      })
+      .addCase(fetchApprovalsAsync.fulfilled, (state, action) => {
+        state.loadingPending = false;
+        // حفظ الموافقات والرفض
+        if (Array.isArray(action.payload)) {
+          state.approvals = action.payload;
+        } else {
+          state.approvals = [];
+        }
+        state.error = null;
+      })
+      .addCase(fetchApprovalsAsync.rejected, (state, action) => {
+        state.loadingPending = false;
+        state.error = action.payload || "حدث خطأ أثناء جلب الموافقات والرفض";
+        state.approvals = [];
+      })
+      // جلب المنشورات المعلقة (قديم - للتوافق)
       .addCase(fetchPendingContentAsync.pending, (state) => {
         state.loadingPending = true;
         state.error = null;

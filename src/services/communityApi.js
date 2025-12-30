@@ -8,12 +8,29 @@ import apiClient from "./api";
 const COMMUNITY_BASE_URL = "/community/";
 
 /**
- * جلب قائمة المحتوى
- * GET /api/v1/community/
- * Query Parameters: type, category, university, featured, status, order_by
+ * جلب منشورات الجامعة
+ * GET /api/community/content/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - مسؤول الجامعة: يرى فقط منشورات جامعته (يتم الفلترة تلقائياً من Backend)
+ * 
+ * Query Parameters (اختيارية):
+ * - type: نوع المحتوى
+ * - category: الفئة
+ * - featured: محتوى مميز
+ * - status: حالة المحتوى
+ * - order_by: ترتيب النتائج
+ * 
+ * يعيد: Array of content objects
  */
 export const fetchCommunityContent = async (params = {}) => {
-  const response = await apiClient.get(COMMUNITY_BASE_URL, { params });
+  const response = await apiClient.get(`${COMMUNITY_BASE_URL}content/`, { params });
+  
+  // الاستجابة قد تأتي بصيغ مختلفة
+  if (response.data?.data && Array.isArray(response.data.data)) {
+    return response.data.data;
+  }
   
   if (Array.isArray(response.data)) {
     return response.data;
@@ -111,14 +128,23 @@ export const deleteCommunityContent = async (id) => {
 };
 
 /**
- * جلب المنشورات المعلقة
- * GET /api/community/moderation/pending/
+ * جلب الموافقات والرفض
+ * GET /api/community/approvals/
  * 
- * ملاحظة: إذا فشل الطلب (500)، نعيد مصفوفة فارغة بدلاً من رمي خطأ
+ * حسب التوثيق:
+ * - الصلاحيات: IsAuthenticated
+ * - مسؤول الجامعة: يرى فقط موافقات ورفض منشورات جامعته (يتم الفلترة تلقائياً من Backend)
+ * 
+ * يعيد: Array of approval/rejection objects
  */
-export const fetchPendingContent = async () => {
+export const fetchApprovals = async (params = {}) => {
   try {
-    const response = await apiClient.get(`${COMMUNITY_BASE_URL}moderation/pending/`);
+    const response = await apiClient.get(`${COMMUNITY_BASE_URL}approvals/`, { params });
+    
+    // الاستجابة قد تأتي بصيغ مختلفة
+    if (response.data?.data && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
     
     if (Array.isArray(response.data)) {
       return response.data;
@@ -128,28 +154,34 @@ export const fetchPendingContent = async () => {
       return response.data.results;
     }
     
-    if (response.data?.data && Array.isArray(response.data.data)) {
-      return response.data.data;
-    }
-    
     return [];
   } catch (error) {
     // إذا كان الخطأ 500 أو خطأ من الخادم، نعيد مصفوفة فارغة
     if (error?.response?.status === 500 || error?.response?.status >= 500) {
       if (process.env.NODE_ENV === "development") {
-        console.warn("⚠️ Pending content API returned 500, using empty array");
+        console.warn("⚠️ Approvals API returned 500, using empty array");
       }
       return [];
     }
     
     // للأخطاء الأخرى، نطبع في development فقط
     if (process.env.NODE_ENV === "development") {
-      console.error("Error fetching pending content:", error);
+      console.error("Error fetching approvals:", error);
     }
     
     // نعيد مصفوفة فارغة بدلاً من رمي الخطأ
     return [];
   }
+};
+
+/**
+ * @deprecated استخدم fetchApprovals بدلاً منها
+ * جلب المنشورات المعلقة (قديم)
+ * GET /api/community/moderation/pending/
+ */
+export const fetchPendingContent = async () => {
+  // إعادة توجيه للـ endpoint الجديد
+  return fetchApprovals({ status: "pending" });
 };
 
 /**

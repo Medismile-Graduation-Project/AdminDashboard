@@ -23,7 +23,12 @@ const getFullName = (supervisor) => {
   if (firstName) return firstName;
   if (lastName) return lastName;
   if (supervisor.username) return supervisor.username;
-  if (supervisor.email) return supervisor.email;
+  
+  // إذا لم يكن هناك اسم، نستخدم جزء من الإيميل
+  if (supervisor.email) {
+    const emailPart = supervisor.email.split("@")[0];
+    return emailPart;
+  }
   
   return "-";
 };
@@ -42,18 +47,27 @@ const mapSupervisorFromApi = (apiSupervisor) => {
   
   return {
     id: safeValue(apiSupervisor.user_id || apiSupervisor.id),
+    user_id: safeValue(apiSupervisor.user_id || apiSupervisor.id),
     supervisorName: getFullName(apiSupervisor),
     email: safeValue(apiSupervisor.email, ""),
+    phone_number: safeValue(apiSupervisor.phone_number, ""),
     university: safeValue(apiSupervisor.university_name, ""),
     department: safeValue(apiSupervisor.department, ""),
     position: safeValue(apiSupervisor.position, ""),
     licenseNumber: safeValue(apiSupervisor.license_number, ""),
+    first_name: safeValue(apiSupervisor.first_name, ""),
+    last_name: safeValue(apiSupervisor.last_name, ""),
+    username: safeValue(apiSupervisor.username, ""),
     _apiData: {
       user_id: safeValue(apiSupervisor.user_id || apiSupervisor.id),
       first_name: safeValue(apiSupervisor.first_name, ""),
       last_name: safeValue(apiSupervisor.last_name, ""),
       username: safeValue(apiSupervisor.username, ""),
       email: safeValue(apiSupervisor.email, ""),
+      phone_number: safeValue(apiSupervisor.phone_number),
+      address: safeValue(apiSupervisor.address),
+      date_of_birth: safeValue(apiSupervisor.date_of_birth),
+      gender: safeValue(apiSupervisor.gender),
       university: safeValue(apiSupervisor.university),
       university_name: safeValue(apiSupervisor.university_name),
       department: safeValue(apiSupervisor.department),

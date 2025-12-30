@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
 import {
-  PlusCircle,
   Search,
   Filter,
   Eye,
@@ -20,17 +19,17 @@ import {
 } from "lucide-react";
 import {
   fetchReportsAsync,
-  createReportAsync,
   deleteReportAsync,
   fetchReportByIdAsync,
   clearError,
   setFilters,
   clearFilters,
 } from "../../redux/features/reports/reportsSlice";
-import { fetchStudentsAsync } from "../../redux/features/students/studentsSlice";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import toast from "react-hot-toast";
 import RoleGuard from "@/components/RoleGuard";
+import { useRole } from "@/hooks/useRole";
+import { fetchUniversityAdminProfile } from "@/services/universityApi";
 
 export default function ReportsPage() {
   return (
@@ -43,6 +42,7 @@ export default function ReportsPage() {
 function ReportsContent() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
+  const { user } = useRole();
   const reportsState = useSelector((state) => state.reports);
   const reports = reportsState?.reports || [];
   const selectedReport = reportsState?.selectedReport;
@@ -51,41 +51,70 @@ function ReportsContent() {
   const error = reportsState?.error || null;
   const filters = reportsState?.filters || {};
 
-  const studentsState = useSelector((state) => state.students);
-  const students = studentsState?.students || [];
-
   const [mounted, setMounted] = useState(false);
+  const [universityId, setUniversityId] = useState(null);
   useEffect(() => setMounted(true), []);
 
-  // State للنموذج
-  const [showForm, setShowForm] = useState(false);
+  // State
   const [showDetails, setShowDetails] = useState(null);
-  const [submitLoading, setSubmitLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [reportTypeFilter, setReportTypeFilter] = useState("all");
   const [isActiveFilter, setIsActiveFilter] = useState("all");
 
-  // جلب معلومات المستخدم
-  const [user, setUser] = useState(null);
-  const [userLoaded, setUserLoaded] = useState(false);
+  // جلب university_id من user أو Profile
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
-    setUser(storedUser);
-    setUserLoaded(true);
-  }, []);
+    const loadUniversityId = async () => {
+      if (!user) return;
 
-  const [formData, setFormData] = useState({
-    student_id: "",
-    report_type: "academic", // academic, clinical, progress, summary
-    title: "",
-    description: "",
-    file_url: "",
-    is_active: true,
-  });
+      // محاولة جلب university_id من user object
+      let universityId = user?.university_id || user?.university;
+      
+      // إذا كان object، نستخرج id
+      if (!universityId && user?.university && typeof user.university === 'object') {
+        universityId = user.university.id;
+      }
+
+      // إذا لم يكن موجوداً، نجرب جلب Profile من API
+      if (!universityId && (user?.role === "university_admin" || user?.role === "college_admin")) {
+        try {
+          const profile = await fetchUniversityAdminProfile();
+          
+          // استخراج university_id من Profile
+          if (profile?.university) {
+            if (typeof profile.university === 'object') {
+              universityId = profile.university.id || profile.university;
+            } else {
+              universityId = profile.university;
+            }
+          } else if (profile?.university_id) {
+            universityId = profile.university_id;
+          }
+
+          // حفظ في localStorage إذا تم جلبها
+          if (universityId) {
+            const updatedUser = { ...user, university_id: universityId };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+          }
+        } catch (error) {
+          console.error("Error fetching university profile:", error);
+        }
+      }
+
+      if (universityId) {
+        setUniversityId(universityId);
+      }
+    };
+
+    if (user) {
+      loadUniversityId();
+    }
+  }, [user]);
 
   // جلب التقارير والطلاب عند تحميل الصفحة
+  // ⚠️ ملاحظة مهمة: Backend يفلتر تلقائياً حسب university_id من Token
+  // لا نمرر university_id في params - Backend يستخرجه من Token تلقائياً
   useEffect(() => {
-    if (!userLoaded) return; // انتظر حتى يتم تحميل المستخدم
+    if (!user) return; // انتظر حتى يتم تحميل المستخدم
     
     const params = {};
     if (reportTypeFilter !== "all") {
@@ -94,9 +123,9 @@ function ReportsContent() {
     if (isActiveFilter !== "all") {
       params.is_active = isActiveFilter === "active";
     }
+    // ⚠️ لا نمرر university_id - Backend يتحقق تلقائياً من Token
     dispatch(fetchReportsAsync(params));
-    dispatch(fetchStudentsAsync());
-  }, [dispatch, userLoaded, reportTypeFilter, isActiveFilter]);
+  }, [dispatch, user, reportTypeFilter, isActiveFilter]);
 
   // عرض رسائل الخطأ
   useEffect(() => {
@@ -107,81 +136,22 @@ function ReportsContent() {
   }, [error, dispatch]);
 
   // معالجة عرض التفاصيل
+  // ⚠️ Backend يتحقق تلقائياً من أن التقرير يخص جامعة المستخدم
+  // إذا كان التقرير من جامعة أخرى، يعيد Backend خطأ 403/404
   const handleViewDetails = async (reportId) => {
     try {
       await dispatch(fetchReportByIdAsync(reportId)).unwrap();
       setShowDetails(reportId);
     } catch (error) {
-      toast.error(error || "فشل في جلب تفاصيل التقرير");
+      // معالجة خطأ الوصول لتقرير من جامعة أخرى
+      const errorMessage = error?.response?.data?.message || error?.message || error || "فشل في جلب تفاصيل التقرير";
+      toast.error(errorMessage);
     }
   };
 
   // إغلاق تفاصيل التقرير
   const handleCloseDetails = () => {
     setShowDetails(null);
-  };
-
-  // معالجة إضافة تقرير جديد
-  const handleAdd = () => {
-    setFormData({
-      student_id: "",
-      report_type: "academic",
-      title: "",
-      description: "",
-      file_url: "",
-      is_active: true,
-    });
-    setShowForm(true);
-  };
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitLoading(true);
-
-    try {
-      // التحقق من الحقول المطلوبة
-      if (!formData.student_id || !formData.title || !formData.report_type) {
-        toast.error("يرجى ملء جميع الحقول المطلوبة");
-        setSubmitLoading(false);
-        return;
-      }
-
-      await dispatch(createReportAsync(formData)).unwrap();
-      toast.success("تم إنشاء التقرير بنجاح");
-      setShowForm(false);
-      
-      // إعادة تعيين النموذج
-      setFormData({
-        student_id: "",
-        report_type: "academic",
-        title: "",
-        description: "",
-        file_url: "",
-        is_active: true,
-      });
-
-      // إعادة جلب التقارير
-      const params = {};
-      if (reportTypeFilter !== "all") {
-        params.report_type = reportTypeFilter;
-      }
-      if (isActiveFilter !== "all") {
-        params.is_active = isActiveFilter === "active";
-      }
-      dispatch(fetchReportsAsync(params));
-    } catch (error) {
-      toast.error(error || "فشل في إنشاء التقرير");
-    } finally {
-      setSubmitLoading(false);
-    }
   };
 
   // معالجة حذف تقرير
@@ -221,14 +191,14 @@ function ReportsContent() {
   // Helper function لتنسيق نوع التقرير
   const getReportTypeBadge = (type) => {
     const typeMap = {
-      academic: { label: "أكاديمي", color: "bg-blue-500" },
-      clinical: { label: "سريري", color: "bg-green-500" },
-      progress: { label: "تقدم", color: "bg-yellow-500" },
-      summary: { label: "ملخص", color: "bg-purple-500" },
+      academic: { label: "أكاديمي", color: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400" },
+      clinical: { label: "سريري", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+      progress: { label: "تقدم", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
+      summary: { label: "ملخص", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
     };
-    const typeInfo = typeMap[type] || { label: type, color: "bg-gray-500" };
+    const typeInfo = typeMap[type] || { label: type, color: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300" };
     return (
-      <span className={`px-2 py-1 rounded text-xs text-white ${typeInfo.color}`}>
+      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${typeInfo.color}`}>
         {typeInfo.label}
       </span>
     );
@@ -265,57 +235,44 @@ function ReportsContent() {
       >
         <div className="max-w-[1400px] mx-auto">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-sky-700 to-sky-500 dark:from-sky-400 dark:to-sky-600 bg-clip-text text-transparent">
-                {t("Reports.title") || "التقارير"}
-              </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                {filteredReports.length} {t("Reports.total") || "تقرير"}
-              </p>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleAdd}
-              className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-sky-600 to-sky-700 
-                hover:from-sky-700 hover:to-sky-800 dark:from-sky-500 dark:to-sky-600 dark:hover:from-sky-600 dark:hover:to-sky-700 
-                text-white rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
-            >
-              <PlusCircle size={18} />
-              <span>{t("Reports.addReport") || "إضافة تقرير جديد"}</span>
-            </motion.button>
+          <div className="mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
+              {t("Reports.title") || "التقارير"}
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
+              {filteredReports.length} {t("Reports.total") || "تقرير"}
+            </p>
           </div>
 
           {/* Filters */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 mb-6 border border-sky-200 dark:border-slate-700">
-            <div className="flex flex-wrap gap-4 items-end">
+          <div className="bg-white dark:bg-dark-light rounded-xl p-5 mb-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div className={`flex flex-wrap gap-4 items-end ${isRtl ? "flex-row-reverse" : ""}`}>
               {/* Search */}
               <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   {t("actions.search") || "بحث"}
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                  <Search className={`absolute top-1/2 transform -translate-y-1/2 text-slate-400 ${isRtl ? "right-3" : "left-3"}`} size={18} />
                   <input
                     type="text"
                     placeholder={t("Reports.searchPlaceholder") || "ابحث عن تقرير..."}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-sky-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    className={`w-full ${isRtl ? "pr-10 pl-4" : "pl-10 pr-4"} py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200`}
                   />
                 </div>
               </div>
 
               {/* Report Type Filter */}
               <div className="min-w-[150px]">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   {t("Reports.type") || "نوع التقرير"}
                 </label>
                 <select
                   value={reportTypeFilter}
                   onChange={(e) => setReportTypeFilter(e.target.value)}
-                  className="w-full p-2 border border-sky-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                 >
                   <option value="all">{t("actions.all") || "الكل"}</option>
                   <option value="academic">{t("Reports.types.academic") || "أكاديمي"}</option>
@@ -327,13 +284,13 @@ function ReportsContent() {
 
               {/* Active Status Filter */}
               <div className="min-w-[150px]">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   {t("Reports.status") || "الحالة"}
                 </label>
                 <select
                   value={isActiveFilter}
                   onChange={(e) => setIsActiveFilter(e.target.value)}
-                  className="w-full p-2 border border-sky-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                 >
                   <option value="all">{t("actions.all") || "الكل"}</option>
                   <option value="active">{t("Reports.active") || "نشط"}</option>
@@ -378,62 +335,62 @@ function ReportsContent() {
                     key={report.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 border-2 border-sky-200 dark:border-slate-700 hover:border-sky-400 dark:hover:border-sky-500 transition"
+                    className="bg-white dark:bg-dark-light rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-200"
                   >
-                    <div className="flex flex-col sm:flex-row justify-between gap-4">
+                    <div className={`flex flex-col sm:flex-row justify-between gap-4 ${isRtl ? "sm:flex-row-reverse" : ""}`}>
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className={`flex items-center gap-3 mb-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                           <h3 className="font-bold text-lg text-slate-900 dark:text-white">
                             {report.title || "-"}
                           </h3>
                           {getReportTypeBadge(report.report_type)}
                           {!report.is_active && (
-                            <span className="px-2 py-1 rounded text-xs bg-gray-500 text-white">
+                            <span className="px-2.5 py-1 rounded-full text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">
                               غير نشط
                             </span>
                           )}
                         </div>
-                        <p className="text-slate-600 dark:text-slate-400 mb-2">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">
                           {report.description || "-"}
                         </p>
-                        <div className="flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
+                        <div className={`flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400 mb-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                           {report.student_name && (
-                            <span className="flex items-center gap-1">
-                              <User size={14} />
-                              <strong>{t("Reports.student") || "الطالب"}:</strong> {report.student_name}
+                            <span className={`flex items-center gap-1.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+                              <User size={16} className="text-sky-600 dark:text-sky-400" />
+                              <strong className="font-semibold">{t("Reports.student") || "الطالب"}:</strong> {report.student_name}
                             </span>
                           )}
-                          <span className="flex items-center gap-1">
-                            <Calendar size={14} />
-                            <strong>{t("Reports.date") || "التاريخ"}:</strong> {formatDate(report.created_at)}
+                          <span className={`flex items-center gap-1.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+                            <Calendar size={16} className="text-sky-600 dark:text-sky-400" />
+                            <strong className="font-semibold">{t("Reports.date") || "التاريخ"}:</strong> {formatDate(report.created_at)}
                           </span>
                         </div>
                         {report.file_url && (
-                          <div className="mt-2">
+                          <div className="mt-3">
                             <a
                               href={report.file_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300"
+                              className={`inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 font-medium transition-colors ${isRtl ? "flex-row-reverse" : ""}`}
                             >
-                              <Download size={14} />
+                              <Download size={16} />
                               {t("Reports.download") || "تحميل الملف"}
                             </a>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex flex-col sm:flex-row gap-2">
+                      <div className={`flex gap-2 ${isRtl ? "flex-row-reverse sm:flex-col-reverse" : "sm:flex-col"}`}>
                         <button
                           onClick={() => handleViewDetails(report.id)}
-                          className="px-3 py-2 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-lg hover:bg-sky-200 dark:hover:bg-sky-900/50 transition text-sm flex items-center gap-1"
+                          className={`px-4 py-2 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 rounded-lg hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-all duration-200 text-sm flex items-center gap-1.5 font-medium shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
                         >
                           <Eye size={16} />
                           {t("Reports.viewDetails") || "عرض التفاصيل"}
                         </button>
                         <button
                           onClick={() => handleDelete(report.id)}
-                          className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition text-sm flex items-center gap-1"
+                          className={`px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 text-sm flex items-center gap-1.5 font-medium shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
                         >
                           <Trash2 size={16} />
                           {t("Reports.delete") || "حذف"}
@@ -446,215 +403,82 @@ function ReportsContent() {
             </div>
           )}
 
-          {/* Create Report Modal */}
-          {showForm && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-sky-200 dark:border-slate-700">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                    {t("Reports.addReport") || "إضافة تقرير جديد"}
-                  </h2>
-                  <button
-                    onClick={() => setShowForm(false)}
-                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  >
-                    <X size={24} />
-                  </button>
-                </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      {t("Reports.student") || "الطالب"} <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="student_id"
-                      value={formData.student_id}
-                      onChange={handleChange}
-                      required
-                      className="w-full p-2 border border-sky-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    >
-                      <option value="">{t("Reports.selectStudent") || "اختر طالباً"}</option>
-                      {students.map((student) => (
-                        <option key={student.id} value={student.id}>
-                          {student.first_name} {student.last_name} {student.student_id ? `(${student.student_id})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      {t("Reports.type") || "نوع التقرير"} <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="report_type"
-                      value={formData.report_type}
-                      onChange={handleChange}
-                      required
-                      className="w-full p-2 border border-sky-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    >
-                      <option value="academic">{t("Reports.types.academic") || "أكاديمي"}</option>
-                      <option value="clinical">{t("Reports.types.clinical") || "سريري"}</option>
-                      <option value="progress">{t("Reports.types.progress") || "تقدم"}</option>
-                      <option value="summary">{t("Reports.types.summary") || "ملخص"}</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      {t("Reports.title") || "العنوان"} <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleChange}
-                      required
-                      className="w-full p-2 border border-sky-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      {t("Reports.description") || "الوصف"}
-                    </label>
-                    <textarea
-                      name="description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      rows={4}
-                      className="w-full p-2 border border-sky-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      {t("Reports.fileUrl") || "رابط الملف (URL)"}
-                    </label>
-                    <input
-                      type="url"
-                      name="file_url"
-                      value={formData.file_url}
-                      onChange={handleChange}
-                      placeholder="https://..."
-                      className="w-full p-2 border border-sky-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      name="is_active"
-                      checked={formData.is_active}
-                      onChange={handleChange}
-                      className="w-4 h-4 text-sky-600 border-sky-300 rounded focus:ring-sky-500"
-                    />
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {t("Reports.active") || "نشط"}
-                    </label>
-                  </div>
-
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setShowForm(false)}
-                      className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
-                    >
-                      {t("Reports.cancel") || "إلغاء"}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitLoading}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg transition disabled:opacity-50 flex items-center gap-2"
-                    >
-                      {submitLoading && <Loader2 size={16} className="animate-spin" />}
-                      {t("Reports.save") || "حفظ"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
           {/* Details Modal */}
           {showDetails && selectedReport && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-sky-200 dark:border-slate-700">
-                <div className="flex justify-between items-center mb-4">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
+              <div className="bg-white dark:bg-dark-light rounded-xl p-5 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-700 shadow-xl">
+                <div className={`flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse" : ""}`}>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                     {t("Reports.viewDetails") || "تفاصيل التقرير"}
                   </h2>
                   <button
                     onClick={handleCloseDetails}
-                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    aria-label="Close"
                   >
-                    <X size={24} />
+                    <X size={20} className="text-slate-600 dark:text-slate-400" />
                   </button>
                 </div>
                 {loadingSelected ? (
                   <div className="flex justify-center items-center py-12">
-                    <Loader2 className="animate-spin text-blue-500" size={32} />
+                    <Loader2 className="animate-spin text-sky-600 dark:text-sky-400" size={32} />
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-start gap-3">
-                        <FileText className="text-sky-600 dark:text-sky-400 mt-1" size={20} />
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{t("Reports.title") || "العنوان"}</p>
-                          <p className="font-semibold text-slate-900 dark:text-white">{selectedReport.title || "-"}</p>
+                      <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+                        <FileText className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">{t("Reports.title") || "العنوان"}</p>
+                          <p className="font-bold text-slate-900 dark:text-white">{selectedReport.title || "-"}</p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3">
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{t("Reports.type") || "النوع"}</p>
-                          <div className="mt-1">{getReportTypeBadge(selectedReport.report_type)}</div>
-                        </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.type") || "النوع"}</p>
+                        <div>{getReportTypeBadge(selectedReport.report_type)}</div>
                       </div>
                       {selectedReport.student_name && (
-                        <div className="flex items-start gap-3">
-                          <User className="text-sky-600 dark:text-sky-400 mt-1" size={20} />
-                          <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{t("Reports.student") || "الطالب"}</p>
-                            <p className="font-semibold text-slate-900 dark:text-white">{selectedReport.student_name}</p>
+                        <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+                          <User className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">{t("Reports.student") || "الطالب"}</p>
+                            <p className="font-bold text-slate-900 dark:text-white">{selectedReport.student_name}</p>
                           </div>
                         </div>
                       )}
-                      <div className="flex items-start gap-3">
-                        <Calendar className="text-sky-600 dark:text-sky-400 mt-1" size={20} />
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{t("Reports.date") || "التاريخ"}</p>
-                          <p className="font-semibold text-slate-900 dark:text-white">{formatDate(selectedReport.created_at)}</p>
+                      <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+                        <Calendar className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">{t("Reports.date") || "التاريخ"}</p>
+                          <p className="font-bold text-slate-900 dark:text-white">{formatDate(selectedReport.created_at)}</p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3">
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{t("Reports.status") || "الحالة"}</p>
-                          <span className={`px-2 py-1 rounded text-xs ${selectedReport.is_active ? "bg-green-500" : "bg-gray-500"} text-white`}>
-                            {selectedReport.is_active ? (t("Reports.active") || "نشط") : (t("Reports.inactive") || "غير نشط")}
-                          </span>
-                        </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.status") || "الحالة"}</p>
+                        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${selectedReport.is_active ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300"}`}>
+                          {selectedReport.is_active ? (t("Reports.active") || "نشط") : (t("Reports.inactive") || "غير نشط")}
+                        </span>
                       </div>
                     </div>
                     {selectedReport.description && (
-                      <div className="flex items-start gap-3">
-                        <FileText className="text-sky-600 dark:text-sky-400 mt-1" size={20} />
+                      <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+                        <FileText className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
                         <div className="flex-1">
-                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{t("Reports.description") || "الوصف"}</p>
-                          <p className="text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700 p-3 rounded-lg">{selectedReport.description}</p>
+                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.description") || "الوصف"}</p>
+                          <p className="text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 p-4 rounded-lg leading-relaxed">{selectedReport.description}</p>
                         </div>
                       </div>
                     )}
                     {selectedReport.file_url && (
-                      <div className="flex items-start gap-3">
-                        <Download className="text-sky-600 dark:text-sky-400 mt-1" size={20} />
+                      <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
+                        <Download className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
                         <div className="flex-1">
-                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{t("Reports.fileUrl") || "رابط الملف"}</p>
+                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.fileUrl") || "رابط الملف"}</p>
                           <a
                             href={selectedReport.file_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 break-all"
+                            className="text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 break-all font-medium transition-colors"
                           >
                             {selectedReport.file_url}
                           </a>

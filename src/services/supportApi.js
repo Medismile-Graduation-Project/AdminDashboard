@@ -2,10 +2,30 @@ import apiClient from "./api";
 
 /**
  * جلب قائمة طلبات الدعم
+ * GET /api/support/tickets/
+ * Backend يفلتر تلقائياً حسب university_id من Token (للمسؤولين)
+ * @param {Object} params - Query parameters (status, priority, category, etc.)
+ * @returns {Promise<Array>} قائمة طلبات الدعم
  */
 export const fetchSupportTickets = async (params = {}) => {
   const response = await apiClient.get("/support/tickets/", { params });
-  return response.data.data;
+  
+  // الاستجابة قد تأتي بصيغة {status: "success", data: [...]}
+  if (response.data && response.data.data && Array.isArray(response.data.data)) {
+    return response.data.data;
+  }
+  
+  // أو مباشرة كـ array
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  
+  // أو في results (pagination)
+  if (response.data && response.data.results && Array.isArray(response.data.results)) {
+    return response.data.results;
+  }
+  
+  return [];
 };
 
 /**
