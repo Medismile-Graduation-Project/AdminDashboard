@@ -143,9 +143,6 @@
       "noHistory": "لا يوجد سجل",
       "performedBy": "من قبل"
     },
-    "form": {
-      "patientNote": "ملاحظة: لا يمكن إضافة طالب أو مشرف مباشرة عند الإنشاء. يتم الإسناد لاحقاً عبر طلبات الإسناد."
-    },
     "actions": {
       "edit": "تعديل",
       "delete": "حذف"
@@ -170,7 +167,8 @@
       "notes": "ملاحظات المشرف",
       "save": "حفظ",
       "update": "تحديث",
-      "cancel": "إلغاء"
+      "cancel": "إلغاء",
+      "patientNote": "ملاحظة: لا يمكن إضافة طالب أو مشرف مباشرة عند الإنشاء. يتم الإسناد لاحقاً عبر طلبات الإسناد."
     }
   },
   "students": {
@@ -272,13 +270,41 @@
   },
   "reviews": {
     "title": "تقييمات المرضى",
+    "description": "إدارة وتتبع جميع التقييمات",
     "total": "إجمالي التقييمات",
     "average": "متوسط التقييم",
     "new": "تقييمات جديدة",
     "reviewed": "مراجَعة",
-    "search": "🔍 ابحث عن مريض",
+    "searchPlaceholder": "ابحث عن التقييمات...",
     "all": "جميع التقييمات",
-    "no_results": "لا توجد تقييمات مطابقة للفلاتر"
+    "no_results": "لا توجد تقييمات مطابقة للفلاتر",
+    "loading": "جاري التحميل...",
+    "unknown": "غير معروف",
+    "evaluatorTypes": {
+      "all": "جميع الأنواع",
+      "patient": "من مريض",
+      "supervisor": "من مشرف",
+      "student": "من طالب",
+      "university": "من الجامعة",
+      "admin": "من الأدمن"
+    },
+    "statuses": {
+      "draft": "مسودة",
+      "submitted": "مقدم",
+      "final": "نهائي",
+      "new": "جديد"
+    },
+    "targetTypes": {
+      "case": "حالة",
+      "session": "جلسة",
+      "appointment": "موعد"
+    },
+    "submit": "تقديم",
+    "finalize": "تثبيت",
+    "submitSuccess": "تم تقديم التقييم بنجاح",
+    "submitError": "فشل في تقديم التقييم",
+    "finalizeSuccess": "تم تثبيت التقييم بنجاح",
+    "finalizeError": "فشل في تثبيت التقييم"
   },
   "titles": {
     "contentManagement": "إدارة المحتوى",
@@ -310,7 +336,9 @@
     "save": "حفظ",
     "view": "عرض",
     "clearFilters": "مسح الفلاتر",
-    "download": "تحميل"
+    "download": "تحميل",
+    "search": "بحث",
+    "all": "الكل"
   },
   "table": {
     "title": "العنوان",
@@ -518,7 +546,6 @@
     "firstName": "الاسم الأول",
     "lastName": "اسم العائلة",
     "address": "العنوان",
-    "dateOfBirth": "تاريخ الميلاد",
     "selectGender": "اختر الجنس",
     "male": "ذكر",
     "female": "أنثى",
@@ -601,7 +628,7 @@
       "recipient": "المستقبل",
       "type": "نوع الإشعار",
       "appointment": "الموعد",
-      "title": "العنوان",
+      "notificationTitle": "العنوان",
       "message": "الرسالة",
       "status": "الحالة",
       "responseMessage": "رسالة الرد",
@@ -758,6 +785,36 @@
     "pleaseLogin": "الرجاء تسجيل الدخول للوصول إلى الإعدادات.",
     "wrongPassword": "كلمة المرور الحالية غير صحيحة.",
     "savedSuccessfully": "تم حفظ التغييرات بنجاح ✅"
+  },
+  "Reports": {
+    "title": "التقارير",
+    "total": "تقرير",
+    "searchPlaceholder": "ابحث عن تقرير...",
+    "type": "نوع التقرير",
+    "types": {
+      "academic": "أكاديمي",
+      "clinical": "سريري",
+      "progress": "تقدم",
+      "summary": "ملخص"
+    },
+    "status": "الحالة",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "noReports": "لا توجد تقارير",
+    "student": "الطالب",
+    "date": "التاريخ",
+    "download": "تحميل الملف",
+    "viewDetails": "عرض التفاصيل",
+    "detailsTitle": "تفاصيل التقرير",
+    "titleLabel": "العنوان",
+    "typeLabel": "النوع",
+    "delete": "حذف",
+    "description": "الوصف",
+    "fileUrl": "رابط الملف",
+    "confirmDelete": "هل أنت متأكد من حذف هذا التقرير؟",
+    "deleteSuccess": "تم حذف التقرير بنجاح",
+    "deleteError": "فشل في حذف التقرير",
+    "fetchDetailsError": "فشل في جلب تفاصيل التقرير"
   },
   "Footer": {
     "description": "نظام إدارة شامل للعيادات الطبية والطلاب والمشرفين. نوفر حلول متكاملة لإدارة الحالات السريرية والمواعيد والتقارير.",

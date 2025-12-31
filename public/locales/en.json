@@ -270,13 +270,41 @@
   },
   "reviews": {
     "title": "Patient Reviews",
+    "description": "Manage and track all evaluations",
     "total": "Total Reviews",
     "average": "Average Rating",
     "new": "New Reviews",
     "reviewed": "Reviewed",
-    "search": "🔍 Search for patient",
+    "searchPlaceholder": "Search for evaluations...",
     "all": "All Reviews",
-    "no_results": "No reviews match the filters"
+    "no_results": "No reviews match the filters",
+    "loading": "Loading...",
+    "unknown": "Unknown",
+    "evaluatorTypes": {
+      "all": "All Types",
+      "patient": "From Patient",
+      "supervisor": "From Supervisor",
+      "student": "From Student",
+      "university": "From University",
+      "admin": "From Admin"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "final": "Final",
+      "new": "New"
+    },
+    "targetTypes": {
+      "case": "Case",
+      "session": "Session",
+      "appointment": "Appointment"
+    },
+    "submit": "Submit",
+    "finalize": "Finalize",
+    "submitSuccess": "Evaluation submitted successfully",
+    "submitError": "Failed to submit evaluation",
+    "finalizeSuccess": "Evaluation finalized successfully",
+    "finalizeError": "Failed to finalize evaluation"
   },
   "titles": {
     "contentManagement": "Content Management",
@@ -308,7 +336,9 @@
     "save": "Save",
     "view": "View",
     "clearFilters": "Clear Filters",
-    "download": "Download"
+    "download": "Download",
+    "search": "Search",
+    "all": "All"
   },
   "table": {
     "title": "Title",
@@ -758,6 +788,36 @@
     "pleaseLogin": "Please log in to access settings.",
     "wrongPassword": "Current password is incorrect.",
     "savedSuccessfully": "Changes saved successfully ✅"
+  },
+  "Reports": {
+    "title": "Reports",
+    "total": "report",
+    "searchPlaceholder": "Search for a report...",
+    "type": "Report Type",
+    "types": {
+      "academic": "Academic",
+      "clinical": "Clinical",
+      "progress": "Progress",
+      "summary": "Summary"
+    },
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "noReports": "No reports found",
+    "student": "Student",
+    "date": "Date",
+    "download": "Download File",
+    "viewDetails": "View Details",
+    "detailsTitle": "Report Details",
+    "titleLabel": "Title",
+    "typeLabel": "Type",
+    "delete": "Delete",
+    "description": "Description",
+    "fileUrl": "File URL",
+    "confirmDelete": "Are you sure you want to delete this report?",
+    "deleteSuccess": "Report deleted successfully",
+    "deleteError": "Failed to delete report",
+    "fetchDetailsError": "Failed to fetch report details"
   },
   "Footer": {
     "description": "Comprehensive management system for medical clinics, students, and supervisors. We provide integrated solutions for managing clinical cases, appointments, and reports.",

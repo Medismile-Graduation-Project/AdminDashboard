@@ -144,7 +144,7 @@ function ReportsContent() {
       setShowDetails(reportId);
     } catch (error) {
       // معالجة خطأ الوصول لتقرير من جامعة أخرى
-      const errorMessage = error?.response?.data?.message || error?.message || error || "فشل في جلب تفاصيل التقرير";
+      const errorMessage = error?.response?.data?.message || error?.message || error || t("Reports.fetchDetailsError");
       toast.error(errorMessage);
     }
   };
@@ -156,11 +156,11 @@ function ReportsContent() {
 
   // معالجة حذف تقرير
   const handleDelete = async (reportId) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا التقرير؟")) return;
+    if (!window.confirm(t("Reports.confirmDelete"))) return;
 
     try {
       await dispatch(deleteReportAsync(reportId)).unwrap();
-      toast.success("تم حذف التقرير بنجاح");
+      toast.success(t("Reports.deleteSuccess"));
       
       // إعادة جلب التقارير
       const params = {};
@@ -172,7 +172,7 @@ function ReportsContent() {
       }
       dispatch(fetchReportsAsync(params));
     } catch (error) {
-      toast.error(error || "فشل في حذف التقرير");
+      toast.error(error || t("Reports.deleteError"));
     }
   };
 
@@ -191,10 +191,10 @@ function ReportsContent() {
   // Helper function لتنسيق نوع التقرير
   const getReportTypeBadge = (type) => {
     const typeMap = {
-      academic: { label: "أكاديمي", color: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400" },
-      clinical: { label: "سريري", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-      progress: { label: "تقدم", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
-      summary: { label: "ملخص", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
+      academic: { label: t("Reports.types.academic"), color: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400" },
+      clinical: { label: t("Reports.types.clinical"), color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+      progress: { label: t("Reports.types.progress"), color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
+      summary: { label: t("Reports.types.summary"), color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
     };
     const typeInfo = typeMap[type] || { label: type, color: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300" };
     return (
@@ -237,10 +237,10 @@ function ReportsContent() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
-              {t("Reports.title") || "التقارير"}
+              {t("Reports.title")}
             </h1>
             <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
-              {filteredReports.length} {t("Reports.total") || "تقرير"}
+              {filteredReports.length} {t("Reports.total")}
             </p>
           </div>
 
@@ -250,13 +250,13 @@ function ReportsContent() {
               {/* Search */}
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  {t("actions.search") || "بحث"}
+                  {t("actions.search")}
                 </label>
                 <div className="relative">
                   <Search className={`absolute top-1/2 transform -translate-y-1/2 text-slate-400 ${isRtl ? "right-3" : "left-3"}`} size={18} />
                   <input
                     type="text"
-                    placeholder={t("Reports.searchPlaceholder") || "ابحث عن تقرير..."}
+                    placeholder={t("Reports.searchPlaceholder")}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className={`w-full ${isRtl ? "pr-10 pl-4" : "pl-10 pr-4"} py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200`}
@@ -267,34 +267,34 @@ function ReportsContent() {
               {/* Report Type Filter */}
               <div className="min-w-[150px]">
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  {t("Reports.type") || "نوع التقرير"}
+                  {t("Reports.type")}
                 </label>
                 <select
                   value={reportTypeFilter}
                   onChange={(e) => setReportTypeFilter(e.target.value)}
                   className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                 >
-                  <option value="all">{t("actions.all") || "الكل"}</option>
-                  <option value="academic">{t("Reports.types.academic") || "أكاديمي"}</option>
-                  <option value="clinical">{t("Reports.types.clinical") || "سريري"}</option>
-                  <option value="progress">{t("Reports.types.progress") || "تقدم"}</option>
-                  <option value="summary">{t("Reports.types.summary") || "ملخص"}</option>
+                  <option value="all">{t("actions.all")}</option>
+                  <option value="academic">{t("Reports.types.academic")}</option>
+                  <option value="clinical">{t("Reports.types.clinical")}</option>
+                  <option value="progress">{t("Reports.types.progress")}</option>
+                  <option value="summary">{t("Reports.types.summary")}</option>
                 </select>
               </div>
 
               {/* Active Status Filter */}
               <div className="min-w-[150px]">
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  {t("Reports.status") || "الحالة"}
+                  {t("Reports.status")}
                 </label>
                 <select
                   value={isActiveFilter}
                   onChange={(e) => setIsActiveFilter(e.target.value)}
                   className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                 >
-                  <option value="all">{t("actions.all") || "الكل"}</option>
-                  <option value="active">{t("Reports.active") || "نشط"}</option>
-                  <option value="inactive">{t("Reports.inactive") || "غير نشط"}</option>
+                  <option value="all">{t("actions.all")}</option>
+                  <option value="active">{t("Reports.active")}</option>
+                  <option value="inactive">{t("Reports.inactive")}</option>
                 </select>
               </div>
             </div>
@@ -326,7 +326,7 @@ function ReportsContent() {
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-sky-200 dark:border-slate-700">
                   <FileText size={48} className="mx-auto text-slate-400 dark:text-slate-500 mb-4" />
                   <p className="text-sky-600 dark:text-sky-400 text-lg">
-                    {t("Reports.noReports") || "لا توجد تقارير"}
+                    {t("Reports.noReports")}
                   </p>
                 </div>
               ) : (
@@ -346,7 +346,7 @@ function ReportsContent() {
                           {getReportTypeBadge(report.report_type)}
                           {!report.is_active && (
                             <span className="px-2.5 py-1 rounded-full text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">
-                              غير نشط
+                              {t("Reports.inactive")}
                             </span>
                           )}
                         </div>
@@ -357,12 +357,12 @@ function ReportsContent() {
                           {report.student_name && (
                             <span className={`flex items-center gap-1.5 ${isRtl ? "flex-row-reverse" : ""}`}>
                               <User size={16} className="text-sky-600 dark:text-sky-400" />
-                              <strong className="font-semibold">{t("Reports.student") || "الطالب"}:</strong> {report.student_name}
+                              <strong className="font-semibold">{t("Reports.student")}:</strong> {report.student_name}
                             </span>
                           )}
                           <span className={`flex items-center gap-1.5 ${isRtl ? "flex-row-reverse" : ""}`}>
                             <Calendar size={16} className="text-sky-600 dark:text-sky-400" />
-                            <strong className="font-semibold">{t("Reports.date") || "التاريخ"}:</strong> {formatDate(report.created_at)}
+                            <strong className="font-semibold">{t("Reports.date")}:</strong> {formatDate(report.created_at)}
                           </span>
                         </div>
                         {report.file_url && (
@@ -374,7 +374,7 @@ function ReportsContent() {
                               className={`inline-flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 font-medium transition-colors ${isRtl ? "flex-row-reverse" : ""}`}
                             >
                               <Download size={16} />
-                              {t("Reports.download") || "تحميل الملف"}
+                              {t("Reports.download")}
                             </a>
                           </div>
                         )}
@@ -386,14 +386,14 @@ function ReportsContent() {
                           className={`px-4 py-2 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 rounded-lg hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-all duration-200 text-sm flex items-center gap-1.5 font-medium shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
                         >
                           <Eye size={16} />
-                          {t("Reports.viewDetails") || "عرض التفاصيل"}
+                          {t("Reports.viewDetails")}
                         </button>
                         <button
                           onClick={() => handleDelete(report.id)}
                           className={`px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 text-sm flex items-center gap-1.5 font-medium shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
                         >
                           <Trash2 size={16} />
-                          {t("Reports.delete") || "حذف"}
+                          {t("Reports.delete")}
                         </button>
                       </div>
                     </div>
@@ -409,7 +409,7 @@ function ReportsContent() {
               <div className="bg-white dark:bg-dark-light rounded-xl p-5 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-700 shadow-xl">
                 <div className={`flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse" : ""}`}>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                    {t("Reports.viewDetails") || "تفاصيل التقرير"}
+                    {t("Reports.detailsTitle")}
                   </h2>
                   <button
                     onClick={handleCloseDetails}
@@ -429,19 +429,19 @@ function ReportsContent() {
                       <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                         <FileText className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">{t("Reports.title") || "العنوان"}</p>
+                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">{t("Reports.titleLabel")}</p>
                           <p className="font-bold text-slate-900 dark:text-white">{selectedReport.title || "-"}</p>
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.type") || "النوع"}</p>
+                        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.typeLabel")}</p>
                         <div>{getReportTypeBadge(selectedReport.report_type)}</div>
                       </div>
                       {selectedReport.student_name && (
                         <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                           <User className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
                           <div className="flex-1">
-                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">{t("Reports.student") || "الطالب"}</p>
+                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">{t("Reports.student")}</p>
                             <p className="font-bold text-slate-900 dark:text-white">{selectedReport.student_name}</p>
                           </div>
                         </div>
@@ -449,14 +449,14 @@ function ReportsContent() {
                       <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                         <Calendar className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">{t("Reports.date") || "التاريخ"}</p>
+                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">{t("Reports.date")}</p>
                           <p className="font-bold text-slate-900 dark:text-white">{formatDate(selectedReport.created_at)}</p>
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.status") || "الحالة"}</p>
+                        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.status")}</p>
                         <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${selectedReport.is_active ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300"}`}>
-                          {selectedReport.is_active ? (t("Reports.active") || "نشط") : (t("Reports.inactive") || "غير نشط")}
+                          {selectedReport.is_active ? t("Reports.active") : t("Reports.inactive")}
                         </span>
                       </div>
                     </div>
@@ -464,7 +464,7 @@ function ReportsContent() {
                       <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                         <FileText className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.description") || "الوصف"}</p>
+                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.description")}</p>
                           <p className="text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 p-4 rounded-lg leading-relaxed">{selectedReport.description}</p>
                         </div>
                       </div>
@@ -473,7 +473,7 @@ function ReportsContent() {
                       <div className={`flex items-start gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                         <Download className="text-sky-600 dark:text-sky-400 mt-1 flex-shrink-0" size={20} />
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.fileUrl") || "رابط الملف"}</p>
+                          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.fileUrl")}</p>
                           <a
                             href={selectedReport.file_url}
                             target="_blank"
