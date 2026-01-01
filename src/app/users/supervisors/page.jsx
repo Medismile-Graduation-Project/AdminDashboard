@@ -634,76 +634,64 @@ function SupervisorsPageContent() {
             {searchTerm ? "لا توجد نتائج للبحث" : "لا يوجد مشرفين"}
           </div>
         ) : (
-          <div className="bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                  <tr>
-                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
-                      الاسم
-                    </th>
-                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
-                      البريد الإلكتروني
-                    </th>
-                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
-                      رقم الهاتف
-                    </th>
-                    <th className={`px-6 py-3.5 ${isRtl ? "text-right" : "text-left"} text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider`}>
-                      الإجراءات
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-dark-light divide-y divide-slate-200 dark:divide-slate-700">
-                  {filteredSupervisors.map((supervisor) => {
-                    const name = supervisor.supervisorName || supervisor.email?.split("@")[0] || "-";
-                    return (
-                      <motion.tr
-                        key={supervisor.user_id || supervisor.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                            {name}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-slate-600 dark:text-slate-400">
-                            {supervisor.email || "-"}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-slate-600 dark:text-slate-400">
-                            {supervisor.phone_number || "-"}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className={`flex items-center gap-2 ${isRtl ? "justify-start" : "justify-end"}`}>
-                            <button
-                              onClick={() => handleEdit(supervisor)}
-                              className="p-2 text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-all duration-200"
-                              title="تعديل"
-                              aria-label="Edit"
-                            >
-                              <Pencil size={18} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(supervisor.user_id || supervisor.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
-                              title="حذف"
-                              aria-label="Delete"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+          <div className="overflow-x-auto rounded-2xl border-2 border-sky-200/50 dark:border-dark-lighter shadow-2xl">
+            <table
+              className={`w-full text-sm text-slate-900 dark:text-slate-200 min-w-[900px] ${
+                isRtl ? "text-right" : "text-left"
+              }`}
+              dir={isRtl ? "rtl" : "ltr"}
+            >
+              <thead className="bg-gradient-to-r from-sky-700 via-sky-600 to-sky-700 dark:from-dark-lighter dark:via-dark-light dark:to-dark-lighter text-white">
+                <tr>
+                  <th className="px-6 py-4 font-semibold">الاسم</th>
+                  <th className="px-6 py-4 font-semibold">البريد الإلكتروني</th>
+                  <th className="px-6 py-4 font-semibold">رقم الهاتف</th>
+                  <th className="px-6 py-4 font-semibold">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSupervisors.map((supervisor, idx) => {
+                  const name = supervisor.supervisorName || supervisor.email?.split("@")[0] || "-";
+                  return (
+                    <motion.tr
+                      key={supervisor.user_id || supervisor.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: idx * 0.02 }}
+                      className={`${
+                        idx % 2 === 0
+                          ? "bg-sky-50/50 dark:bg-dark-light/30"
+                          : "bg-white dark:bg-dark-light"
+                      } border-b border-sky-200/50 dark:border-dark-lighter hover:bg-gradient-to-r hover:from-sky-100/50 hover:to-sky-200/50 dark:hover:from-dark-lighter transition-all duration-300`}
+                    >
+                      <td className="px-6 py-4 font-medium">{name}</td>
+                      <td className="px-6 py-4">{supervisor.email || "-"}</td>
+                      <td className="px-6 py-4">{supervisor.phone_number || "-"}</td>
+                      <td className="px-6 py-4">
+                        <div className={`flex items-center gap-2 ${isRtl ? "justify-start" : "justify-end"}`}>
+                          <button
+                            onClick={() => handleEdit(supervisor)}
+                            className="p-2 text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-all duration-200"
+                            title="تعديل"
+                            aria-label="Edit"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(supervisor.user_id || supervisor.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+                            title="حذف"
+                            aria-label="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
