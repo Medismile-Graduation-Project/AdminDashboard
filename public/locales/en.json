@@ -338,7 +338,11 @@
     "clearFilters": "Clear Filters",
     "download": "Download",
     "search": "Search",
-    "all": "All"
+    "all": "All",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "of": "of"
   },
   "table": {
     "title": "Title",
@@ -584,6 +588,21 @@
     "pending": "Pending",
     "accepted": "Accepted",
     "rejected": "Rejected",
+    "priorityLabel": "Priority",
+    "priority": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "targetObject": "Target Object",
+    "targetType": {
+      "report": "Report",
+      "case": "Case",
+      "appointment": "Appointment",
+      "evaluation": "Evaluation",
+      "message": "Message"
+    },
     "table": {
       "sender": "Sender",
       "recipient": "Recipient",
@@ -596,11 +615,30 @@
       "actions": "Actions"
     },
     "types": {
+      "appointment_reminder": "Appointment Reminder",
       "appointment_update_request": "Appointment Update Request",
       "appointment_cancel_request": "Appointment Cancel Request",
+      "appointment_status_update": "Appointment Status Update",
       "appointment_confirmed": "Appointment Confirmed",
       "appointment_cancelled": "Appointment Cancelled",
       "appointment_completed": "Appointment Completed",
+      "report_submitted": "Report Submitted",
+      "report_reviewed": "Report Reviewed",
+      "evaluation_submitted": "Evaluation Submitted",
+      "ai_analysis_ready": "AI Analysis Ready",
+      "community_content_pending": "Community Content Pending",
+      "community_content_approved": "Community Content Approved",
+      "community_content_rejected": "Community Content Rejected",
+      "case_created": "Case Created",
+      "case_assigned": "Case Assigned",
+      "case_status_changed": "Case Status Changed",
+      "session_created": "Session Created",
+      "session_needs_review": "Session Needs Review",
+      "session_reviewed": "Session Reviewed",
+      "new_message": "New Message",
+      "system_alert": "System Alert",
+      "backup_status": "Backup Status",
+      "security_event": "Security Event",
       "content_approval_request": "Content Approval Request",
       "content_publish_request": "Content Publish Request",
       "case_assignment_request": "Case Assignment Request"
@@ -621,8 +659,12 @@
       "titlePlaceholder": "Enter notification title",
       "message": "Message",
       "messagePlaceholder": "Enter notification message",
+      "targetType": "Target Object Type",
+      "selectTargetType": "Select target object type (optional)",
+      "targetId": "Target Object ID",
+      "targetIdPlaceholder": "Enter target object ID (UUID)",
       "proposedChanges": "Proposed Changes",
-      "proposedChangesPlaceholder": "Enter proposed changes (optional)",
+      "proposedChangesPlaceholder": "Enter proposed changes in JSON format (optional)",
       "proposedChangesHint": "Enter changes in JSON format (only for appointment update request)"
     },
     "details": {
@@ -660,6 +702,9 @@
     "confirmDelete": "Are you sure you want to delete this notification?",
     "createSuccess": "Notification created successfully",
     "createError": "Failed to create notification",
+    "updateSuccess": "Notification updated successfully",
+    "updateError": "Failed to update notification",
+    "fetchError": "Failed to fetch notification details",
     "updateError": "Failed to update notification",
     "markAsReadSuccess": "Notification marked as read",
     "markAsReadError": "Failed to mark notification as read",

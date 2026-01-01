@@ -594,7 +594,7 @@ function AcademicStructureContent() {
                   }`}
                 >
                   <TabIcon size={18} />
-                  {tabName}
+                  {tab.name}
                 </button>
               );
             })}

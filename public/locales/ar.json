@@ -338,7 +338,11 @@
     "clearFilters": "مسح الفلاتر",
     "download": "تحميل",
     "search": "بحث",
-    "all": "الكل"
+    "all": "الكل",
+    "previous": "السابق",
+    "next": "التالي",
+    "page": "صفحة",
+    "of": "من"
   },
   "table": {
     "title": "العنوان",
@@ -584,6 +588,21 @@
     "pending": "قيد الانتظار",
     "accepted": "مقبول",
     "rejected": "مرفوض",
+    "priorityLabel": "الأولوية",
+    "priority": {
+      "low": "منخفضة",
+      "normal": "عادية",
+      "high": "عالية",
+      "critical": "حرجة"
+    },
+    "targetObject": "الكائن المستهدف",
+    "targetType": {
+      "report": "تقرير",
+      "case": "حالة",
+      "appointment": "موعد",
+      "evaluation": "تقييم",
+      "message": "رسالة"
+    },
     "table": {
       "sender": "المرسل",
       "recipient": "المستقبل",
@@ -596,11 +615,30 @@
       "actions": "الإجراءات"
     },
     "types": {
+      "appointment_reminder": "تذكير بالموعد",
       "appointment_update_request": "طلب تحديث موعد",
       "appointment_cancel_request": "طلب إلغاء موعد",
+      "appointment_status_update": "تحديث حالة الموعد",
       "appointment_confirmed": "تأكيد موعد",
       "appointment_cancelled": "إلغاء موعد",
-      "appointment_completed": "اكتمال موعد"
+      "appointment_completed": "اكتمال موعد",
+      "report_submitted": "إرسال تقرير",
+      "report_reviewed": "مراجعة تقرير",
+      "evaluation_submitted": "إرسال تقييم",
+      "ai_analysis_ready": "جاهزية تحليل الذكاء الاصطناعي",
+      "community_content_pending": "محتوى المجتمع قيد الانتظار",
+      "community_content_approved": "موافقة على محتوى المجتمع",
+      "community_content_rejected": "رفض محتوى المجتمع",
+      "case_created": "إنشاء حالة",
+      "case_assigned": "إسناد حالة",
+      "case_status_changed": "تغيير حالة الحالة",
+      "session_created": "إنشاء جلسة",
+      "session_needs_review": "جلسة تحتاج مراجعة",
+      "session_reviewed": "مراجعة جلسة",
+      "new_message": "رسالة جديدة",
+      "system_alert": "تنبيه النظام",
+      "backup_status": "حالة النسخ الاحتياطي",
+      "security_event": "حدث أمني"
     },
     "statuses": {
       "pending": "قيد الانتظار",
@@ -618,8 +656,12 @@
       "titlePlaceholder": "أدخل عنوان الإشعار",
       "message": "الرسالة",
       "messagePlaceholder": "أدخل رسالة الإشعار",
+      "targetType": "نوع الكائن المستهدف",
+      "selectTargetType": "اختر نوع الكائن المستهدف (اختياري)",
+      "targetId": "معرف الكائن المستهدف",
+      "targetIdPlaceholder": "أدخل معرف الكائن (UUID)",
       "proposedChanges": "التغييرات المقترحة",
-      "proposedChangesPlaceholder": "أدخل التغييرات المقترحة (اختياري)",
+      "proposedChangesPlaceholder": "أدخل التغييرات المقترحة بصيغة JSON (اختياري)",
       "proposedChangesHint": "أدخل التغييرات بصيغة JSON (فقط لطلب تحديث الموعد)"
     },
     "details": {
@@ -657,7 +699,9 @@
     "confirmDelete": "هل أنت متأكد من حذف هذا الإشعار؟",
     "createSuccess": "تم إنشاء الإشعار بنجاح",
     "createError": "فشل في إنشاء الإشعار",
+    "updateSuccess": "تم تحديث الإشعار بنجاح",
     "updateError": "فشل في تحديث الإشعار",
+    "fetchError": "فشل في جلب تفاصيل الإشعار",
     "markAsReadSuccess": "تم تحديد الإشعار كمقروء",
     "markAsReadError": "فشل في تحديد الإشعار كمقروء",
     "acceptSuccess": "تم قبول الإشعار بنجاح",
