@@ -261,11 +261,23 @@ export const fetchCourses = async (universityId) => {
  * - is_active: (boolean) - نشط/غير نشط
  */
 export const createCourse = async (payload) => {
-  const response = await apiClient.post(
-    `/universities/courses/`,
-    payload
-  );
-  return response.data?.data || response.data;
+  try {
+    console.log("📚 createCourse - البيانات المرسلة:", JSON.stringify(payload, null, 2));
+    console.log("📚 createCourse - URL:", `/universities/courses/`);
+    
+    const response = await apiClient.post(
+      `/universities/courses/`,
+      payload
+    );
+    
+    console.log("📚 createCourse - الاستجابة:", response.data);
+    return response.data?.data || response.data;
+  } catch (error) {
+    console.error("📚 createCourse - خطأ:", error);
+    console.error("📚 createCourse - تفاصيل الخطأ:", error?.response?.data);
+    console.error("📚 createCourse - Status:", error?.response?.status);
+    throw error;
+  }
 };
 
 /**

@@ -24,6 +24,8 @@ import {
   deleteAcademicYear,
   fetchCourses,
   createCourse,
+  updateCourse,
+  deleteCourse,
   // 🔕 الإشعارات معلقة مؤقتاً
   // createProgramNotification,
   // createAcademicYearNotification,
@@ -426,22 +428,37 @@ function AcademicStructureContent() {
   // Course handlers
   const handleCreateCourse = async (e) => {
     e.preventDefault();
-    if (!universityId) return;
+    if (!universityId) {
+      toast.error("معرف الجامعة غير موجود");
+      return;
+    }
+
+    // التحقق من الحقول المطلوبة
+    if (!courseForm.name || !courseForm.code) {
+      toast.error("يرجى إدخال اسم المقرر وكود المقرر");
+      return;
+    }
 
     try {
-      const newCourse = await createCourse({
-        name: courseForm.name,
-        code: courseForm.code,
-        academic_year: courseForm.academic_year || null,
-        program: courseForm.program || null,
-        supervisor: courseForm.supervisor || null,
-        students: courseForm.students || [],
-        description: courseForm.description || "",
-        credits: courseForm.credits ? parseInt(courseForm.credits) : null,
-        is_active: courseForm.is_active,
-      });
+      // بناء البيانات المرسلة - نبدأ بالحقول الأساسية فقط (كما في Postman)
+      // بناءً على أن API يعمل في Postman مع code و name فقط
+      const courseData = {
+        name: courseForm.name.trim(),
+        code: courseForm.code.trim(),
+      };
 
-      setCourses([...courses, newCourse]);
+      console.log("📚 إرسال بيانات المقرر (الحقول الأساسية فقط):", JSON.stringify(courseData, null, 2));
+      console.log("📚 universityId:", universityId);
+
+      const newCourse = await createCourse(courseData);
+
+      console.log("✅ تم إنشاء المقرر بنجاح:", newCourse);
+
+      // إعادة تحميل قائمة المقررات لضمان الحصول على أحدث البيانات
+      const updatedCourses = await fetchCourses(universityId);
+      setCourses(Array.isArray(updatedCourses) ? updatedCourses : []);
+
+      // إعادة تعيين النموذج
       setCourseForm({ 
         name: "", 
         code: "", 
@@ -455,7 +472,30 @@ function AcademicStructureContent() {
       });
       toast.success("تم إنشاء المقرر بنجاح");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "فشل في إنشاء المقرر");
+      console.error("❌ خطأ في إنشاء المقرر:", error);
+      console.error("❌ تفاصيل الخطأ:", error?.response?.data);
+      console.error("❌ Status Code:", error?.response?.status);
+      console.error("❌ Error Message:", error?.message);
+      
+      // عرض تفاصيل الخطأ
+      let errorMessage = "فشل في إنشاء المقرر";
+      
+      if (error?.response?.data) {
+        // محاولة استخراج رسالة الخطأ من الاستجابة
+        errorMessage = error.response.data.message 
+          || error.response.data.error 
+          || error.response.data.detail
+          || (typeof error.response.data === 'string' ? error.response.data : JSON.stringify(error.response.data));
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // إذا كان الخطأ 500، أضف رسالة توضيحية
+      if (error?.response?.status === 500) {
+        errorMessage = `خطأ في السيرفر (500): ${errorMessage}. يرجى التحقق من صحة البيانات أو الاتصال بالدعم الفني.`;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
