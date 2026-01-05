@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Eye, Filter, Search } from "lucide-react";
+import { Loader2, Filter, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
@@ -195,7 +195,7 @@ function UniversityCasesContent() {
           {!loading && (
             <div className="overflow-x-auto rounded-2xl border-2 border-sky-200/50 dark:border-dark-lighter shadow-2xl">
               <table
-                className={`w-full text-sm text-slate-900 dark:text-slate-200 min-w-[900px] ${
+                className={`w-full text-sm text-slate-900 dark:text-slate-200 min-w-[700px] ${
                   isRtl ? "text-right" : "text-left"
                 }`}
                 dir={isRtl ? "rtl" : "ltr"}
@@ -209,7 +209,6 @@ function UniversityCasesContent() {
                     <th className="px-6 py-4 font-semibold">الحالة</th>
                     <th className="px-6 py-4 font-semibold">الأولوية</th>
                     <th className="px-6 py-4 font-semibold">التاريخ</th>
-                    <th className="px-6 py-4 font-semibold">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -241,22 +240,12 @@ function UniversityCasesContent() {
                               })
                             : "-"}
                         </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => router.push(`/university-cases/${c.id}`)}
-                            className="px-3 py-1 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors flex items-center gap-1"
-                            title="عرض التفاصيل"
-                          >
-                            <Eye size={16} />
-                            <span>عرض</span>
-                          </button>
-                        </td>
                       </motion.tr>
                     ))
                   ) : (
                     <tr>
                       <td
-                        colSpan="8"
+                        colSpan="7"
                         className="text-center py-6 text-slate-500 dark:text-slate-400"
                       >
                         {cases.length === 0
@@ -295,13 +284,6 @@ function UniversityCasesContent() {
                       {getStatusBadge(c.status)}
                       {getPriorityBadge(c.priority)}
                     </div>
-                    <button
-                      onClick={() => router.push(`/university-cases/${c.id}`)}
-                      className="mt-3 w-full px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Eye size={16} />
-                      <span>عرض التفاصيل</span>
-                    </button>
                   </motion.div>
                 ))
               ) : (

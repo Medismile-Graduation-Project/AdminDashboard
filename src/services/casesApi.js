@@ -307,6 +307,39 @@ export const updateAssignmentRequest = async (requestId, requestData) => {
 };
 
 /**
+ * تعيين مشرف لحالة سريرية
+ * PATCH /api/cases/{case_id}/assign-supervisor/
+ * الصلاحيات: Bearer (supervisor / tech_support / university_admin per permissions)
+ * @param {string} caseId - UUID للحالة
+ * @param {Object} assignData - { supervisor_id?: string (optional if requester is supervisor) }
+ * @returns {Promise<Object>} Case object محدث
+ */
+export const assignSupervisorToCase = async (caseId, assignData = {}) => {
+  try {
+    console.log("📋 Assigning supervisor to case:", caseId, assignData);
+    
+    const response = await apiClient.patch(
+      `${CASES_BASE_URL}${caseId}/assign-supervisor/`,
+      assignData
+    );
+    
+    console.log("📋 Assign supervisor response:", response.data);
+    
+    // الاستجابة قد تأتي بصيغة {status: "success", data: {...}}
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
+    // أو مباشرة كـ Case object
+    return response.data;
+  } catch (error) {
+    console.error("📋 Error assigning supervisor to case:", error);
+    console.error("📋 Error response:", error.response?.data);
+    throw error;
+  }
+};
+
+/**
  * إجراء المشرف (قبول/رفض طلب إسناد)
  * POST /api/v1/cases/<case_id>/supervisor-action/
  * @param {string} caseId - UUID للحالة

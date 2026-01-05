@@ -318,6 +318,31 @@ export const createAssignmentRequestAsync = createAsyncThunk(
 );
 
 /**
+ * تعيين مشرف لحالة سريرية
+ * الصلاحيات: university_admin, tech_support, supervisor
+ */
+export const assignSupervisorToCaseAsync = createAsyncThunk(
+  "cases/assignSupervisorToCase",
+  async ({ caseId, supervisorId }, { rejectWithValue }) => {
+    try {
+      const payload = supervisorId ? { supervisor_id: supervisorId } : {};
+      const data = await casesApi.assignSupervisorToCase(caseId, payload);
+      const mappedCase = mapCaseFromApi(data);
+      return { caseId, case: mappedCase };
+    } catch (error) {
+      const errorData = error.response?.data;
+      const errorMessage = 
+        errorData?.message || 
+        errorData?.detail || 
+        errorData?.error ||
+        error.message || 
+        "فشل في تعيين المشرف";
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+/**
  * إجراء المشرف (قبول/رفض طلب إسناد)
  */
 export const supervisorCaseActionAsync = createAsyncThunk(
@@ -627,6 +652,29 @@ const clinicalCasesSlice = createSlice({
         state.error = null;
       })
       .addCase(supervisorCaseActionAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // assignSupervisorToCaseAsync
+      .addCase(assignSupervisorToCaseAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(assignSupervisorToCaseAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const { caseId, case: caseData } = action.payload;
+        // تحديث الحالة في القائمة
+        const index = state.cases.findIndex((c) => c.id === caseId);
+        if (index !== -1) {
+          state.cases[index] = caseData;
+        }
+        // تحديث الحالة المحددة
+        if (state.selectedCase && state.selectedCase.id === caseId) {
+          state.selectedCase = caseData;
+        }
+        state.error = null;
+      })
+      .addCase(assignSupervisorToCaseAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
