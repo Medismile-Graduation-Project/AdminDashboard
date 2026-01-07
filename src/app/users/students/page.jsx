@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PlusCircle, Pencil, Trash2, X, Save, Loader2, Search } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, X, Save, Loader2, Search, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
@@ -12,6 +12,7 @@ import {
   deleteStudentAsync,
   clearError,
 } from "@/redux/features/students/studentsSlice";
+import { fetchStudentRatingAsync } from "@/redux/features/evaluations/evaluationsSlice";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import RoleGuard from "@/components/RoleGuard";
 import toast from "react-hot-toast";
@@ -34,6 +35,10 @@ function StudentsPageContent() {
   const students = studentsState?.students || [];
   const loading = studentsState?.loading || false;
   const error = studentsState?.error || null;
+  
+  const evaluationsState = useSelector((state) => state.evaluations);
+  const studentRatings = evaluationsState?.studentRatings || {};
+  const studentStatistics = evaluationsState?.studentStatistics || {};
 
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
@@ -41,6 +46,7 @@ function StudentsPageContent() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loadingRatings, setLoadingRatings] = useState({});
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -101,6 +107,35 @@ function StudentsPageContent() {
   useEffect(() => {
     dispatch(fetchStudentsAsync());
   }, [dispatch]);
+
+  // جلب تقييمات الطلاب بعد تحميلهم
+  useEffect(() => {
+    if (students.length > 0) {
+      students.forEach((student) => {
+        const studentId = student.user_id || student.id;
+        if (studentId && !studentRatings[studentId] && !loadingRatings[studentId]) {
+          setLoadingRatings((prev) => ({ ...prev, [studentId]: true }));
+          dispatch(fetchStudentRatingAsync(studentId))
+            .catch((error) => {
+              // تسجيل الخطأ في development mode للتحقق
+              if (process.env.NODE_ENV === "development") {
+                console.warn(`Failed to fetch rating for student ${studentId}:`, error);
+              }
+              // إذا كان الخطأ 404، يعني لا يوجد تقييم عام للطالب
+              // لكن قد يكون هناك تقييمات فردية في صفحة التقييمات
+            })
+            .finally(() => {
+              setLoadingRatings((prev) => {
+                const newState = { ...prev };
+                delete newState[studentId];
+                return newState;
+              });
+            });
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [students.length, dispatch]);
 
   // عرض رسائل الخطأ
   useEffect(() => {
@@ -615,15 +650,24 @@ function StudentsPageContent() {
                   <th className="px-6 py-4 font-semibold">رقم الهاتف</th>
                   <th className="px-6 py-4 font-semibold">السنة الدراسية</th>
                   <th className="px-6 py-4 font-semibold">التخصص</th>
+                  <th className="px-6 py-4 font-semibold">التقييم</th>
                   <th className="px-6 py-4 font-semibold">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredStudents.map((student, idx) => {
                   const name = student.studentName || student.email?.split("@")[0] || "-";
+                  const studentId = student.user_id || student.id;
+                  const ratingData = studentRatings[studentId] || studentStatistics[studentId]?.rating;
+                  const isLoadingRating = loadingRatings[studentId];
+                  
+                  // حساب النجوم من final_rating (كما يأتي من API)
+                  const finalRating = ratingData?.final_rating || 0;
+                  const starCount = Math.round((finalRating / 100) * 5);
+                  
                   return (
                     <motion.tr
-                      key={student.user_id || student.id}
+                      key={studentId}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2, delay: idx * 0.02 }}
@@ -639,6 +683,34 @@ function StudentsPageContent() {
                       <td className="px-6 py-4">{student.year_of_study ? `السنة ${student.year_of_study}` : "-"}</td>
                       <td className="px-6 py-4">{student.specialization || "-"}</td>
                       <td className="px-6 py-4">
+                        {isLoadingRating ? (
+                          <Loader2 className="animate-spin text-sky-600" size={16} />
+                        ) : ratingData ? (
+                          <div className="flex flex-col gap-1">
+                            <div className={`flex items-center gap-1 ${isRtl ? "flex-row-reverse" : ""}`}>
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < starCount
+                                      ? "fill-sky-500 text-sky-500 dark:fill-sky-400 dark:text-sky-400"
+                                      : "text-slate-300 dark:text-slate-600"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400">
+                              {finalRating.toFixed(1)}/100
+                              {ratingData.total_evaluations && (
+                                <span className="mr-1">({ratingData.total_evaluations} تقييم)</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 dark:text-slate-500 text-sm">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
                         <div className={`flex items-center gap-2 ${isRtl ? "justify-start" : "justify-end"}`}>
                           <button
                             onClick={() => handleEdit(student)}
@@ -649,7 +721,7 @@ function StudentsPageContent() {
                             <Pencil size={18} />
                           </button>
                           <button
-                            onClick={() => handleDelete(student.user_id || student.id)}
+                            onClick={() => handleDelete(studentId)}
                             className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
                             title="حذف"
                             aria-label="Delete"

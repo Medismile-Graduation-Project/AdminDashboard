@@ -11,44 +11,47 @@ const REPORTS_BASE_URL = "/reports/";
  * جلب قائمة التقارير
  * GET /api/reports/
  * 
- * حسب التوثيق:
- * - الصلاحيات: IsAuthenticated + Bearer Token (role = university_admin)
- * - مسؤول الجامعة (university_admin): يرى فقط تقارير جامعته
- *   ⚠️ مهم: Backend يتحقق تلقائياً من university_id من Token
- *   ⚠️ لا يجب تمرير university_id كـ query parameter - Backend يستخرجه من Token
- * - tech_support: يرى جميع التقارير
+ * حسب التوثيق الجديد:
+ * - الصلاحيات: student, supervisor, university_admin, patient
+ * - Query Parameters (اختيارية):
+ *   - status: حالة التقرير (draft, submitted, approved, rejected, locked)
+ *   - report_type: نوع التقرير (clinical_case, etc.)
+ *   - target_type: نوع الهدف (case, appointment, etc.)
+ *   - target_id: معرف الهدف (case_id, appointment_id, etc.)
  * 
- * Query Parameters (اختيارية):
- * - student_id: معرف الطالب
- * - report_type: نوع التقرير (academic, clinical, progress, summary)
- * - is_active: حالة التقرير (true/false)
- * 
- * ⚠️ ملاحظة مهمة: لا تمرر university_id في params - Backend يتحقق تلقائياً من Token
- * 
- * يعيد: Array of report objects (مفلترة تلقائياً حسب جامعة المستخدم)
+ * يعيد: { status: "success", data: [...] }
  */
 export const fetchReports = async (params = {}) => {
   try {
-    // ⚠️ لا تمرر university_id - Backend يستخرجه من Token تلقائياً
-    // إزالة university_id من params إذا كان موجوداً (للتأكد)
-    const { university_id, ...cleanParams } = params;
+    const queryParams = new URLSearchParams();
     
-    const response = await apiClient.get(REPORTS_BASE_URL, { params: cleanParams });
+    // Query Parameters الجديدة حسب التوثيق
+    if (params.status) queryParams.append("status", params.status);
+    if (params.report_type) queryParams.append("report_type", params.report_type);
+    if (params.target_type) queryParams.append("target_type", params.target_type);
+    if (params.target_id) queryParams.append("target_id", params.target_id);
     
-    // الاستجابة قد تأتي بصيغ مختلفة:
-    // 1. Array مباشر
+    // Query Parameters القديمة (للتوافق)
+    if (params.student_id) queryParams.append("student_id", params.student_id);
+    if (params.is_active !== undefined) queryParams.append("is_active", params.is_active);
+    
+    const queryString = queryParams.toString();
+    const url = queryString ? `${REPORTS_BASE_URL}?${queryString}` : REPORTS_BASE_URL;
+    
+    const response = await apiClient.get(url);
+    
+    // الاستجابة تأتي بصيغة { status: "success", data: [...] }
+    if (response.data?.data && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    
+    // للتوافق مع النظام القديم
     if (Array.isArray(response.data)) {
       return response.data;
     }
     
-    // 2. {results: [...]} (pagination)
     if (response.data?.results && Array.isArray(response.data.results)) {
       return response.data.results;
-    }
-    
-    // 3. {data: [...]}
-    if (response.data?.data && Array.isArray(response.data.data)) {
-      return response.data.data;
     }
     
     if (process.env.NODE_ENV === "development") {
@@ -96,18 +99,19 @@ export const fetchReportById = async (id) => {
 };
 
 /**
- * إنشاء تقرير جديد
+ * إنشاء تقرير جديد (Draft)
  * POST /api/reports/
  * 
- * حسب التوثيق:
- * - الصلاحيات: فقط المشرفين/المسؤولين يمكنهم إنشاء التقارير
- * - الحقول: student_id, report_type, title, description, file_url, is_active
+ * حسب التوثيق الجديد:
+ * - الصلاحيات: student, supervisor, university_admin
+ * - Request: { report_type, target_type, target_id, title, description, content, attachments }
+ * - Response: { status: "success", data: { id, status: "draft", ... } }
  */
 export const createReport = async (data) => {
   try {
     const response = await apiClient.post(REPORTS_BASE_URL, data);
     
-    // الاستجابة قد تأتي بصيغة {data: {...}}
+    // الاستجابة تأتي بصيغة { status: "success", data: {...} }
     if (response.data?.data) {
       return response.data.data;
     }
@@ -122,11 +126,14 @@ export const createReport = async (data) => {
 };
 
 /**
- * تحديث تقرير
- * PATCH /api/reports/<report_id>/
+ * تحديث تقرير (Draft/Rejected فقط)
+ * PATCH /api/reports/{id}/
  * 
- * ملاحظة: حسب التوثيق، التقارير غير قابلة للتعديل بعد الإنشاء (Immutable)
- * لكن API قد يدعم soft delete (is_active)
+ * حسب التوثيق الجديد:
+ * - الصلاحيات: student, supervisor, university_admin
+ * - فقط التقارير بحالة draft أو rejected يمكن تحديثها
+ * - Request: { title, content, description, ... }
+ * - Response: { status: "success", data: { id, status: "draft", ... } }
  */
 export const updateReport = async (id, data) => {
   try {
@@ -140,6 +147,57 @@ export const updateReport = async (id, data) => {
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       console.error("Error updating report:", error);
+    }
+    throw error;
+  }
+};
+
+/**
+ * تقديم تقرير (Submit)
+ * POST /api/reports/{id}/submit/
+ * 
+ * حسب التوثيق الجديد:
+ * - الصلاحيات: student, supervisor, university_admin
+ * - Response: { status: "success", data: { id, status: "submitted" } }
+ */
+export const submitReport = async (id) => {
+  try {
+    const response = await apiClient.post(`${REPORTS_BASE_URL}${id}/submit/`);
+    
+    if (response.data?.data) {
+      return response.data.data;
+    }
+    
+    return response.data;
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error submitting report:", error);
+    }
+    throw error;
+  }
+};
+
+/**
+ * تصدير تقرير (Export)
+ * POST /api/reports/{id}/export/
+ * 
+ * حسب التوثيق الجديد:
+ * - الصلاحيات: university_admin فقط
+ * - Request: { format: "pdf" }
+ * - Response: { status: "success", data: { file_url: "/media/exports/report_<uuid>.pdf" } }
+ */
+export const exportReport = async (id, format = "pdf") => {
+  try {
+    const response = await apiClient.post(`${REPORTS_BASE_URL}${id}/export/`, { format });
+    
+    if (response.data?.data) {
+      return response.data.data;
+    }
+    
+    return response.data;
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error exporting report:", error);
     }
     throw error;
   }

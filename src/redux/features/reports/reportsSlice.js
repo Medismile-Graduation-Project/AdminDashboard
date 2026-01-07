@@ -5,6 +5,8 @@ import {
   createReport,
   updateReport,
   deleteReport,
+  submitReport,
+  exportReport,
   fetchStudentReports,
   fetchUniversityReports,
 } from "../../../services/reportsApi";
@@ -45,9 +47,14 @@ const mapReportFromApi = (apiReport) => {
     id: safeValue(apiReport.id),
     title: safeValue(apiReport.title, ""),
     description: safeValue(apiReport.description, ""),
+    content: safeValue(apiReport.content, null), // JSON object
     report_type: safeValue(apiReport.report_type, ""),
+    target_type: safeValue(apiReport.target_type, ""),
+    target_id: safeValue(apiReport.target_id, null),
+    status: safeValue(apiReport.status, "draft"), // draft, submitted, approved, rejected, locked
+    attachments: safeValue(apiReport.attachments, []), // Array of attachment objects
     file_url: safeValue(apiReport.file_url, ""),
-    is_active: safeValue(apiReport.is_active, true),
+    is_active: safeValue(apiReport.is_active, true), // للتوافق مع النظام القديم
     // معلومات الطالب (nested User object)
     student: safeValue(apiReport.student, null),
     student_name: getUserName(apiReport.student),
@@ -55,9 +62,16 @@ const mapReportFromApi = (apiReport) => {
     // معلومات الجامعة
     university: safeValue(apiReport.university, null),
     university_id: apiReport.university?.id || apiReport.university_id || null,
+    // معلومات المراجع (supervisor)
+    reviewer: safeValue(apiReport.reviewer, null),
+    reviewer_name: getUserName(apiReport.reviewer),
+    review_notes: safeValue(apiReport.review_notes, ""),
+    score: safeValue(apiReport.score, null),
     // الحقول التاريخية
     created_at: safeValue(apiReport.created_at),
     updated_at: safeValue(apiReport.updated_at),
+    submitted_at: safeValue(apiReport.submitted_at),
+    reviewed_at: safeValue(apiReport.reviewed_at),
   };
 };
 
@@ -128,6 +142,40 @@ export const updateReportAsync = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error?.response?.data?.message || error?.message || "فشل في تحديث التقرير"
+      );
+    }
+  }
+);
+
+/**
+ * تقديم تقرير (Submit)
+ */
+export const submitReportAsync = createAsyncThunk(
+  "reports/submitReport",
+  async (id, { rejectWithValue }) => {
+    try {
+      const data = await submitReport(id);
+      return mapReportFromApi(data);
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في تقديم التقرير"
+      );
+    }
+  }
+);
+
+/**
+ * تصدير تقرير (Export)
+ */
+export const exportReportAsync = createAsyncThunk(
+  "reports/exportReport",
+  async ({ id, format = "pdf" }, { rejectWithValue }) => {
+    try {
+      const data = await exportReport(id, format);
+      return { id, ...data };
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "فشل في تصدير التقرير"
       );
     }
   }
@@ -305,6 +353,43 @@ const reportsSlice = createSlice({
       .addCase(updateReportAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "حدث خطأ أثناء تحديث التقرير";
+      })
+      // تقديم تقرير (Submit)
+      .addCase(submitReportAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(submitReportAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        // تحديث في القائمة
+        const index = state.reports.findIndex((item) => item.id === updated?.id);
+        if (index !== -1) {
+          state.reports[index] = updated;
+        }
+        // تحديث التقرير المحدد إذا كان نفسه
+        if (state.selectedReport?.id === updated?.id) {
+          state.selectedReport = updated;
+        }
+        state.error = null;
+      })
+      .addCase(submitReportAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "حدث خطأ أثناء تقديم التقرير";
+      })
+      // تصدير تقرير (Export)
+      .addCase(exportReportAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(exportReportAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        // لا نحتاج لتحديث state - فقط file_url في response
+      })
+      .addCase(exportReportAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "حدث خطأ أثناء تصدير التقرير";
       })
       // حذف تقرير
       .addCase(deleteReportAsync.pending, (state) => {

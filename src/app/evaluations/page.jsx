@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Star, Loader2, Send, CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
@@ -54,16 +55,21 @@ function EvaluationsContent() {
   useEffect(() => {
     if (!userLoaded) return; // انتظر حتى يتم تحميل المستخدم
     
-    // بناء معاملات البحث - مسؤول الجامعة فقط
+    // بناء معاملات البحث - مسؤول الجامعة
     const params = {};
     
-    // مسؤول الجامعة: يمكن عرض جميع التقييمات أو فلترة حسب evaluator_type
+    // Query Parameters الجديدة حسب التوثيق
+    if (statusFilter !== "all") {
+      params.status = statusFilter; // created, adjusted, finalized
+    }
     if (evaluatorTypeFilter !== "all") {
-      params.evaluator_type = evaluatorTypeFilter;
+      // استخدام evaluator_role (الجديد) أو evaluator_type (القديم للتوافق)
+      params.evaluator_role = evaluatorTypeFilter;
+      params.evaluator_type = evaluatorTypeFilter; // للتوافق
     }
     
     dispatch(fetchEvaluationsAsync(params));
-  }, [dispatch, userLoaded, user?.id, user?.role, evaluatorTypeFilter]);
+  }, [dispatch, userLoaded, user?.id, user?.role, statusFilter, evaluatorTypeFilter]);
 
   // عرض رسائل الخطأ
   useEffect(() => {
@@ -226,6 +232,10 @@ function EvaluationsContent() {
                 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
             >
               <option value="all">{t("reviews.all")}</option>
+              <option value="created">تم الإنشاء</option>
+              <option value="adjusted">تم التعديل</option>
+              <option value="finalized">مقرار</option>
+              {/* للتوافق مع النظام القديم */}
               <option value="draft">{t("reviews.statuses.draft")}</option>
               <option value="submitted">{t("reviews.statuses.submitted")}</option>
               <option value="final">{t("reviews.statuses.final")}</option>
@@ -263,15 +273,32 @@ function EvaluationsContent() {
                       <div className="flex-1">
                         <div className={`flex items-center gap-3 mb-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                           <h2 className="font-bold text-lg text-slate-900 dark:text-white">
-                            {review.name || t("reviews.unknown")}
+                            <Link 
+                              href={`/evaluations/${review.id}`}
+                              className="hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+                            >
+                              {review.evaluator_name || review.name || "غير معروف"}
+                            </Link>
                           </h2>
                           <span className="text-xs px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 font-medium">
-                            {review.evaluatorType || "-"}
+                            {review.evaluator_role || review.evaluatorType || "-"}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-                          {review.date || "-"}
-                        </p>
+                        <div className="space-y-1 mb-3">
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            {review.date || "-"}
+                          </p>
+                          {review.student_name && (
+                            <p className="text-sm text-slate-600 dark:text-slate-300">
+                              الطالب: {review.student_name}
+                            </p>
+                          )}
+                          {review.target_name && (
+                            <p className="text-sm text-slate-600 dark:text-slate-300">
+                              الهدف: {review.target_name}
+                            </p>
+                          )}
+                        </div>
                         {review.comment && (
                           <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                             {review.comment}
@@ -296,27 +323,40 @@ function EvaluationsContent() {
                           })}
                         </div>
                         {/* التقييم الرقمي (Score 0-100) */}
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          {review.score !== undefined ? `${review.score}/100` : `${review.rating || 0}/10`}
-                        </p>
+                        <div className="text-center">
+                          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            {review.final_score !== undefined ? `${review.final_score}/100` : review.score !== undefined ? `${review.score}/100` : `${review.rating || 0}/10`}
+                          </p>
+                          {review.original_score !== undefined && review.original_score !== review.final_score && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 line-through">
+                              {review.original_score}/100
+                            </p>
+                          )}
+                        </div>
                         {review.target_type && (
                           <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">
-                            {review.target_type === "case" ? t("reviews.targetTypes.case") : review.target_type === "session" ? t("reviews.targetTypes.session") : t("reviews.targetTypes.appointment")}
+                            {review.target_type === "case" ? "حالة سريرية" : review.target_type === "appointment" ? "موعد" : review.target_type === "session" ? "جلسة" : review.target_type}
                           </span>
                         )}
                         {/* الحالة */}
                         <span
                           className={`px-3 py-1.5 text-xs font-semibold rounded-full ${
-                            review.status === "draft"
+                            review.status === "created" || review.status === "draft"
                               ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                              : review.status === "submitted"
+                              : review.status === "adjusted" || review.status === "submitted"
                               ? "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400"
-                              : review.status === "final"
+                              : review.status === "finalized" || review.status === "final"
                               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                               : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300"
                           }`}
                         >
-                          {review.status === "draft" ? t("reviews.statuses.draft") : review.status === "submitted" ? t("reviews.statuses.submitted") : review.status === "final" ? t("reviews.statuses.final") : review.status || t("reviews.statuses.new")}
+                          {review.status === "created" ? "تم الإنشاء" :
+                           review.status === "adjusted" ? "تم التعديل" :
+                           review.status === "finalized" ? "مقرار" :
+                           review.status === "draft" ? t("reviews.statuses.draft") :
+                           review.status === "submitted" ? t("reviews.statuses.submitted") :
+                           review.status === "final" ? t("reviews.statuses.final") :
+                           review.status || t("reviews.statuses.new")}
                         </span>
                         
                         {/* أزرار الإجراءات */}

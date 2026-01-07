@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   Search,
   Filter,
@@ -16,9 +17,12 @@ import {
   Calendar,
   User,
   Download,
+  PlusCircle,
 } from "lucide-react";
 import {
   fetchReportsAsync,
+  createReportAsync,
+  updateReportAsync,
   deleteReportAsync,
   fetchReportByIdAsync,
   clearError,
@@ -57,9 +61,21 @@ function ReportsContent() {
 
   // State
   const [showDetails, setShowDetails] = useState(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [reportTypeFilter, setReportTypeFilter] = useState("all");
-  const [isActiveFilter, setIsActiveFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [targetTypeFilter, setTargetTypeFilter] = useState("all");
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    report_type: "clinical_case",
+    target_type: "case",
+    target_id: "",
+    title: "",
+    description: "",
+    content: "",
+    attachments: "",
+  });
 
   // جلب university_id من user أو Profile
   useEffect(() => {
@@ -110,9 +126,7 @@ function ReportsContent() {
     }
   }, [user]);
 
-  // جلب التقارير والطلاب عند تحميل الصفحة
-  // ⚠️ ملاحظة مهمة: Backend يفلتر تلقائياً حسب university_id من Token
-  // لا نمرر university_id في params - Backend يستخرجه من Token تلقائياً
+  // جلب التقارير عند تحميل الصفحة
   useEffect(() => {
     if (!user) return; // انتظر حتى يتم تحميل المستخدم
     
@@ -120,12 +134,15 @@ function ReportsContent() {
     if (reportTypeFilter !== "all") {
       params.report_type = reportTypeFilter;
     }
-    if (isActiveFilter !== "all") {
-      params.is_active = isActiveFilter === "active";
+    if (statusFilter !== "all") {
+      params.status = statusFilter;
     }
-    // ⚠️ لا نمرر university_id - Backend يتحقق تلقائياً من Token
+    if (targetTypeFilter !== "all") {
+      params.target_type = targetTypeFilter;
+    }
+    
     dispatch(fetchReportsAsync(params));
-  }, [dispatch, user, reportTypeFilter, isActiveFilter]);
+  }, [dispatch, user, reportTypeFilter, statusFilter, targetTypeFilter]);
 
   // عرض رسائل الخطأ
   useEffect(() => {
@@ -167,8 +184,11 @@ function ReportsContent() {
       if (reportTypeFilter !== "all") {
         params.report_type = reportTypeFilter;
       }
-      if (isActiveFilter !== "all") {
-        params.is_active = isActiveFilter === "active";
+      if (statusFilter !== "all") {
+        params.status = statusFilter;
+      }
+      if (targetTypeFilter !== "all") {
+        params.target_type = targetTypeFilter;
       }
       dispatch(fetchReportsAsync(params));
     } catch (error) {
@@ -282,19 +302,39 @@ function ReportsContent() {
                 </select>
               </div>
 
-              {/* Active Status Filter */}
+              {/* Status Filter */}
               <div className="min-w-[150px]">
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   {t("Reports.status")}
                 </label>
                 <select
-                  value={isActiveFilter}
-                  onChange={(e) => setIsActiveFilter(e.target.value)}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
                 >
                   <option value="all">{t("actions.all")}</option>
-                  <option value="active">{t("Reports.active")}</option>
-                  <option value="inactive">{t("Reports.inactive")}</option>
+                  <option value="draft">مسودة</option>
+                  <option value="submitted">مقدمة</option>
+                  <option value="approved">موافق عليها</option>
+                  <option value="rejected">مرفوضة</option>
+                  <option value="locked">مقفلة</option>
+                </select>
+              </div>
+
+              {/* Target Type Filter */}
+              <div className="min-w-[150px]">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  نوع الهدف
+                </label>
+                <select
+                  value={targetTypeFilter}
+                  onChange={(e) => setTargetTypeFilter(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
+                >
+                  <option value="all">{t("actions.all")}</option>
+                  <option value="case">حالة سريرية</option>
+                  <option value="appointment">موعد</option>
+                  <option value="session">جلسة</option>
                 </select>
               </div>
             </div>
@@ -341,12 +381,29 @@ function ReportsContent() {
                       <div className="flex-1">
                         <div className={`flex items-center gap-3 mb-3 ${isRtl ? "flex-row-reverse" : ""}`}>
                           <h3 className="font-bold text-lg text-slate-900 dark:text-white">
-                            {report.title || "-"}
+                            <Link 
+                              href={`/reports/${report.id}`}
+                              className="hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+                            >
+                              {report.title || "-"}
+                            </Link>
                           </h3>
                           {getReportTypeBadge(report.report_type)}
-                          {!report.is_active && (
-                            <span className="px-2.5 py-1 rounded-full text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">
-                              {t("Reports.inactive")}
+                          {report.status && (
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                              report.status === "draft" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                              report.status === "submitted" ? "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400" :
+                              report.status === "approved" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+                              report.status === "rejected" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
+                              report.status === "locked" ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" :
+                              "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300"
+                            }`}>
+                              {report.status === "draft" ? "مسودة" :
+                               report.status === "submitted" ? "مقدمة" :
+                               report.status === "approved" ? "موافق عليها" :
+                               report.status === "rejected" ? "مرفوضة" :
+                               report.status === "locked" ? "مقفلة" :
+                               report.status}
                             </span>
                           )}
                         </div>
@@ -455,9 +512,27 @@ function ReportsContent() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">{t("Reports.status")}</p>
-                        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${selectedReport.is_active ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300"}`}>
-                          {selectedReport.is_active ? t("Reports.active") : t("Reports.inactive")}
-                        </span>
+                        {selectedReport.status ? (
+                          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                            selectedReport.status === "draft" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                            selectedReport.status === "submitted" ? "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400" :
+                            selectedReport.status === "approved" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
+                            selectedReport.status === "rejected" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" :
+                            selectedReport.status === "locked" ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" :
+                            "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300"
+                          }`}>
+                            {selectedReport.status === "draft" ? "مسودة" :
+                             selectedReport.status === "submitted" ? "مقدمة" :
+                             selectedReport.status === "approved" ? "موافق عليها" :
+                             selectedReport.status === "rejected" ? "مرفوضة" :
+                             selectedReport.status === "locked" ? "مقفلة" :
+                             selectedReport.status}
+                          </span>
+                        ) : (
+                          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${selectedReport.is_active ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300"}`}>
+                            {selectedReport.is_active ? t("Reports.active") : t("Reports.inactive")}
+                          </span>
+                        )}
                       </div>
                     </div>
                     {selectedReport.description && (

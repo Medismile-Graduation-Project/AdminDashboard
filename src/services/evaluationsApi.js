@@ -9,21 +9,40 @@ const EVALUATIONS_BASE_URL = "/evaluations/";
 
 /**
  * جلب جميع التقييمات
- * GET /api/v1/evaluations/
- * Query Parameters:
- * - evaluator_type: نوع المقيم (patient, supervisor, student, university, admin)
+ * GET /api/evaluations/
+ * 
+ * Query Parameters (حسب التوثيق الجديد):
+ * - status: حالة التقييم (created, adjusted, finalized)
+ * - target_type: نوع الهدف (appointment, case, student, supervisor)
+ * - evaluator_role: دور المقيم (patient, student, supervisor, university_admin)
  * - student_id: فلترة حسب الطالب الذي تم تقييمه
- * - patient_id: فلترة حسب المريض المرتبط بالتقييم
- * - appointment_id: فلترة حسب الموعد المرتبط بالتقييم
+ * - target_id: فلترة حسب الهدف (appointment_id, case_id, etc.)
+ * 
+ * الاستجابة: { status: "success", data: [...] }
  */
 export const fetchEvaluations = async (params = {}) => {
   const queryParams = new URLSearchParams();
   
-  if (params.evaluator_type) {
-    queryParams.append("evaluator_type", params.evaluator_type);
+  // Query Parameters الجديدة حسب التوثيق
+  if (params.status) {
+    queryParams.append("status", params.status);
+  }
+  if (params.target_type) {
+    queryParams.append("target_type", params.target_type);
+  }
+  if (params.evaluator_role) {
+    queryParams.append("evaluator_role", params.evaluator_role);
   }
   if (params.student_id) {
     queryParams.append("student_id", params.student_id);
+  }
+  if (params.target_id) {
+    queryParams.append("target_id", params.target_id);
+  }
+  
+  // Query Parameters القديمة (للتوافق)
+  if (params.evaluator_type) {
+    queryParams.append("evaluator_type", params.evaluator_type);
   }
   if (params.patient_id) {
     queryParams.append("patient_id", params.patient_id);
@@ -37,7 +56,12 @@ export const fetchEvaluations = async (params = {}) => {
   
   const response = await apiClient.get(url);
   
-  // الاستجابة تأتي كمصفوفة مباشرة
+  // الاستجابة تأتي بصيغة { status: "success", data: [...] }
+  if (response.data?.data && Array.isArray(response.data.data)) {
+    return response.data.data;
+  }
+  
+  // أو كمصفوفة مباشرة (للتوافق مع النظام القديم)
   if (Array.isArray(response.data)) {
     return response.data;
   }
@@ -105,16 +129,38 @@ export const updateEvaluation = async (evaluationId, evaluationData) => {
 };
 
 /**
- * جلب إحصائيات التقييمات لطالب محدد
- * GET /api/evaluations/students/<student_id>/statistics/
+ * جلب تقييم الطالب العام (Student Rating)
+ * GET /api/evaluations/students/{id}/rating/
  * 
  * حسب التوثيق:
- * - الصلاحيات: IsAuthenticated
- * - مسؤول الجامعة: يمكنه عرض إحصائيات طلاب جامعته فقط
- *   (Backend يتحقق تلقائياً من أن الطالب يخص جامعته)
+ * - الصلاحيات: patient, student, supervisor, university_admin
+ * - Response: { status: "success", data: { student_id, final_rating, total_evaluations, components: {...} } }
+ */
+export const fetchStudentRating = async (studentId) => {
+  try {
+    const response = await apiClient.get(
+      `${EVALUATIONS_BASE_URL}students/${studentId}/rating/`
+    );
+    
+    // الاستجابة تأتي بصيغة { status: "success", data: {...} }
+    if (response.data?.data) {
+      return response.data.data;
+    }
+    
+    return response.data;
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error fetching student rating:", error);
+    }
+    throw error;
+  }
+};
+
+/**
+ * جلب إحصائيات التقييمات لطالب محدد (قديم - للتوافق)
+ * GET /api/evaluations/students/<student_id>/statistics/
  * 
- * @param {string} studentId - ID الطالب
- * يعيد: Statistics object (مثل: {average_score, total_evaluations, ...})
+ * @deprecated استخدم fetchStudentRating بدلاً منها
  */
 export const fetchStudentStatistics = async (studentId) => {
   try {
@@ -156,8 +202,25 @@ export const submitEvaluation = async (evaluationId) => {
 };
 
 /**
- * تثبيت تقييم (Finalize) - نقل من submitted إلى final
- * POST /api/v1/evaluations/<evaluation_id>/finalize/
+ * تعديل التقييم (Adjust) - لمسؤول الجامعة والمشرف
+ * PATCH /api/evaluations/{id}/adjust/
+ * 
+ * Request: { new_score: 90, reason: "Adjusted after review" }
+ * Response: { status: "success", data: { id, status: "adjusted" } }
+ */
+export const adjustEvaluation = async (evaluationId, adjustmentData) => {
+  const response = await apiClient.patch(
+    `${EVALUATIONS_BASE_URL}${evaluationId}/adjust/`,
+    adjustmentData
+  );
+  return response.data?.data || response.data;
+};
+
+/**
+ * إقرار التقييم (Finalize) - لمسؤول الجامعة فقط
+ * POST /api/evaluations/{id}/finalize/
+ * 
+ * Response: { status: "success", data: { id, status: "finalized" } }
  */
 export const finalizeEvaluation = async (evaluationId) => {
   const response = await apiClient.post(`${EVALUATIONS_BASE_URL}${evaluationId}/finalize/`);
