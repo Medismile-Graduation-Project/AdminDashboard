@@ -45,11 +45,12 @@ export const fetchCommunityContent = async (params = {}) => {
 
 /**
  * جلب محتوى محدد
- * GET /api/v1/community/<id>/
+ * GET /api/community/posts/{id}/
  */
 export const fetchCommunityContentById = async (id) => {
-  const response = await apiClient.get(`${COMMUNITY_BASE_URL}${id}/`);
-  return response.data;
+  const response = await apiClient.get(`${COMMUNITY_BASE_URL}posts/${id}/`);
+  // الاستجابة المتوقعة: { status: "success", data: { ...post } }
+  return response.data?.data || response.data;
 };
 
 /**
@@ -119,17 +120,17 @@ export const updateCommunityContent = async (id, data) => {
 };
 
 /**
- * حذف محتوى
- * DELETE /api/v1/community/<id>/
+ * حذف محتوى (Soft Delete)
+ * DELETE /api/community/posts/{id}/
  */
 export const deleteCommunityContent = async (id) => {
-  const response = await apiClient.delete(`${COMMUNITY_BASE_URL}${id}/`);
+  const response = await apiClient.delete(`${COMMUNITY_BASE_URL}posts/${id}/`);
   return response.data;
 };
 
 /**
  * جلب الموافقات والرفض
- * GET /api/community/approvals/
+ * GET /api/community/approval-logs/
  * 
  * حسب التوثيق:
  * - الصلاحيات: IsAuthenticated
@@ -139,7 +140,7 @@ export const deleteCommunityContent = async (id) => {
  */
 export const fetchApprovals = async (params = {}) => {
   try {
-    const response = await apiClient.get(`${COMMUNITY_BASE_URL}approvals/`, { params });
+    const response = await apiClient.get(`${COMMUNITY_BASE_URL}approval-logs/`, { params });
     
     // الاستجابة قد تأتي بصيغ مختلفة
     if (response.data?.data && Array.isArray(response.data.data)) {

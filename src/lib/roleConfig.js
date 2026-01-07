@@ -93,6 +93,13 @@ export const menuItems = [
     readOnly: true, // قراءة فقط
   },
   {
+    name: "محتوى المجتمع",
+    nameEn: "Community Content",
+    href: "/community",
+    icon: BookOpen,
+    readOnly: true, // قراءة فقط لمسؤول الجامعة
+  },
+  {
     name: "المواعيد",
     nameEn: "Appointments",
     href: "/university-appointments",
@@ -110,6 +117,13 @@ export const menuItems = [
     nameEn: "Audit Logs",
     href: "/audit-logs",
     icon: Activity,
+  },
+  {
+    name: "سجلات موافقة المجتمع",
+    nameEn: "Community Approval Logs",
+    href: "/community/approval-logs",
+    icon: Activity,
+    readOnly: true, // قراءة فقط
   },
   {
     name: "التقارير",

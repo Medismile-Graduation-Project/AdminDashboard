@@ -47,32 +47,51 @@ const mapContentFromApi = (apiContent) => {
     return value !== null && value !== undefined ? value : defaultValue;
   };
   
+  // محاولة استخراج اسم الكاتب بشكل ذكي
+  const resolvedAuthorName =
+    // لو الـ API يرسل اسم جاهز في أحد هذه الحقول نستخدمه أولاً
+    safeValue(
+      apiContent.author_name ||
+        apiContent.author_full_name ||
+        apiContent.author_fullname ||
+        apiContent.author_display,
+      null
+    ) ||
+    // وإلا نستخدم الدالة التي تحاول بناء الاسم من الـ object
+    getUserName(apiContent.author);
+
   return {
     id: safeValue(apiContent.id),
     title: safeValue(apiContent.title, ""),
     description: safeValue(apiContent.description, ""),
+    content: safeValue(apiContent.content, ""),
     content_type: safeValue(apiContent.content_type, ""),
     category: safeValue(apiContent.category, ""),
     url: safeValue(apiContent.url, ""),
     file: safeValue(apiContent.file, ""),
-    file_url: safeValue(apiContent.file_url, ""),
+    file_url: safeValue(apiContent.file_url || apiContent.file, ""),
     is_featured: safeValue(apiContent.is_featured, false),
+    is_public: safeValue(apiContent.is_public, false),
+    is_deleted: safeValue(apiContent.is_deleted, false),
     status: safeValue(apiContent.status, "pending"),
+    tags: safeValue(apiContent.tags, ""),
     // معلومات المستخدم (nested User object)
     author: safeValue(apiContent.author, null),
-    author_name: getUserName(apiContent.author),
+    author_name: resolvedAuthorName,
     author_id: apiContent.author?.id || apiContent.author_id || null,
     // معلومات الموافقة
     approved_by: safeValue(apiContent.approved_by, null),
-    approved_by_name: getUserName(apiContent.approved_by),
+    approved_by_name: apiContent.approved_by_name || getUserName(apiContent.approved_by),
     rejection_reason: safeValue(apiContent.rejection_reason, ""),
     approved_at: safeValue(apiContent.approved_at),
     // معلومات الجامعة
     university: safeValue(apiContent.university, null),
     university_id: apiContent.university?.id || apiContent.university_id || null,
+    university_name: safeValue(apiContent.university_name, ""),
     // إحصائيات
     likes_count: safeValue(apiContent.likes_count, 0),
     comments_count: safeValue(apiContent.comments_count, 0),
+    view_count: safeValue(apiContent.view_count, 0),
     is_liked: safeValue(apiContent.is_liked, false),
     // الحقول التاريخية
     created_at: safeValue(apiContent.created_at),
