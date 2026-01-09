@@ -285,16 +285,6 @@ export default function Navbar() {
                     >
                       {t("Navbar.profile") || "الملف الشخصي"}
                     </button>
-                    <button
-                      onClick={() => {
-                        router.push("/settings");
-                        setMenuOpen(false);
-                      }}
-                      className="px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 
-                               transition-colors text-slate-700 dark:text-slate-300 text-sm font-medium text-start"
-                    >
-                      {t("Navbar.settings") || "الإعدادات"}
-                    </button>
                     <div className="border-t border-slate-200 dark:border-slate-700 my-1.5"></div>
                     <button
                       onClick={() => {
@@ -356,111 +346,91 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* === Drawer Mobile Menu === */}
+      {/* === Mobile Menu - أفقي في الأسفل === */}
       <AnimatePresence>
         {mobileMenu && (
-          <motion.div
-            initial={{ opacity: 0, x: isRtl ? 20 : -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: isRtl ? 20 : -20 }}
-            transition={{ duration: 0.2 }}
-            dir={isRtl ? "rtl" : "ltr"}
-            className="navbar-drawer fixed top-0 end-0 h-full w-80 bg-white dark:bg-dark z-50 border-s border-slate-200 dark:border-slate-700 overflow-y-auto shadow-xl"
-          >
-            <div className="p-6">
-              <div className={`flex items-center justify-between mb-6 pb-4 border-b border-slate-200 dark:border-slate-700 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">القائمة</h2>
-                <button
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                  onClick={() => setMobileMenu(false)}
-                  aria-label="Close menu"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
+          <>
+            {/* Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setMobileMenu(false)}
+            />
+            
+            {/* Menu - أفقي في الأعلى */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+              dir={isRtl ? "rtl" : "ltr"}
+              className="fixed top-14 start-0 end-0 bg-white dark:bg-dark z-50 border-b border-slate-200 dark:border-slate-700 shadow-2xl lg:hidden"
+            >
               {currentUser && (
-                <>
+                <div className="px-3 py-3">
                   {/* Search */}
-                  <input
-                    type="text"
-                    placeholder={t("Navbar.searchPlaceholder") || "بحث..."}
-                    className="w-full mb-5 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-dark-light 
-                      text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none 
-                      focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 text-start transition-all duration-200"
-                  />
-
-                  {/* تبديل الوضع الليلي/النهاري */}
-                  <div className={`flex items-center gap-3 py-2.5 mb-4 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
-                    <ToggleTheme />
-                    <span className="text-slate-700 dark:text-slate-300 font-medium text-sm">تبديل المظهر</span>
+                  <div className="mb-3">
+                    <input
+                      type="text"
+                      placeholder={t("Navbar.searchPlaceholder") || "بحث..."}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-dark-light 
+                        text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none 
+                        focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 text-sm text-start transition-all duration-200"
+                    />
                   </div>
 
-                  {/* 🔕 إشعارات - معلقة مؤقتاً */}
-                  {/* <button
-                    onClick={() => {
-                      router.push("/notifications");
-                      setMobileMenu(false);
-                    }}
-                    className="flex items-center gap-3 py-2 w-full rounded-lg hover:bg-slate-100 dark:hover:bg-dark-lighter transition-colors text-slate-700 dark:text-slate-300 relative mb-2 font-medium text-start"
-                  >
-                    <Bell size={20} />
-                    <span className="flex-1">إشعارات</span>
-                    {unreadCount > 0 && (
-                      <span className="bg-red-500 text-white rounded-full text-xs font-bold px-2 py-0.5">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </button> */}
+                  {/* Menu Items - أفقي */}
+                  <div className={`flex items-center gap-2 overflow-x-auto pb-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
+                    {/* Theme Toggle */}
+                    <div
+                      className="flex-shrink-0"
+                      onClick={() => setMobileMenu(false)}
+                    >
+                      <ToggleTheme />
+                    </div>
 
-                  <div className="border-t border-slate-200 dark:border-slate-700 my-3"></div>
-                  
-                  {/* هذا المشروع خاص فقط بإدارة الجامعة */}
-                  {(currentUser.role === "university_admin" || currentUser.role === "college_admin") && (
+                    {/* لوحة إدارة الجامعة */}
+                    {(currentUser.role === "university_admin" || currentUser.role === "college_admin") && (
+                      <button
+                        onClick={() => {
+                          router.push("/");
+                          setMobileMenu(false);
+                        }}
+                        className="flex-shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 text-sm font-medium whitespace-nowrap"
+                      >
+                        لوحة الإدارة
+                      </button>
+                    )}
+
+                    {/* الملف الشخصي */}
                     <button
                       onClick={() => {
-                        router.push("/");
+                        router.push("/profile");
                         setMobileMenu(false);
                       }}
-                      className={`block w-full py-2.5 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 font-medium mb-1.5 ${isRtl ? "text-right" : "text-left"}`}
+                      className="flex-shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 text-sm font-medium whitespace-nowrap"
                     >
-                      لوحة إدارة الجامعة
+                      {t("Navbar.profile") || "الملف الشخصي"}
                     </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      router.push("/profile");
-                      setMobileMenu(false);
-                    }}
-                    className={`block w-full py-2.5 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 font-medium mb-1.5 ${isRtl ? "text-right" : "text-left"}`}
-                  >
-                    {t("Navbar.profile") || "الملف الشخصي"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      router.push("/settings");
-                      setMobileMenu(false);
-                    }}
-                    className={`block w-full py-2.5 px-4 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 font-medium mb-1.5 ${isRtl ? "text-right" : "text-left"}`}
-                  >
-                    {t("Navbar.settings") || "الإعدادات"}
-                  </button>
-                  
-                  <div className="border-t border-slate-200 dark:border-slate-700 my-3"></div>
-                  
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setMobileMenu(false);
-                    }}
-                    className={`block w-full py-2.5 px-4 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400 font-medium ${isRtl ? "text-right" : "text-left"}`}
-                  >
-                    {t("Navbar.logout") || "تسجيل الخروج"}
-                  </button>
-                </>
+
+                    {/* تسجيل الخروج */}
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setMobileMenu(false);
+                      }}
+                      className="flex-shrink-0 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400 text-sm font-medium whitespace-nowrap ml-auto"
+                    >
+                      {t("Navbar.logout") || "تسجيل الخروج"}
+                    </button>
+                  </div>
+                </div>
               )}
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
