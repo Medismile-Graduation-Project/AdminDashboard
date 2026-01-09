@@ -662,7 +662,11 @@ function StudentsPageContent() {
                   const isLoadingRating = loadingRatings[studentId];
                   
                   // حساب النجوم من final_rating (كما يأتي من API)
-                  const finalRating = ratingData?.final_rating || 0;
+                  // إذا كانت القيمة أكبر من 100، نقسم على 10 (API يعيد 1000 بدلاً من 100)
+                  let finalRating = ratingData?.final_rating || 0;
+                  if (finalRating > 100) {
+                    finalRating = finalRating / 10;
+                  }
                   const starCount = Math.round((finalRating / 100) * 5);
                   
                   return (

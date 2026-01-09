@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Filter, Search } from "lucide-react";
+import Link from "next/link";
+import { Loader2, Filter, Search, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
@@ -61,10 +62,12 @@ function UniversityCasesContent() {
   const getStatusBadge = (status) => {
     const statusMap = {
       new: { label: "جديدة", color: "bg-blue-500" },
-      pending_assignment: { label: "في انتظار الإسناد", color: "bg-yellow-500" },
+      accepted: { label: "مقبولة", color: "bg-green-500" },
+      rejected: { label: "مرفوضة", color: "bg-red-500" },
+      needs_assignment_approval: { label: "تحتاج موافقة إسناد", color: "bg-yellow-500" },
       assigned: { label: "مسندة", color: "bg-purple-500" },
       in_progress: { label: "قيد التنفيذ", color: "bg-indigo-500" },
-      completed: { label: "مكتملة", color: "bg-green-500" },
+      completed: { label: "مكتملة", color: "bg-emerald-500" },
       closed: { label: "مغلقة", color: "bg-gray-500" },
     };
     const statusInfo = statusMap[status] || { label: status, color: "bg-gray-500" };
@@ -142,7 +145,9 @@ function UniversityCasesContent() {
                 >
                   <option value="">جميع الحالات</option>
                   <option value="new">جديدة</option>
-                  <option value="pending_assignment">في انتظار الإسناد</option>
+                  <option value="accepted">مقبولة</option>
+                  <option value="rejected">مرفوضة</option>
+                  <option value="needs_assignment_approval">تحتاج موافقة إسناد</option>
                   <option value="assigned">مسندة</option>
                   <option value="in_progress">قيد التنفيذ</option>
                   <option value="completed">مكتملة</option>
@@ -225,7 +230,15 @@ function UniversityCasesContent() {
                             : "bg-white dark:bg-dark-light"
                         } border-b border-sky-200/50 dark:border-dark-lighter hover:bg-gradient-to-r hover:from-sky-100/50 hover:to-sky-200/50 dark:hover:from-dark-lighter transition-all duration-300`}
                       >
-                        <td className="px-6 py-4 font-medium">{c.title || "-"}</td>
+                        <td className="px-6 py-4 font-medium">
+                          <Link 
+                            href={`/university-cases/${c.id}`}
+                            className="text-sky-700 dark:text-sky-300 hover:underline flex items-center gap-2"
+                          >
+                            {c.title || "-"}
+                            <Eye size={14} className="opacity-60" />
+                          </Link>
+                        </td>
                         <td className="px-6 py-4">{c.patient_name || "-"}</td>
                         <td className="px-6 py-4">{c.student_name || "-"}</td>
                         <td className="px-6 py-4">{c.supervisor_name || "-"}</td>

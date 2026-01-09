@@ -451,3 +451,40 @@ export const requestCaseSessionModification = async (caseId, sessionId, data = {
   return response.data;
 };
 
+/**
+ * تحديث حالة الحالة السريرية
+ * PATCH /api/cases/<id>/status/
+ * 
+ * حسب التوثيق:
+ * - الصلاحيات: supervisor|tech_support|university_admin (scoped)
+ * - يسمح بتغيير الحالة: accepted, rejected, needs_assignment_approval, assigned, in_progress, completed, closed
+ * 
+ * @param {string} caseId - UUID للحالة
+ * @param {string} status - الحالة الجديدة (accepted|rejected|needs_assignment_approval|assigned|in_progress|completed|closed)
+ * @returns {Promise<Object>} Case object محدث
+ */
+export const updateCaseStatus = async (caseId, status) => {
+  try {
+    console.log("📋 Updating case status:", caseId, status);
+    
+    const response = await apiClient.patch(
+      `${CASES_BASE_URL}${caseId}/status/`,
+      { status }
+    );
+    
+    console.log("📋 Update case status response:", response.data);
+    
+    // الاستجابة قد تأتي بصيغة {status: "success", data: {...}}
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
+    // أو مباشرة كـ Case object
+    return response.data;
+  } catch (error) {
+    console.error("📋 Error updating case status:", error);
+    console.error("📋 Error response:", error.response?.data);
+    throw error;
+  }
+};
+

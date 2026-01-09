@@ -61,10 +61,11 @@ function EvaluationDetailsInner() {
     }
   }, [error, dispatch]);
 
-  // تحديث newScore عند تحميل التقييم
+  // تحديث newScore عند تحميل التقييم (عرض من 10)
   useEffect(() => {
     if (evaluation?.final_score !== undefined) {
-      setNewScore(evaluation.final_score.toString());
+      // تحويل من 100 إلى 10 للعرض
+      setNewScore((evaluation.final_score / 10).toFixed(1));
     }
   }, [evaluation]);
 
@@ -75,10 +76,13 @@ function EvaluationDetailsInner() {
     }
 
     const score = parseFloat(newScore);
-    if (isNaN(score) || score < 0 || score > 100) {
-      toast.error("التقييم يجب أن يكون بين 0 و 100");
+    if (isNaN(score) || score < 0 || score > 10) {
+      toast.error("التقييم يجب أن يكون بين 0 و 10");
       return;
     }
+
+    // تحويل من 10 إلى 100 للإرسال للـ API
+    const apiScore = score * 10;
 
     try {
       setAdjusting(true);
@@ -86,7 +90,7 @@ function EvaluationDetailsInner() {
         adjustEvaluationAsync({
           evaluationId: id,
           adjustmentData: {
-            new_score: score,
+            new_score: apiScore,
             reason: adjustReason || undefined,
           },
         })
@@ -273,15 +277,15 @@ function EvaluationDetailsInner() {
                     <div>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
                         {evaluation.final_score !== undefined 
-                          ? `${evaluation.final_score}/100` 
+                          ? `${(evaluation.final_score / 10).toFixed(1)}/10` 
                           : evaluation.score !== undefined 
-                          ? `${evaluation.score}/100` 
-                          : `${evaluation.rating || 0}/10`}
+                          ? `${(evaluation.score / 10).toFixed(1)}/10` 
+                          : `${(evaluation.rating || 0) / 10}/10`}
                       </p>
                       {evaluation.original_score !== undefined && 
                        evaluation.original_score !== evaluation.final_score && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 line-through mt-1">
-                          التقييم الأصلي: {evaluation.original_score}/100
+                          التقييم الأصلي: {(evaluation.original_score / 10).toFixed(1)}/10
                         </p>
                       )}
                     </div>
@@ -398,16 +402,17 @@ function EvaluationDetailsInner() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  التقييم الجديد (0-100)
+                  التقييم الجديد (0-10)
                 </label>
                 <input
                   type="number"
                   min="0"
-                  max="100"
+                  max="10"
+                  step="0.1"
                   value={newScore}
                   onChange={(e) => setNewScore(e.target.value)}
                   className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 bg-white dark:bg-dark-light text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                  placeholder="0-100"
+                  placeholder="0-10"
                 />
               </div>
               <div>

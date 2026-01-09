@@ -343,6 +343,31 @@ export const assignSupervisorToCaseAsync = createAsyncThunk(
 );
 
 /**
+ * تحديث حالة الحالة السريرية
+ * الصلاحيات: supervisor|tech_support|university_admin (scoped)
+ * يسمح بتغيير الحالة: accepted, rejected, needs_assignment_approval, assigned, in_progress, completed, closed
+ */
+export const updateCaseStatusAsync = createAsyncThunk(
+  "cases/updateCaseStatus",
+  async ({ caseId, status }, { rejectWithValue }) => {
+    try {
+      const data = await casesApi.updateCaseStatus(caseId, status);
+      const mappedCase = mapCaseFromApi(data);
+      return { caseId, case: mappedCase };
+    } catch (error) {
+      const errorData = error.response?.data;
+      const errorMessage = 
+        errorData?.message || 
+        errorData?.detail || 
+        errorData?.error ||
+        error.message || 
+        "فشل في تحديث حالة الحالة";
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+/**
  * إجراء المشرف (قبول/رفض طلب إسناد)
  */
 export const supervisorCaseActionAsync = createAsyncThunk(
@@ -675,6 +700,29 @@ const clinicalCasesSlice = createSlice({
         state.error = null;
       })
       .addCase(assignSupervisorToCaseAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // updateCaseStatusAsync
+      .addCase(updateCaseStatusAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateCaseStatusAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const { caseId, case: caseData } = action.payload;
+        // تحديث الحالة في القائمة
+        const index = state.cases.findIndex((c) => c.id === caseId);
+        if (index !== -1) {
+          state.cases[index] = caseData;
+        }
+        // تحديث الحالة المحددة
+        if (state.selectedCase && state.selectedCase.id === caseId) {
+          state.selectedCase = caseData;
+        }
+        state.error = null;
+      })
+      .addCase(updateCaseStatusAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
