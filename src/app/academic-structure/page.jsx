@@ -440,15 +440,27 @@ function AcademicStructureContent() {
     }
 
     try {
-      // بناء البيانات المرسلة - نبدأ بالحقول الأساسية فقط (كما في Postman)
-      // بناءً على أن API يعمل في Postman مع code و name فقط
+      // بناء البيانات المرسلة - نرسل جميع الحقول بما في ذلك المشرف والطلاب
+      // ملاحظة: لا نرسل حقل university - الـ API يستخرجه تلقائياً من Token
       const courseData = {
         name: courseForm.name.trim(),
         code: courseForm.code.trim(),
+        academic_year: courseForm.academic_year || null,
+        program: courseForm.program || null,
+        supervisor: courseForm.supervisor || null,
+        students: courseForm.students && courseForm.students.length > 0 ? courseForm.students : [],
+        description: courseForm.description ? courseForm.description.trim() : null,
+        credits: courseForm.credits ? parseInt(courseForm.credits) : 0,
+        is_active: courseForm.is_active,
       };
+      
+      // التأكد من عدم إرسال university
+      delete courseData.university;
 
-      console.log("📚 إرسال بيانات المقرر (الحقول الأساسية فقط):", JSON.stringify(courseData, null, 2));
+      console.log("📚 إرسال بيانات المقرر:", JSON.stringify(courseData, null, 2));
       console.log("📚 universityId:", universityId);
+      console.log("📚 supervisor:", courseForm.supervisor);
+      console.log("📚 students:", courseForm.students);
 
       const newCourse = await createCourse(courseData);
 
@@ -482,10 +494,20 @@ function AcademicStructureContent() {
       
       if (error?.response?.data) {
         // محاولة استخراج رسالة الخطأ من الاستجابة
-        errorMessage = error.response.data.message 
-          || error.response.data.error 
-          || error.response.data.detail
-          || (typeof error.response.data === 'string' ? error.response.data : JSON.stringify(error.response.data));
+        const errorData = error.response.data;
+        
+        // إذا كان هناك أخطاء في الحقول
+        if (errorData.errors && typeof errorData.errors === 'object') {
+          const fieldErrors = Object.entries(errorData.errors)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+            .join('; ');
+          errorMessage = `أخطاء في البيانات: ${fieldErrors}`;
+        } else {
+          errorMessage = errorData.message 
+            || errorData.error 
+            || errorData.detail
+            || (typeof errorData === 'string' ? errorData : JSON.stringify(errorData));
+        }
       } else if (error?.message) {
         errorMessage = error.message;
       }
@@ -495,18 +517,24 @@ function AcademicStructureContent() {
         errorMessage = `خطأ في السيرفر (500): ${errorMessage}. يرجى التحقق من صحة البيانات أو الاتصال بالدعم الفني.`;
       }
       
+      console.error("❌ رسالة الخطأ النهائية:", errorMessage);
       toast.error(errorMessage);
     }
   };
 
   const handleEditCourse = (course) => {
     setEditingCourse(course);
+    // استخراج supervisor ID إذا كان object
+    const supervisorId = typeof course.supervisor === 'object' && course.supervisor !== null
+      ? course.supervisor.id
+      : course.supervisor || "";
+    
     setCourseForm({
       name: course.name || "",
       code: course.code || "",
       academic_year: course.academic_year || "",
       program: course.program || "",
-      supervisor: course.supervisor || "",
+      supervisor: supervisorId,
       students: course.students || [],
       description: course.description || "",
       credits: course.credits || "",
@@ -1755,11 +1783,32 @@ function AcademicStructureContent() {
                                   البرنامج: {programs.find((p) => p.id === course.program)?.name || course.program}
                                 </span>
                               )}
-                              {course.supervisor && (
-                                <span className="px-2 py-1 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded">
-                                  المشرف: {supervisors.find((s) => s.id === course.supervisor)?.first_name || course.supervisor}
-                                </span>
-                              )}
+                              {course.supervisor && (() => {
+                                let displayText = "";
+                                
+                                // إذا كان supervisor object، استخدمه مباشرة
+                                if (typeof course.supervisor === 'object' && course.supervisor !== null) {
+                                  const name = `${course.supervisor.first_name || ''} ${course.supervisor.last_name || ''}`.trim();
+                                  displayText = name || course.supervisor.email || "";
+                                } else {
+                                  // إذا كان supervisor UUID، ابحث في قائمة المشرفين
+                                  const supervisor = supervisors.find((s) => s.id === course.supervisor);
+                                  if (supervisor) {
+                                    const name = `${supervisor.first_name || ''} ${supervisor.last_name || ''}`.trim();
+                                    displayText = name || supervisor.email || "";
+                                  } else {
+                                    // إذا لم نجد المشرف في القائمة، لا نعرض المعرف
+                                    return null;
+                                  }
+                                }
+                                
+                                // عرض المشرف إذا كان هناك نص للعرض
+                                return displayText ? (
+                                  <span className="px-2 py-1 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded">
+                                    المشرف: {displayText}
+                                  </span>
+                                ) : null;
+                              })()}
                               {course.students && course.students.length > 0 && (
                                 <span className="px-2 py-1 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded flex items-center gap-1">
                                   <Users size={14} />
