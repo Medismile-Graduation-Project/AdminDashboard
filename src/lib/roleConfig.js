@@ -21,6 +21,7 @@ import {
   CalendarDays,
   Activity,
   BookOpen,
+  Paperclip,
 } from "lucide-react";
 
 /**
@@ -104,6 +105,13 @@ export const menuItems = [
     nameEn: "Appointments",
     href: "/university-appointments",
     icon: Calendar,
+    readOnly: true, // قراءة فقط
+  },
+  {
+    name: "المرفقات",
+    nameEn: "Attachments",
+    href: "/university-attachments",
+    icon: Paperclip,
     readOnly: true, // قراءة فقط
   },
   {

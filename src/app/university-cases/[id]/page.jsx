@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Calendar, User, FileText, Clock, AlertCircle, UserPlus, X, Edit2 } from "lucide-react";
+import { ArrowLeft, Calendar, User, FileText, Clock, AlertCircle, UserPlus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useRtl } from "@/hooks/useRtl";
 import { useDispatch } from "react-redux";
@@ -12,9 +12,6 @@ import { fetchCaseById, fetchCaseHistory, fetchCaseSessions } from "@/services/c
 import { fetchSupervisors } from "@/services/supervisorsApi";
 import { 
   assignSupervisorToCaseAsync,
-  updateCaseStatusAsync,
-  fetchCaseHistory as fetchCaseHistoryAsync,
-  fetchCaseSessionsAsync,
 } from "@/redux/features/clinicalCases/clinicalCasesSlice";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -47,9 +44,6 @@ function CaseDetailsContent() {
   const [assigningSupervisor, setAssigningSupervisor] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState("");
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState("");
   const [caseHistory, setCaseHistory] = useState([]);
   const [caseSessions, setCaseSessions] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -168,41 +162,6 @@ function CaseDetailsContent() {
     }
   };
 
-  const handleUpdateStatus = async () => {
-    if (!selectedStatus) {
-      toast.error("يرجى اختيار حالة");
-      return;
-    }
-
-    try {
-      setUpdatingStatus(true);
-      const result = await dispatch(
-        updateCaseStatusAsync({ caseId, status: selectedStatus })
-      ).unwrap();
-      
-      // تحديث بيانات الحالة
-      if (result.case) {
-        setCaseData(result.case);
-      } else {
-        // إعادة تحميل التفاصيل
-        await loadCaseDetails();
-      }
-      
-      setShowStatusModal(false);
-      setSelectedStatus("");
-      toast.success("تم تحديث حالة الحالة بنجاح");
-      // إعادة تحميل التاريخ
-      await loadCaseHistory();
-    } catch (err) {
-      console.error("Error updating status:", err);
-      const errorMessage = 
-        err || 
-        "فشل في تحديث حالة الحالة";
-      toast.error(errorMessage);
-    } finally {
-      setUpdatingStatus(false);
-    }
-  };
 
   const getStatusBadge = (status) => {
     const statusMap = {
@@ -223,20 +182,6 @@ function CaseDetailsContent() {
     );
   };
 
-  // الحصول على الحالات المتاحة للتغيير حسب الحالة الحالية
-  const getAvailableStatuses = (currentStatus) => {
-    const statusTransitions = {
-      new: ["accepted", "rejected"],
-      accepted: ["needs_assignment_approval", "rejected"],
-      needs_assignment_approval: ["accepted", "assigned"],
-      assigned: ["in_progress"],
-      in_progress: ["completed"],
-      completed: ["closed"],
-      rejected: [],
-      closed: [],
-    };
-    return statusTransitions[currentStatus] || [];
-  };
 
   const getPriorityBadge = (priority) => {
     const priorityMap = {
@@ -342,21 +287,6 @@ function CaseDetailsContent() {
                   </span>
                 )}
               </div>
-            </div>
-            <div className="flex gap-2">
-              {getAvailableStatuses(caseData.status).length > 0 && (
-                <button
-                  onClick={() => {
-                    setShowStatusModal(true);
-                    setSelectedStatus("");
-                  }}
-                  className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-white rounded-lg transition-colors flex items-center gap-2"
-                  disabled={updatingStatus}
-                >
-                  <Edit2 size={18} />
-                  <span>تغيير الحالة</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -568,169 +498,6 @@ function CaseDetailsContent() {
           </div>
         </div>
 
-        {/* Assign Supervisor Modal */}
-        {showAssignModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
-            <div className="bg-white dark:bg-dark-light rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                  تعيين مشرف للحالة
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowAssignModal(false);
-                    setSelectedSupervisorId("");
-                  }}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                  disabled={assigningSupervisor}
-                  aria-label="إغلاق"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    اختر المشرف *
-                  </label>
-                  {loadingSupervisors ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="animate-spin text-sky-500" size={20} />
-                    </div>
-                  ) : (
-                    <select
-                      value={selectedSupervisorId}
-                      onChange={(e) => setSelectedSupervisorId(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
-                      disabled={assigningSupervisor}
-                    >
-                      <option value="">اختر مشرف</option>
-                      {supervisors.map((supervisor) => (
-                        <option key={supervisor.id} value={supervisor.id}>
-                          {supervisor.first_name} {supervisor.last_name} 
-                          {supervisor.email && ` (${supervisor.email})`}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {supervisors.length === 0 && !loadingSupervisors && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                      لا توجد مشرفين متاحين
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex gap-3 justify-end pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <button
-                    onClick={() => {
-                      setShowAssignModal(false);
-                      setSelectedSupervisorId("");
-                    }}
-                    className="px-5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 font-semibold text-sm"
-                    disabled={assigningSupervisor}
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    onClick={handleAssignSupervisor}
-                    disabled={assigningSupervisor || !selectedSupervisorId || loadingSupervisors}
-                    className="px-5 py-2.5 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-all duration-200 font-semibold text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {assigningSupervisor && <Loader2 className="animate-spin" size={16} />}
-                    <span>تعيين المشرف</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Update Status Modal */}
-        {showStatusModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
-            <div className="bg-white dark:bg-dark-light rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                  تغيير حالة الحالة
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowStatusModal(false);
-                    setSelectedStatus("");
-                  }}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                  disabled={updatingStatus}
-                  aria-label="إغلاق"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    الحالة الحالية
-                  </label>
-                  <div className="mb-4">
-                    {getStatusBadge(caseData.status)}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    اختر الحالة الجديدة *
-                  </label>
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
-                    disabled={updatingStatus}
-                  >
-                    <option value="">اختر حالة</option>
-                    {getAvailableStatuses(caseData.status).map((status) => {
-                      const statusLabels = {
-                        accepted: "مقبولة",
-                        rejected: "مرفوضة",
-                        needs_assignment_approval: "تحتاج موافقة إسناد",
-                        assigned: "مسندة",
-                        in_progress: "قيد التنفيذ",
-                        completed: "مكتملة",
-                        closed: "مغلقة",
-                      };
-                      return (
-                        <option key={status} value={status}>
-                          {statusLabels[status] || status}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                <div className="flex gap-3 justify-end pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <button
-                    onClick={() => {
-                      setShowStatusModal(false);
-                      setSelectedStatus("");
-                    }}
-                    className="px-5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 font-semibold text-sm"
-                    disabled={updatingStatus}
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    onClick={handleUpdateStatus}
-                    disabled={updatingStatus || !selectedStatus}
-                    className="px-5 py-2.5 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-all duration-200 font-semibold text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {updatingStatus && <Loader2 className="animate-spin" size={16} />}
-                    <span>تحديث الحالة</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </AnimatedWrapper>
   );

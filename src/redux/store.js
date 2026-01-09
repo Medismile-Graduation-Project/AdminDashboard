@@ -10,6 +10,7 @@ import appointmentsReducer from "./features/appointments/appointmentsSlice";
 import sessionsReducer from "./features/sessions/sessionsSlice";
 import mediContentReducer from "./features/mediContent/mediContentSlice";
 import reportsReducer from "./features/reports/reportsSlice";
+import attachmentsReducer from "./features/attachments/attachmentsSlice";
 import notificationsReducer from "./features/notifications/notificationsSlice";
 import themeReducer from "./features/theme/themeSlice";
 import authReducer from "./features/auth/authSlice";
@@ -32,6 +33,7 @@ export const store = configureStore({
     sessions: sessionsReducer,
     mediContent: mediContentReducer,
     reports: reportsReducer,
+    attachments: attachmentsReducer,
     notifications: notificationsReducer,
     theme: themeReducer,
     support: supportReducer,

@@ -23,6 +23,9 @@ function UniversityAppointmentsContent() {
   // State للفلترة والبحث
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
+  const [participantFilter, setParticipantFilter] = useState("all");
   const [showDetails, setShowDetails] = useState(null);
 
   // جلب المواعيد عند تحميل الصفحة
@@ -55,8 +58,7 @@ function UniversityAppointmentsContent() {
   const getStatusBadge = (status) => {
     const statusMap = {
       scheduled: { label: "مجدول", color: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400" },
-      confirmed: { label: "مؤكد", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-      in_progress: { label: "قيد التنفيذ", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400" },
+      rescheduled: { label: "أعيد جدولته", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
       completed: { label: "مكتمل", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
       cancelled: { label: "ملغي", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
       no_show: { label: "عدم الحضور", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
@@ -77,11 +79,42 @@ function UniversityAppointmentsContent() {
       !searchTerm ||
       (apt.patient_name || "").toLowerCase().includes(searchLower) ||
       (apt.student_name || "").toLowerCase().includes(searchLower) ||
+      (apt.supervisor_name || "").toLowerCase().includes(searchLower) ||
       (apt.case_title || "").toLowerCase().includes(searchLower) ||
       (apt.notes || "").toLowerCase().includes(searchLower) ||
       (apt.title || "").toLowerCase().includes(searchLower);
 
-    return matchesSearch;
+    // فلترة الحالة
+    const matchesStatus = statusFilter === "all" || apt.status === statusFilter;
+
+    // فلترة التاريخ
+    const appointmentDate = apt.appointment_date || apt.start_datetime || apt.scheduled_at;
+    let matchesDate = true;
+    if (appointmentDate) {
+      const aptDate = new Date(appointmentDate);
+      if (dateFromFilter) {
+        const fromDate = new Date(dateFromFilter);
+        fromDate.setHours(0, 0, 0, 0);
+        if (aptDate < fromDate) matchesDate = false;
+      }
+      if (dateToFilter) {
+        const toDate = new Date(dateToFilter);
+        toDate.setHours(23, 59, 59, 999);
+        if (aptDate > toDate) matchesDate = false;
+      }
+    } else if (dateFromFilter || dateToFilter) {
+      matchesDate = false; // إذا كان الموعد بدون تاريخ وكان هناك فلتر تاريخ
+    }
+
+    // فلترة المشارك
+    let matchesParticipant = true;
+    if (participantFilter !== "all") {
+      if (participantFilter === "patient" && !apt.patient_name) matchesParticipant = false;
+      if (participantFilter === "student" && !apt.student_name) matchesParticipant = false;
+      if (participantFilter === "supervisor" && !apt.supervisor_name) matchesParticipant = false;
+    }
+
+    return matchesSearch && matchesStatus && matchesDate && matchesParticipant;
   });
 
   if (!mounted)
@@ -141,12 +174,70 @@ function UniversityAppointmentsContent() {
                 >
                   <option value="all">{t("actions.all") || "الكل"}</option>
                   <option value="scheduled">{t("Appointments.statuses.scheduled") || "مجدول"}</option>
-                  <option value="confirmed">{t("Appointments.statuses.confirmed") || "مؤكد"}</option>
-                  <option value="in_progress">{t("Appointments.statuses.in_progress") || "قيد التنفيذ"}</option>
+                  <option value="rescheduled">{t("Appointments.statuses.rescheduled") || "أعيد جدولته"}</option>
                   <option value="completed">{t("Appointments.statuses.completed") || "مكتمل"}</option>
                   <option value="cancelled">{t("Appointments.statuses.cancelled") || "ملغي"}</option>
                   <option value="no_show">{t("Appointments.statuses.no_show") || "عدم الحضور"}</option>
                 </select>
+              </div>
+
+              {/* Date From Filter */}
+              <div className="min-w-[150px]">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  من تاريخ
+                </label>
+                <input
+                  type="date"
+                  value={dateFromFilter}
+                  onChange={(e) => setDateFromFilter(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
+                />
+              </div>
+
+              {/* Date To Filter */}
+              <div className="min-w-[150px]">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  إلى تاريخ
+                </label>
+                <input
+                  type="date"
+                  value={dateToFilter}
+                  onChange={(e) => setDateToFilter(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
+                />
+              </div>
+
+              {/* Participant Filter */}
+              <div className="min-w-[150px]">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  المشارك
+                </label>
+                <select
+                  value={participantFilter}
+                  onChange={(e) => setParticipantFilter(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white dark:bg-dark text-slate-900 dark:text-white transition-all duration-200"
+                >
+                  <option value="all">الكل</option>
+                  <option value="patient">مريض</option>
+                  <option value="student">طالب</option>
+                  <option value="supervisor">مشرف</option>
+                </select>
+              </div>
+
+              {/* Reset Filters */}
+              <div>
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("all");
+                    setDateFromFilter("");
+                    setDateToFilter("");
+                    setParticipantFilter("all");
+                  }}
+                  className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors font-semibold text-sm"
+                >
+                  إعادة تعيين
+                </button>
               </div>
             </div>
           </div>
@@ -200,6 +291,7 @@ function UniversityAppointmentsContent() {
                       >
                         <td className="px-6 py-4 font-medium">{apt.patient_name || "-"}</td>
                         <td className="px-6 py-4 font-medium">{apt.student_name || "-"}</td>
+                        <td className="px-6 py-4 font-medium">{apt.supervisor_name || "-"}</td>
                         <td className="px-6 py-4 font-medium">{apt.case_title || "-"}</td>
                         <td className="px-6 py-4 font-medium">
                           {apt.appointment_date || apt.start_datetime
@@ -227,7 +319,7 @@ function UniversityAppointmentsContent() {
                   ) : (
                     <tr>
                       <td
-                        colSpan="6"
+                        colSpan="7"
                         className="text-center py-12 text-slate-500 dark:text-slate-400"
                       >
                         {t("Appointments.noAppointments") || "لا توجد مواعيد"}
@@ -256,6 +348,9 @@ function UniversityAppointmentsContent() {
                     <div className="space-y-2 mb-4">
                       <p className="text-sm text-slate-600 dark:text-slate-400">
                         <span className="font-semibold">الطالب:</span> {apt.student_name || "-"}
+                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        <span className="font-semibold">المشرف:</span> {apt.supervisor_name || "-"}
                       </p>
                       <p className="text-sm text-slate-600 dark:text-slate-400">
                         <span className="font-semibold">الحالة:</span> {apt.case_title || "-"}

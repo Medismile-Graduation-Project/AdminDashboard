@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Loader2, Filter, Search, Eye } from "lucide-react";
+import { Loader2, Filter, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
@@ -33,6 +32,7 @@ function UniversityCasesContent() {
     status: "",
     priority: "",
     search: "",
+    needsSupervisor: false, // فلتر للحالات التي تحتاج مشرف
   });
 
   // جلب الحالات عند تحميل الصفحة أو تغيير الفلاتر
@@ -45,8 +45,17 @@ function UniversityCasesContent() {
     dispatch(fetchCases(params));
   }, [dispatch, filters.status, filters.priority]);
 
-  // Filter cases locally by search term
+  // Filter cases locally by search term and needs supervisor
   const filteredCases = cases.filter((c) => {
+    // فلترة الحالات التي تحتاج مشرف
+    if (filters.needsSupervisor) {
+      // إذا كان هناك supervisor_id أو supervisor object، لا نعرضه
+      if (c.supervisor_id || (c.supervisor && c.supervisor !== null)) {
+        return false;
+      }
+    }
+    
+    // فلترة البحث
     if (!filters.search) return true;
     const searchTerm = filters.search.toLowerCase();
     return (
@@ -116,8 +125,22 @@ function UniversityCasesContent() {
                 حالات الجامعة السريرية
               </h1>
               <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                عرض فقط - جميع حالات جامعتك ({filteredCases.length})
+                {filters.needsSupervisor 
+                  ? `حالات تحتاج تعيين مشرف (${filteredCases.length})`
+                  : `جميع حالات جامعتك (${filteredCases.length})`}
               </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilters({ ...filters, needsSupervisor: !filters.needsSupervisor })}
+                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm flex items-center gap-2 ${
+                  filters.needsSupervisor
+                    ? "bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-white"
+                    : "bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
+                }`}
+              >
+                {filters.needsSupervisor ? "عرض الكل" : "حالات تحتاج مشرف"}
+              </button>
             </div>
           </div>
 
@@ -173,7 +196,7 @@ function UniversityCasesContent() {
               {/* Reset Filters */}
               <div>
                 <button
-                  onClick={() => setFilters({ status: "", priority: "", search: "" })}
+                  onClick={() => setFilters({ status: "", priority: "", search: "", needsSupervisor: false })}
                   className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   إعادة تعيين
@@ -231,13 +254,16 @@ function UniversityCasesContent() {
                         } border-b border-sky-200/50 dark:border-dark-lighter hover:bg-gradient-to-r hover:from-sky-100/50 hover:to-sky-200/50 dark:hover:from-dark-lighter transition-all duration-300`}
                       >
                         <td className="px-6 py-4 font-medium">
-                          <Link 
-                            href={`/university-cases/${c.id}`}
-                            className="text-sky-700 dark:text-sky-300 hover:underline flex items-center gap-2"
-                          >
-                            {c.title || "-"}
-                            <Eye size={14} className="opacity-60" />
-                          </Link>
+                          {(!c.supervisor_id && !c.supervisor) ? (
+                            <a
+                              href={`/university-cases/${c.id}`}
+                              className="text-sky-700 dark:text-sky-300 hover:underline cursor-pointer"
+                            >
+                              {c.title || "-"}
+                            </a>
+                          ) : (
+                            c.title || "-"
+                          )}
                         </td>
                         <td className="px-6 py-4">{c.patient_name || "-"}</td>
                         <td className="px-6 py-4">{c.student_name || "-"}</td>
@@ -283,7 +309,18 @@ function UniversityCasesContent() {
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-white dark:bg-dark-light rounded-2xl shadow-lg p-5 border-2 border-sky-200/50 dark:border-dark-lighter"
                   >
-                    <h3 className="font-bold text-lg mb-2">{c.title || "-"}</h3>
+                    <h3 className="font-bold text-lg mb-2">
+                      {(!c.supervisor_id && !c.supervisor) ? (
+                        <a
+                          href={`/university-cases/${c.id}`}
+                          className="text-sky-700 dark:text-sky-300 hover:underline cursor-pointer"
+                        >
+                          {c.title || "-"}
+                        </a>
+                      ) : (
+                        c.title || "-"
+                      )}
+                    </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                       المريض: {c.patient_name || "-"}
                     </p>
