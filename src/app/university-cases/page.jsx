@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Filter, Search } from "lucide-react";
+import { Loader2, Filter, Search, FileSpreadsheet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
 import { fetchCases } from "../../redux/features/clinicalCases/clinicalCasesSlice";
 import RoleGuard from "@/components/RoleGuard";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
+import * as XLSX from "xlsx";
+import toast from "react-hot-toast";
 
 export default function UniversityCasesPage() {
   return (
@@ -103,6 +105,87 @@ function UniversityCasesContent() {
     );
   };
 
+  // Helper function لتنسيق التاريخ
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "-";
+      return date.toLocaleDateString("ar-SA", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return "-";
+    }
+  };
+
+  // تصدير الحالات إلى Excel
+  const handleExportExcel = () => {
+    if (filteredCases.length === 0) {
+      toast.error("لا توجد حالات للتصدير");
+      return;
+    }
+
+    try {
+      // تحضير البيانات للتصدير
+      const excelData = filteredCases.map((caseItem) => ({
+        "العنوان": caseItem.title || "-",
+        "الوصف": caseItem.description || "-",
+        "الحالة": 
+          caseItem.status === "new" ? "جديدة" :
+          caseItem.status === "accepted" ? "مقبولة" :
+          caseItem.status === "rejected" ? "مرفوضة" :
+          caseItem.status === "needs_assignment_approval" ? "تحتاج موافقة إسناد" :
+          caseItem.status === "assigned" ? "مسندة" :
+          caseItem.status === "in_progress" ? "قيد التنفيذ" :
+          caseItem.status === "completed" ? "مكتملة" :
+          caseItem.status === "closed" ? "مغلقة" :
+          caseItem.status || "-",
+        "الأولوية": 
+          caseItem.priority === "low" ? "منخفضة" :
+          caseItem.priority === "medium" ? "متوسطة" :
+          caseItem.priority === "high" ? "عالية" :
+          caseItem.priority === "urgent" ? "عاجلة" :
+          caseItem.priority || "-",
+        "المريض": caseItem.patient_name || "-",
+        "الطالب": caseItem.student_name || "-",
+        "المشرف": caseItem.supervisor_name || "-",
+        "تاريخ الإنشاء": caseItem.created_at ? formatDate(caseItem.created_at) : "-",
+        "تاريخ التحديث": caseItem.updated_at ? formatDate(caseItem.updated_at) : "-",
+      }));
+
+      // إنشاء workbook
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "الحالات السريرية");
+
+      // تحديد عرض الأعمدة
+      const colWidths = [
+        { wch: 30 }, // العنوان
+        { wch: 40 }, // الوصف
+        { wch: 20 }, // الحالة
+        { wch: 15 }, // الأولوية
+        { wch: 25 }, // المريض
+        { wch: 25 }, // الطالب
+        { wch: 25 }, // المشرف
+        { wch: 20 }, // تاريخ الإنشاء
+        { wch: 20 }, // تاريخ التحديث
+      ];
+      ws["!cols"] = colWidths;
+
+      // تصدير الملف
+      const fileName = `الحالات_السريرية_${new Date().toISOString().split("T")[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      
+      toast.success(`تم تصدير ${filteredCases.length} حالة بنجاح`);
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      toast.error("فشل في تصدير الحالات إلى Excel");
+    }
+  };
+
   if (!mounted)
     return (
       <div className="p-4 sm:p-6 min-h-screen bg-sky-50 dark:bg-slate-900"></div>
@@ -131,6 +214,15 @@ function UniversityCasesContent() {
               </p>
             </div>
             <div className="flex gap-2">
+              {filteredCases.length > 0 && (
+                <button
+                  onClick={handleExportExcel}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm"
+                >
+                  <FileSpreadsheet size={18} />
+                  <span>تصدير Excel</span>
+                </button>
+              )}
               <button
                 onClick={() => setFilters({ ...filters, needsSupervisor: !filters.needsSupervisor })}
                 className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm flex items-center gap-2 ${

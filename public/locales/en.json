@@ -43,9 +43,18 @@
         "logins": "Logins",
         "consults": "Consults",
         "completedTasks": "Completed Tasks"
-      }
+      },
+      "studentsByYear": "Students Distribution by Academic Year",
+      "supervisorsByDepartment": "Supervisors Distribution by Department",
+      "userDistribution": "User Distribution",
+      "actionDistribution": "Actions Distribution",
+      "dailyActivity": "Daily Activity (Last 30 Days)",
+      "studentCount": "Number of Students",
+      "supervisorCount": "Number of Supervisors",
+      "actionCount": "Number of Actions"
     },
     "notifications": "Notifications",
+    "noNotifications": "No new notifications",
     "notificationsList": {
       "new": "New Notification",
       "old": "Old Notification"
@@ -55,7 +64,19 @@
       "appointment1": "Appointment with Patient Laila",
       "appointment2": "Appointment with Patient Said"
     },
-    "quickAccess": "Quick Access / Notifications"
+    "quickAccess": "Quick Access / Notifications",
+    "quickActions": "Quick Actions",
+    "timeAgo": {
+      "now": "Now",
+      "unknown": "Unknown time ago",
+      "minutesAgo": "{{count}} minutes ago",
+      "hoursAgo": "{{count}} hours ago",
+      "daysAgo": "{{count}} days ago"
+    },
+    "userTypes": {
+      "students": "Students",
+      "supervisors": "Supervisors"
+    }
   },
   "Days": {
     "Sunday": "Sunday",

@@ -43,9 +43,18 @@
         "logins": "تسجيلات دخول",
         "consults": "استشارات",
         "completedTasks": "مهام مكتملة"
-      }
+      },
+      "studentsByYear": "توزيع الطلاب حسب السنة الدراسية",
+      "supervisorsByDepartment": "توزيع المشرفين حسب القسم",
+      "userDistribution": "توزيع المستخدمين",
+      "actionDistribution": "توزيع الإجراءات",
+      "dailyActivity": "النشاط اليومي (آخر 30 يوم)",
+      "studentCount": "عدد الطلاب",
+      "supervisorCount": "عدد المشرفين",
+      "actionCount": "عدد الإجراءات"
     },
-    "notifications": "التنبيهات",
+    "notifications": "الإشعارات",
+    "noNotifications": "لا توجد إشعارات جديدة",
     "notificationsList": {
       "new": "يوجد إشعار جديد",
       "old": "يوجد إشعار قديم"
@@ -55,7 +64,19 @@
       "appointment1": "موعد مع المريض ليلى",
       "appointment2": "موعد مع المريض سعيد"
     },
-    "quickAccess": "الوصول السريع / الإشعارات"
+    "quickAccess": "الوصول السريع / الإشعارات",
+    "quickActions": "إجراءات سريعة",
+    "timeAgo": {
+      "now": "الآن",
+      "unknown": "منذ وقت غير محدد",
+      "minutesAgo": "قبل {{count}} دقيقة",
+      "hoursAgo": "قبل {{count}} ساعة",
+      "daysAgo": "قبل {{count}} يوم"
+    },
+    "userTypes": {
+      "students": "طلاب",
+      "supervisors": "مشرفين"
+    }
   },
   "Days": {
     "Sunday": "الأحد",

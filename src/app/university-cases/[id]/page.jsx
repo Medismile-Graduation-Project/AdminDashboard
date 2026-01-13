@@ -498,6 +498,107 @@ function CaseDetailsContent() {
           </div>
         </div>
 
+        {/* Modal تعيين المشرف */}
+        {showAssignModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-dark-light rounded-xl p-6 max-w-md w-full shadow-xl">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  تعيين مشرف للحالة
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setSelectedSupervisorId("");
+                  }}
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <X size={20} className="text-slate-600 dark:text-slate-400" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  اختر المشرف
+                </label>
+                {loadingSupervisors ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="animate-spin text-sky-600 dark:text-sky-400" size={24} />
+                  </div>
+                ) : supervisors.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    لا توجد مشرفين متاحين
+                  </p>
+                ) : (
+                  <select
+                    value={selectedSupervisorId}
+                    onChange={(e) => setSelectedSupervisorId(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-dark text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  >
+                    <option value="">-- اختر مشرف --</option>
+                    {supervisors.map((supervisor) => {
+                      // بناء نص العرض من الحقول المتاحة
+                      let displayText = "";
+                      
+                      // الإيميل (دائماً موجود)
+                      if (supervisor.email) {
+                        displayText = supervisor.email;
+                      }
+                      
+                      // إضافة اسم الجامعة إذا كان مختلفاً
+                      if (supervisor.university_name && supervisor.university_name !== "Al Sham Private University") {
+                        displayText += ` - ${supervisor.university_name}`;
+                      }
+                      
+                      // إضافة القسم إذا كان موجوداً
+                      if (supervisor.department) {
+                        displayText += ` (${supervisor.department})`;
+                      }
+                      
+                      // إضافة المنصب إذا كان موجوداً
+                      if (supervisor.position) {
+                        displayText += ` - ${supervisor.position}`;
+                      }
+                      
+                      return (
+                        <option key={supervisor.id} value={supervisor.id}>
+                          {displayText || `مشرف ${supervisor.id.slice(0, 8)}`}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setSelectedSupervisorId("");
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleAssignSupervisor}
+                  disabled={!selectedSupervisorId || assigningSupervisor}
+                  className="px-4 py-2 bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {assigningSupervisor ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      <span>جاري التعيين...</span>
+                    </>
+                  ) : (
+                    <span>تعيين</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </AnimatedWrapper>
   );

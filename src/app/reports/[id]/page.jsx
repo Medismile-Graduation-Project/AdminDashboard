@@ -555,22 +555,6 @@ function ReportDetailsInner() {
                 </div>
               )}
 
-              {/* File URL */}
-              {report.file_url && (
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                    رابط الملف
-                  </h3>
-                  <a
-                    href={report.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 break-all"
-                  >
-                    {report.file_url}
-                  </a>
-                </div>
-              )}
 
               {/* Actions */}
               {(canSubmit || canExport) && (

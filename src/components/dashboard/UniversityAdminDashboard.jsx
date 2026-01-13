@@ -56,8 +56,8 @@ export default function UniversityAdminDashboard() {
   const [studentsByYear, setStudentsByYear] = useState([]);
   const [supervisorsByDepartment, setSupervisorsByDepartment] = useState([]);
   const [userDistribution, setUserDistribution] = useState([
-    { name: "طلاب", value: 0 },
-    { name: "مشرفين", value: 0 },
+    { name: "", value: 0 },
+    { name: "", value: 0 },
   ]);
 
   // State لإحصائيات Audit
@@ -112,8 +112,8 @@ export default function UniversityAdminDashboard() {
         setStudentsByYear(dashboardData.studentsByYear || []);
         setSupervisorsByDepartment(dashboardData.supervisorsByDepartment || []);
         setUserDistribution([
-          { name: "طلاب", value: dashboardData.totalStudents },
-          { name: "مشرفين", value: dashboardData.totalSupervisors },
+          { name: t("Home.userTypes.students"), value: dashboardData.totalStudents },
+          { name: t("Home.userTypes.supervisors"), value: dashboardData.totalSupervisors },
         ]);
 
         // تحديث إحصائيات Audit
@@ -149,7 +149,7 @@ export default function UniversityAdminDashboard() {
 
   // Helper functions
   const formatTimeAgo = (dateString) => {
-    if (!dateString) return "منذ وقت غير محدد";
+    if (!dateString) return t("Home.timeAgo.unknown");
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
@@ -157,10 +157,10 @@ export default function UniversityAdminDashboard() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "الآن";
-    if (diffMins < 60) return `قبل ${diffMins} دقيقة`;
-    if (diffHours < 24) return `قبل ${diffHours} ساعة`;
-    if (diffDays < 7) return `قبل ${diffDays} يوم`;
+    if (diffMins < 1) return t("Home.timeAgo.now");
+    if (diffMins < 60) return t("Home.timeAgo.minutesAgo", { count: diffMins });
+    if (diffHours < 24) return t("Home.timeAgo.hoursAgo", { count: diffHours });
+    if (diffDays < 7) return t("Home.timeAgo.daysAgo", { count: diffDays });
     return date.toLocaleDateString("ar-SA");
   };
 
@@ -222,18 +222,24 @@ export default function UniversityAdminDashboard() {
         >
           {/* توزيع الطلاب حسب السنة */}
           {studentsByYear.length > 0 && (
-            <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
-              <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
-                توزيع الطلاب حسب السنة الدراسية
+            <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px] hover:shadow-xl transition-shadow duration-300">
+              <h2 className="text-lg sm:text-xl font-bold mb-5 text-slate-900 dark:text-white">
+                {t("Home.charts.studentsByYear")}
               </h2>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={studentsByYear}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="year" />
-                  <YAxis />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="year" stroke="#64748b" />
+                  <YAxis stroke="#64748b" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: "rgba(255, 255, 255, 0.95)", 
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "8px"
+                    }} 
+                  />
                   <Legend />
-                  <Bar dataKey="count" fill="#0ea5e9" name="عدد الطلاب" />
+                  <Bar dataKey="count" fill="#0ea5e9" name={t("Home.charts.studentCount")} radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -241,23 +247,30 @@ export default function UniversityAdminDashboard() {
 
           {/* توزيع المشرفين حسب القسم */}
           {supervisorsByDepartment.length > 0 && (
-            <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
-              <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
-                توزيع المشرفين حسب القسم
+            <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px] hover:shadow-xl transition-shadow duration-300">
+              <h2 className="text-lg sm:text-xl font-bold mb-5 text-slate-900 dark:text-white">
+                {t("Home.charts.supervisorsByDepartment")}
               </h2>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={supervisorsByDepartment}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis
                     dataKey="department"
                     angle={-45}
                     textAnchor="end"
                     height={80}
+                    stroke="#64748b"
                   />
-                  <YAxis />
-                  <Tooltip />
+                  <YAxis stroke="#64748b" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: "rgba(255, 255, 255, 0.95)", 
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "8px"
+                    }} 
+                  />
                   <Legend />
-                  <Bar dataKey="count" fill="#bae6fd" name="عدد المشرفين" />
+                  <Bar dataKey="count" fill="#bae6fd" name={t("Home.charts.supervisorCount")} radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -265,9 +278,9 @@ export default function UniversityAdminDashboard() {
 
           {/* توزيع المستخدمين (Pie Chart) */}
           {(userDistribution[0].value > 0 || userDistribution[1].value > 0) && (
-            <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
-              <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
-                توزيع المستخدمين
+            <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px] hover:shadow-xl transition-shadow duration-300">
+              <h2 className="text-lg sm:text-xl font-bold mb-5 text-slate-900 dark:text-white">
+                {t("Home.charts.userDistribution")}
               </h2>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
@@ -285,7 +298,13 @@ export default function UniversityAdminDashboard() {
                       />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: "rgba(255, 255, 255, 0.95)", 
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "8px"
+                    }} 
+                  />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -303,18 +322,24 @@ export default function UniversityAdminDashboard() {
           >
             {/* توزيع الإجراءات */}
             {auditStatistics.action_counts.length > 0 && (
-              <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
-                <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
-                  توزيع الإجراءات
+              <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px] hover:shadow-xl transition-shadow duration-300">
+                <h2 className="text-lg sm:text-xl font-bold mb-5 text-slate-900 dark:text-white">
+                  {t("Home.charts.actionDistribution")}
                 </h2>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={auditStatistics.action_counts}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="action" />
-                    <YAxis />
-                    <Tooltip />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="action" stroke="#64748b" />
+                    <YAxis stroke="#64748b" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: "rgba(255, 255, 255, 0.95)", 
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "8px"
+                      }} 
+                    />
                     <Legend />
-                    <Bar dataKey="count" fill="#7c3aed" name="عدد الإجراءات" />
+                    <Bar dataKey="count" fill="#7c3aed" name={t("Home.charts.actionCount")} radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -322,23 +347,31 @@ export default function UniversityAdminDashboard() {
 
             {/* النشاط اليومي */}
             {auditStatistics.daily_activity.length > 0 && (
-              <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px]">
-                <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
-                  النشاط اليومي (آخر 30 يوم)
+              <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 flex-1 min-w-[300px] hover:shadow-xl transition-shadow duration-300">
+                <h2 className="text-lg sm:text-xl font-bold mb-5 text-slate-900 dark:text-white">
+                  {t("Home.charts.dailyActivity")}
                 </h2>
                 <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={auditStatistics.daily_activity}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="date" stroke="#64748b" />
+                    <YAxis stroke="#64748b" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: "rgba(255, 255, 255, 0.95)", 
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "8px"
+                      }} 
+                    />
                     <Legend />
                     <Line
                       type="monotone"
                       dataKey="count"
                       stroke="#ec4899"
                       strokeWidth={3}
-                      name="عدد الإجراءات"
+                      name={t("Home.charts.actionCount")}
+                      dot={{ fill: "#ec4899", r: 4 }}
+                      activeDot={{ r: 6 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -355,10 +388,10 @@ export default function UniversityAdminDashboard() {
         }`}
       >
         {/* Notifications */}
-        <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[250px]">
-          <h2 className="text-lg font-bold mb-5 flex items-center gap-2.5 text-slate-900 dark:text-white">
+        <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 flex-1 min-w-[250px] hover:shadow-xl transition-shadow duration-300">
+          <h2 className="text-lg sm:text-xl font-bold mb-5 flex items-center gap-2.5 text-slate-900 dark:text-white">
             <BellIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" /> 
-            <span>الإشعارات</span>
+            <span>{t("Home.notifications")}</span>
           </h2>
           <ul
             className={`space-y-3 ${
@@ -367,7 +400,7 @@ export default function UniversityAdminDashboard() {
           >
             {notifications.length > 0 ? (
               notifications.map((note, idx) => (
-                <li key={idx} className="pb-3 border-b border-slate-100 dark:border-slate-700 last:border-0 last:pb-0">
+                <li key={idx} className="pb-3 border-b border-slate-100 dark:border-slate-700 last:border-0 last:pb-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg px-2 py-1 transition-colors">
                   <Link href={note.href || "#"} className="block group">
                     <p className="text-sky-700 dark:text-sky-300 group-hover:text-sky-900 dark:group-hover:text-sky-100 transition-colors text-sm font-medium mb-1">
                       {note.message}
@@ -377,8 +410,8 @@ export default function UniversityAdminDashboard() {
                 </li>
               ))
             ) : (
-              <li className="text-slate-500 dark:text-slate-400 text-sm py-2">
-                لا توجد إشعارات جديدة
+              <li className="text-slate-500 dark:text-slate-400 text-sm py-2 text-center">
+                {t("Home.noNotifications")}
               </li>
             )}
           </ul>
@@ -386,9 +419,9 @@ export default function UniversityAdminDashboard() {
 
         {/* Quick Actions */}
         {quickActions && quickActions.length > 0 && (
-          <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-1 min-w-[250px]">
-            <h2 className="text-lg font-bold mb-5 text-slate-900 dark:text-white">
-              إجراءات سريعة
+          <div className="p-5 sm:p-6 bg-white dark:bg-dark-light rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 flex-1 min-w-[250px] hover:shadow-xl transition-shadow duration-300">
+            <h2 className="text-lg sm:text-xl font-bold mb-5 text-slate-900 dark:text-white">
+              {t("Home.quickActions")}
             </h2>
             <ul className={`space-y-2.5 ${isRtl ? "text-right" : "text-left"}`}>
               {quickActions.map((action, idx) => {
@@ -398,7 +431,7 @@ export default function UniversityAdminDashboard() {
                   <li key={idx}>
                     <Link
                       href={action.href}
-                      className="flex items-center gap-3 py-2 px-3 rounded-lg text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-all duration-200 group"
+                      className="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-all duration-200 group border border-transparent hover:border-sky-200 dark:hover:border-sky-800"
                     >
                       {ActionIcon && <ActionIcon size={18} className="group-hover:scale-110 transition-transform" />}
                       <span className="text-sm font-medium">{actionName}</span>
