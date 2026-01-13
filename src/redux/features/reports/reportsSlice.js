@@ -57,21 +57,36 @@ const mapReportFromApi = (apiReport) => {
     is_active: safeValue(apiReport.is_active, true), // للتوافق مع النظام القديم
     // معلومات الطالب (nested User object)
     student: safeValue(apiReport.student, null),
-    student_name: getUserName(apiReport.student),
-    student_id: apiReport.student?.id || apiReport.student_id || null,
+    student_name: apiReport.student_name || getUserName(apiReport.student),
+    student_id: apiReport.student?.id || apiReport.student_id || apiReport.student || null,
+    // معلومات المؤلف
+    author: safeValue(apiReport.author, null),
+    author_name: apiReport.author_name || getUserName(apiReport.author),
+    author_role: safeValue(apiReport.author_role, null),
+    // معلومات المشرف
+    supervisor: safeValue(apiReport.supervisor, null),
+    supervisor_name: apiReport.supervisor_name || getUserName(apiReport.supervisor),
     // معلومات الجامعة
     university: safeValue(apiReport.university, null),
-    university_id: apiReport.university?.id || apiReport.university_id || null,
+    university_id: apiReport.university?.id || apiReport.university_id || apiReport.university || null,
+    university_name: apiReport.university_name || null,
+    // معلومات الموافق عليه
+    approved_by: safeValue(apiReport.approved_by, null),
+    approved_by_name: apiReport.approved_by_name || getUserName(apiReport.approved_by),
     // معلومات المراجع (supervisor)
     reviewer: safeValue(apiReport.reviewer, null),
-    reviewer_name: getUserName(apiReport.reviewer),
+    reviewer_name: apiReport.reviewer_name || getUserName(apiReport.reviewer),
     review_notes: safeValue(apiReport.review_notes, ""),
     score: safeValue(apiReport.score, null),
+    feedback: safeValue(apiReport.feedback, null),
     // الحقول التاريخية
     created_at: safeValue(apiReport.created_at),
     updated_at: safeValue(apiReport.updated_at),
     submitted_at: safeValue(apiReport.submitted_at),
     reviewed_at: safeValue(apiReport.reviewed_at),
+    approved_at: safeValue(apiReport.approved_at),
+    locked_at: safeValue(apiReport.locked_at),
+    rejected_at: safeValue(apiReport.rejected_at),
   };
 };
 

@@ -18,6 +18,7 @@ import {
   User,
   Download,
   PlusCircle,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   fetchReportsAsync,
@@ -34,6 +35,7 @@ import toast from "react-hot-toast";
 import RoleGuard from "@/components/RoleGuard";
 import { useRole } from "@/hooks/useRole";
 import { fetchUniversityAdminProfile } from "@/services/universityApi";
+import * as XLSX from "xlsx";
 
 export default function ReportsPage() {
   return (
@@ -240,6 +242,81 @@ function ReportsContent() {
     }
   };
 
+  // تصدير التقارير إلى Excel
+  const handleExportExcel = () => {
+    if (filteredReports.length === 0) {
+      toast.error("لا توجد تقارير للتصدير");
+      return;
+    }
+
+    try {
+      // تحضير البيانات للتصدير
+      const excelData = filteredReports.map((report) => ({
+        "العنوان": report.title || "-",
+        "الوصف": report.description || "-",
+        "نوع التقرير": report.report_type === "clinical_case" ? "حالة سريرية" : report.report_type || "-",
+        "الحالة": 
+          report.status === "draft" ? "مسودة" :
+          report.status === "submitted" ? "مقدمة" :
+          report.status === "approved" ? "موافق عليها" :
+          report.status === "rejected" ? "مرفوضة" :
+          report.status === "locked" ? "مقفلة" :
+          report.status || "-",
+        "الطالب": report.student_name || "-",
+        "المشرف": report.supervisor_name || "-",
+        "الجامعة": report.university_name || "-",
+        "المؤلف": report.author_name || "-",
+        "دور المؤلف": 
+          report.author_role === "student" ? "طالب" :
+          report.author_role === "supervisor" ? "مشرف" :
+          report.author_role === "university_admin" ? "مسؤول جامعة" :
+          report.author_role || "-",
+        "النتيجة": report.score !== null && report.score !== undefined ? `${report.score}/100` : "-",
+        "ملاحظات المراجعة": report.review_notes || "-",
+        "الموافق عليه": report.approved_by_name || "-",
+        "تاريخ الإنشاء": report.created_at ? formatDate(report.created_at) : "-",
+        "تاريخ التقديم": report.submitted_at ? formatDate(report.submitted_at) : "-",
+        "تاريخ الموافقة": report.approved_at ? formatDate(report.approved_at) : "-",
+        "تاريخ القفل": report.locked_at ? formatDate(report.locked_at) : "-",
+      }));
+
+      // إنشاء workbook
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "التقارير");
+
+      // تحديد عرض الأعمدة
+      const colWidths = [
+        { wch: 25 }, // العنوان
+        { wch: 30 }, // الوصف
+        { wch: 15 }, // نوع التقرير
+        { wch: 12 }, // الحالة
+        { wch: 20 }, // الطالب
+        { wch: 20 }, // المشرف
+        { wch: 25 }, // الجامعة
+        { wch: 20 }, // المؤلف
+        { wch: 15 }, // دور المؤلف
+        { wch: 10 }, // النتيجة
+        { wch: 30 }, // ملاحظات المراجعة
+        { wch: 20 }, // الموافق عليه
+        { wch: 20 }, // تاريخ الإنشاء
+        { wch: 20 }, // تاريخ التقديم
+        { wch: 20 }, // تاريخ الموافقة
+        { wch: 20 }, // تاريخ القفل
+      ];
+      ws["!cols"] = colWidths;
+
+      // تصدير الملف
+      const fileName = `التقارير_${new Date().toISOString().split("T")[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      
+      toast.success(`تم تصدير ${filteredReports.length} تقرير بنجاح`);
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      toast.error("فشل في تصدير التقارير إلى Excel");
+    }
+  };
+
   if (!mounted) {
     return <div className="p-4 min-h-screen bg-sky-50 dark:bg-dark"></div>;
   }
@@ -255,13 +332,24 @@ function ReportsContent() {
       >
         <div className="max-w-[1400px] mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
-              {t("Reports.title")}
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
-              {filteredReports.length} {t("Reports.total")}
-            </p>
+          <div className={`mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isRtl ? "sm:flex-row-reverse" : ""}`}>
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
+                {t("Reports.title")}
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
+                {filteredReports.length} {t("Reports.total")}
+              </p>
+            </div>
+            {filteredReports.length > 0 && (
+              <button
+                onClick={handleExportExcel}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm ${isRtl ? "flex-row-reverse" : ""}`}
+              >
+                <FileSpreadsheet size={18} />
+                <span>تصدير Excel</span>
+              </button>
+            )}
           </div>
 
           {/* Filters */}
@@ -415,6 +503,24 @@ function ReportsContent() {
                             <span className={`flex items-center gap-1.5 ${isRtl ? "flex-row-reverse" : ""}`}>
                               <User size={16} className="text-sky-600 dark:text-sky-400" />
                               <strong className="font-semibold">{t("Reports.student")}:</strong> {report.student_name}
+                            </span>
+                          )}
+                          {report.supervisor_name && (
+                            <span className={`flex items-center gap-1.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+                              <User size={16} className="text-sky-600 dark:text-sky-400" />
+                              <strong className="font-semibold">المشرف:</strong> {report.supervisor_name}
+                            </span>
+                          )}
+                          {report.university_name && (
+                            <span className={`flex items-center gap-1.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+                              <User size={16} className="text-sky-600 dark:text-sky-400" />
+                              <strong className="font-semibold">الجامعة:</strong> {report.university_name}
+                            </span>
+                          )}
+                          {report.score !== null && report.score !== undefined && (
+                            <span className={`flex items-center gap-1.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+                              <FileText size={16} className="text-sky-600 dark:text-sky-400" />
+                              <strong className="font-semibold">النتيجة:</strong> {report.score}/100
                             </span>
                           )}
                           <span className={`flex items-center gap-1.5 ${isRtl ? "flex-row-reverse" : ""}`}>

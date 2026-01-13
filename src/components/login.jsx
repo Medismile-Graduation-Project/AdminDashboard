@@ -28,6 +28,9 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [hasChecked, setHasChecked] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockUntil, setLockUntil] = useState(null);
+  const [lockRemainingSeconds, setLockRemainingSeconds] = useState(0);
 
   useEffect(() => {
     // إذا كان المستخدم مسجلاً دخوله بالفعل، نعيد توجيهه بعيداً عن صفحة تسجيل الدخول
@@ -42,6 +45,32 @@ export default function LoginPage() {
         typeof window !== "undefined"
           ? localStorage.getItem("access_token")
           : null;
+
+      // قراءة بيانات الحظر من localStorage
+      if (typeof window !== "undefined") {
+        const attemptsStr = localStorage.getItem("login_failed_attempts");
+        const lockUntilStr = localStorage.getItem("login_lock_until");
+
+        const attempts = attemptsStr ? parseInt(attemptsStr, 10) : 0;
+        const lockUntilTime = lockUntilStr ? parseInt(lockUntilStr, 10) : null;
+
+        setFailedAttempts(Number.isNaN(attempts) ? 0 : attempts);
+
+        if (lockUntilTime && !Number.isNaN(lockUntilTime)) {
+          const now = Date.now();
+          if (now < lockUntilTime) {
+            setLockUntil(lockUntilTime);
+            setLockRemainingSeconds(Math.ceil((lockUntilTime - now) / 1000));
+          } else {
+            // انتهت فترة الحظر
+            localStorage.removeItem("login_lock_until");
+            localStorage.removeItem("login_failed_attempts");
+            setFailedAttempts(0);
+            setLockUntil(null);
+            setLockRemainingSeconds(0);
+          }
+        }
+      }
 
       if (storedUser && accessToken) {
         // هذا المشروع خاص فقط بإدارة الجامعة
@@ -58,8 +87,39 @@ export default function LoginPage() {
     }
   }, [hasChecked, router]);
 
+  // مؤقت لتحديث العدّاد التنازلي أثناء الحظر
+  useEffect(() => {
+    if (!lockUntil) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now >= lockUntil) {
+        // انتهاء فترة الحظر
+        setLockUntil(null);
+        setLockRemainingSeconds(0);
+        setFailedAttempts(0);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("login_lock_until");
+          localStorage.removeItem("login_failed_attempts");
+        }
+        clearInterval(interval);
+      } else {
+        setLockRemainingSeconds(Math.ceil((lockUntil - now) / 1000));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lockUntil]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // إذا كان هناك حظر فعّال، لا نسمح بالمحاولة
+    if (lockUntil && Date.now() < lockUntil) {
+      toast.error("لقد تجاوزت عدد المحاولات المسموح بها. يرجى الانتظار قبل المحاولة مرة أخرى.");
+      return;
+    }
+
     setError("");
 
     if (!email || !password) {
@@ -72,6 +132,15 @@ export default function LoginPage() {
       
       if (result?.user) {
         toast.success("تم تسجيل الدخول بنجاح");
+
+        // في حالة النجاح، إعادة ضبط عدّاد المحاولات
+        setFailedAttempts(0);
+        setLockUntil(null);
+        setLockRemainingSeconds(0);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("login_failed_attempts");
+          localStorage.removeItem("login_lock_until");
+        }
         
         // التوجيه حسب الدور
         // ملاحظة: هذا المشروع خاص فقط بمسؤول الجامعة (university_admin)
@@ -92,6 +161,29 @@ export default function LoginPage() {
       const errorMessage = err || "البريد أو كلمة المرور غير صحيحة";
       setError(errorMessage);
       toast.error(errorMessage);
+
+      // تحديث عدّاد المحاولات الفاشلة
+      const newAttempts = failedAttempts + 1;
+      setFailedAttempts(newAttempts);
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("login_failed_attempts", String(newAttempts));
+      }
+
+      // بعد 5 محاولات فاشلة، تفعيل حظر لمدة 60 ثانية
+      if (newAttempts >= 5) {
+        const lockDurationMs = 60 * 1000; // 60 ثانية
+        const newLockUntil = Date.now() + lockDurationMs;
+
+        setLockUntil(newLockUntil);
+        setLockRemainingSeconds(Math.ceil(lockDurationMs / 1000));
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("login_lock_until", String(newLockUntil));
+        }
+
+        toast.error("تم إدخال بيانات غير صحيحة عدة مرات. يرجى الانتظار 60 ثانية قبل المحاولة مرة أخرى.");
+      }
     }
   };
 
@@ -124,9 +216,20 @@ export default function LoginPage() {
 
           {/* Error Message */}
           {(error || authError) && (
-            <div className="mb-6 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
               <p className="text-red-600 dark:text-red-400 text-sm text-center font-medium">
                 {error || authError}
+              </p>
+            </div>
+          )}
+
+          {/* Lock Message */}
+          {lockUntil && lockRemainingSeconds > 0 && (
+            <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <p className="text-amber-700 dark:text-amber-300 text-sm text-center font-medium">
+                لقد تجاوزت عدد المحاولات المسموح بها. يرجى الانتظار{" "}
+                <span className="font-bold">{lockRemainingSeconds}</span>{" "}
+                ثانية قبل المحاولة مرة أخرى.
               </p>
             </div>
           )}
@@ -176,7 +279,7 @@ export default function LoginPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (lockUntil && lockRemainingSeconds > 0)}
               className="w-full bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600
                          disabled:bg-sky-300 dark:disabled:bg-sky-800 disabled:cursor-not-allowed
                          text-white font-semibold py-3 px-4 rounded-lg 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, FileText, Download, Send, AlertCircle, Edit2, X } from "lucide-react";
+import { Loader2, ArrowLeft, FileText, Download, Send, AlertCircle, Edit2, X, FileSpreadsheet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import RoleGuard from "@/components/RoleGuard";
@@ -17,6 +17,7 @@ import {
   clearError,
   clearSelectedReport,
 } from "@/redux/features/reports/reportsSlice";
+import apiClient from "@/services/api";
 
 function ReportDetailsInner() {
   const { id } = useParams();
@@ -34,6 +35,7 @@ function ReportDetailsInner() {
   const [mounted, setMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [exportUrl, setExportUrl] = useState(null);
 
   // جلب معلومات المستخدم
@@ -87,22 +89,100 @@ function ReportDetailsInner() {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format = "pdf") => {
     if (!id) return;
 
     try {
-      setExporting(true);
-      const result = await dispatch(exportReportAsync({ id, format: "pdf" })).unwrap();
-      if (result?.file_url) {
-        setExportUrl(result.file_url);
-        // فتح الرابط في نافذة جديدة
-        window.open(result.file_url, "_blank");
-        toast.success("تم تصدير التقرير بنجاح");
+      if (format === "pdf") {
+        setExporting(true);
+      } else {
+        setExportingExcel(true);
       }
+
+      // استدعاء API التصدير للحصول على file_url
+      const result = await dispatch(exportReportAsync({ id, format })).unwrap();
+      
+      // الحصول على file_url من الاستجابة
+      let fileUrl = result?.file_url || result?.data?.file_url;
+      
+      if (!fileUrl) {
+        console.error("Export result:", result); // للتصحيح
+        toast.error("لم يتم الحصول على رابط الملف من الـ API");
+        return;
+      }
+
+      console.log("File URL from API:", fileUrl); // للتصحيح
+
+      // بناء URL كامل للملف
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://medismile1-production.up.railway.app/api";
+      let fullFileUrl = fileUrl;
+      
+      if (fileUrl.startsWith("/")) {
+        // إذا كان المسار نسبي، نضيف base URL (بدون /api/)
+        const baseUrl = apiBaseUrl.replace(/\/api$/, "");
+        fullFileUrl = `${baseUrl}${fileUrl}`;
+      }
+
+      console.log("Full file URL:", fullFileUrl); // للتصحيح
+
+      // جلب الملف الفعلي من الرابط
+      const accessToken = localStorage.getItem("access_token");
+      const fileResponse = await fetch(fullFileUrl, {
+        method: "GET",
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+        },
+      });
+
+      if (!fileResponse.ok) {
+        console.error("File response status:", fileResponse.status, fileResponse.statusText);
+        throw new Error(`فشل في تحميل الملف: ${fileResponse.status}`);
+      }
+
+      // التحقق من نوع المحتوى
+      const contentType = fileResponse.headers.get("content-type");
+      console.log("Content-Type:", contentType); // للتصحيح
+
+      // إذا كان المحتوى JSON، فهناك مشكلة
+      if (contentType && contentType.includes("application/json")) {
+        const jsonData = await fileResponse.json();
+        console.error("Received JSON instead of file:", jsonData);
+        throw new Error("الخادم أعاد JSON بدلاً من الملف. يرجى التحقق من رابط الملف.");
+      }
+
+      // تحويل الاستجابة إلى blob (ملف)
+      const blob = await fileResponse.blob();
+      console.log("Blob type:", blob.type, "Size:", blob.size); // للتصحيح
+
+      // إنشاء رابط تحميل
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.style.display = "none";
+      link.href = blobUrl;
+      
+      // اسم الملف مع الامتداد الصحيح
+      const fileExtension = format === "pdf" ? "pdf" : "xlsx";
+      const fileName = `تقرير_${new Date().toISOString().split("T")[0]}.${fileExtension}`;
+      link.download = fileName;
+      
+      // تحميل الملف
+      document.body.appendChild(link);
+      link.click();
+      
+      // تنظيف
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      }, 100);
+      
+      toast.success("تم تحميل الملف بنجاح");
     } catch (err) {
-      toast.error(err?.message || "فشل في تصدير التقرير");
+      console.error("Export error:", err);
+      const errorMessage = err?.message || err || `فشل في تصدير التقرير إلى ${format === "pdf" ? "PDF" : "Excel"}`;
+      toast.error(errorMessage);
     } finally {
       setExporting(false);
+      setExportingExcel(false);
     }
   };
 
@@ -283,41 +363,109 @@ function ReportDetailsInner() {
                   <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
                     الهدف
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <p className="text-base text-slate-900 dark:text-white">
-                      {report.target_type === "case" ? "حالة سريرية" : 
-                       report.target_type === "appointment" ? "موعد" : 
-                       report.target_type === "session" ? "جلسة" : 
-                       report.target_type}
-                    </p>
-                    {report.target_id && (
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        (ID: {report.target_id})
+                  <p className="text-base text-slate-900 dark:text-white">
+                    {report.target_type === "case" ? "حالة سريرية" : 
+                     report.target_type === "appointment" ? "موعد" : 
+                     report.target_type === "session" ? "جلسة" : 
+                     report.target_type}
+                  </p>
+                </div>
+              )}
+
+              {/* Author Info */}
+              {report.author_name && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                    المؤلف
+                  </h3>
+                  <p className="text-base text-slate-900 dark:text-white">
+                    {report.author_name}
+                    {report.author_role && (
+                      <span className="text-sm text-slate-500 dark:text-slate-400 mr-2">
+                        ({report.author_role === "student" ? "طالب" : 
+                          report.author_role === "supervisor" ? "مشرف" : 
+                          report.author_role === "university_admin" ? "مسؤول جامعة" : 
+                          report.author_role})
                       </span>
                     )}
-                  </div>
+                  </p>
+                </div>
+              )}
+
+              {/* Supervisor Info */}
+              {report.supervisor_name && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                    المشرف
+                  </h3>
+                  <p className="text-base text-slate-900 dark:text-white">
+                    {report.supervisor_name}
+                  </p>
+                </div>
+              )}
+
+              {/* University Info */}
+              {report.university_name && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                    الجامعة
+                  </h3>
+                  <p className="text-base text-slate-900 dark:text-white">
+                    {report.university_name}
+                  </p>
+                </div>
+              )}
+
+              {/* Score */}
+              {report.score !== null && report.score !== undefined && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                    النتيجة
+                  </h3>
+                  <p className="text-base text-slate-900 dark:text-white">
+                    {report.score}/100
+                  </p>
+                </div>
+              )}
+
+              {/* Feedback */}
+              {report.feedback && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                    الملاحظات
+                  </h3>
+                  <p className="text-base text-slate-900 dark:text-white whitespace-pre-wrap">
+                    {report.feedback}
+                  </p>
                 </div>
               )}
 
               {/* Review Info */}
-              {report.reviewer_name && (
+              {report.approved_by_name && (
                 <div>
                   <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                    المراجع
+                    الموافق عليه
                   </h3>
                   <p className="text-base text-slate-900 dark:text-white">
-                    {report.reviewer_name}
+                    {report.approved_by_name}
                   </p>
-                  {report.review_notes && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-                      {report.review_notes}
-                    </p>
-                  )}
-                  {report.score !== null && report.score !== undefined && (
+                  {report.approved_at && (
                     <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                      التقييم: {report.score}/100
+                      تاريخ الموافقة: {formatDate(report.approved_at)}
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Review Notes */}
+              {report.review_notes && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                    ملاحظات المراجعة
+                  </h3>
+                  <p className="text-base text-slate-900 dark:text-white whitespace-pre-wrap">
+                    {report.review_notes}
+                  </p>
                 </div>
               )}
 
@@ -343,13 +491,43 @@ function ReportDetailsInner() {
                     </p>
                   </div>
                 )}
-                {report.reviewed_at && (
+                {report.approved_at && (
                   <div>
                     <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                      تاريخ المراجعة
+                      تاريخ الموافقة
                     </h3>
                     <p className="text-base text-slate-900 dark:text-white">
-                      {formatDate(report.reviewed_at)}
+                      {formatDate(report.approved_at)}
+                    </p>
+                  </div>
+                )}
+                {report.locked_at && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                      تاريخ القفل
+                    </h3>
+                    <p className="text-base text-slate-900 dark:text-white">
+                      {formatDate(report.locked_at)}
+                    </p>
+                  </div>
+                )}
+                {report.rejected_at && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                      تاريخ الرفض
+                    </h3>
+                    <p className="text-base text-slate-900 dark:text-white">
+                      {formatDate(report.rejected_at)}
+                    </p>
+                  </div>
+                )}
+                {report.updated_at && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                      آخر تحديث
+                    </h3>
+                    <p className="text-base text-slate-900 dark:text-white">
+                      {formatDate(report.updated_at)}
                     </p>
                   </div>
                 )}
@@ -401,7 +579,7 @@ function ReportDetailsInner() {
                     {canSubmit && (
                       <button
                         onClick={handleSubmit}
-                        disabled={submitting || exporting}
+                        disabled={submitting || exporting || exportingExcel}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {submitting ? (
@@ -418,23 +596,42 @@ function ReportDetailsInner() {
                       </button>
                     )}
                     {canExport && (
-                      <button
-                        onClick={handleExport}
-                        disabled={submitting || exporting}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {exporting ? (
-                          <>
-                            <Loader2 className="animate-spin" size={18} />
-                            <span>جاري التصدير...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Download size={18} />
-                            <span>تصدير PDF</span>
-                          </>
-                        )}
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleExport("pdf")}
+                          disabled={submitting || exporting || exportingExcel}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {exporting ? (
+                            <>
+                              <Loader2 className="animate-spin" size={18} />
+                              <span>جاري التصدير...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download size={18} />
+                              <span>تصدير PDF</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleExport("excel")}
+                          disabled={submitting || exporting || exportingExcel}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {exportingExcel ? (
+                            <>
+                              <Loader2 className="animate-spin" size={18} />
+                              <span>جاري التصدير...</span>
+                            </>
+                          ) : (
+                            <>
+                              <FileSpreadsheet size={18} />
+                              <span>تصدير Excel</span>
+                            </>
+                          )}
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
