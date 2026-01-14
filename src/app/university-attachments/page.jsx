@@ -265,22 +265,22 @@ function UniversityAttachmentsContent() {
 
           {/* Table */}
           {!loading && (
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border-2 border-sky-200/50 dark:border-dark-lighter shadow-2xl">
               <table
                 className={`w-full text-sm text-slate-900 dark:text-slate-200 min-w-[1000px] ${
                   isRtl ? "text-right" : "text-left"
                 }`}
                 dir={isRtl ? "rtl" : "ltr"}
               >
-                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-gradient-to-r from-sky-700 via-sky-600 to-sky-700 dark:from-dark-lighter dark:via-dark-light dark:to-dark-lighter text-white">
                   <tr>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">الملف</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">النوع</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">الحجم</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">الحالة المرتبطة</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">الطالب</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">التاريخ</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">الإجراءات</th>
+                    <th className="px-6 py-4 font-semibold">الملف</th>
+                    <th className="px-6 py-4 font-semibold">النوع</th>
+                    <th className="px-6 py-4 font-semibold">الحجم</th>
+                    <th className="px-6 py-4 font-semibold">الحالة المرتبطة</th>
+                    <th className="px-6 py-4 font-semibold">الطالب</th>
+                    <th className="px-6 py-4 font-semibold">التاريخ</th>
+                    <th className="px-6 py-4 font-semibold">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -293,14 +293,14 @@ function UniversityAttachmentsContent() {
                         transition={{ duration: 0.2, delay: idx * 0.02 }}
                         className={`${
                           idx % 2 === 0
-                            ? "bg-white dark:bg-dark-light"
-                            : "bg-slate-50/50 dark:bg-slate-800/50"
-                        } border-b border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200`}
+                            ? "bg-sky-50/50 dark:bg-dark-light/30"
+                            : "bg-white dark:bg-dark-light"
+                        } border-b border-sky-200/50 dark:border-dark-lighter hover:bg-gradient-to-r hover:from-sky-100/50 hover:to-sky-200/50 dark:hover:from-dark-lighter transition-all duration-300`}
                       >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
+                        <td className="px-6 py-4 font-medium">
+                          <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
                             {getFileIcon(att.file_category, att.mime_type)}
-                            <span className="font-medium">{att.original_filename || "-"}</span>
+                            <span>{att.original_filename || "-"}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">{getAttachmentTypeBadge(att.attachment_type)}</td>
@@ -309,7 +309,7 @@ function UniversityAttachmentsContent() {
                           {att.case_title ? (
                             <Link 
                               href={`/university-cases/${att.case_id}`}
-                              className="text-sky-700 dark:text-sky-300 hover:underline"
+                              className="text-sky-700 dark:text-sky-300 hover:underline font-medium"
                             >
                               {att.case_title}
                             </Link>
@@ -330,13 +330,15 @@ function UniversityAttachmentsContent() {
                             : "-"}
                         </td>
                         <td className="px-6 py-4">
-                          <Link
-                            href={`/university-attachments/${att.id}`}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
-                          >
-                            <Eye size={16} />
-                            <span>عرض</span>
-                          </Link>
+                          <div className={`flex items-center gap-2 ${isRtl ? "justify-start" : "justify-end"}`}>
+                            <Link
+                              href={`/university-attachments/${att.id}`}
+                              className={`inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
+                            >
+                              <Eye size={16} />
+                              <span>عرض</span>
+                            </Link>
+                          </div>
                         </td>
                       </motion.tr>
                     ))

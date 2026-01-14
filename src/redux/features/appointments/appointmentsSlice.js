@@ -72,6 +72,9 @@ const mapAppointmentFromApi = (apiAppointment) => {
     user: userObj,
     student: userObj, // للتوافق مع الكود الموجود
     student_name: getUserName(userObj),
+    // معلومات المشرف (nested User object)
+    supervisor: safeValue(apiAppointment.supervisor, null),
+    supervisor_name: getUserName(apiAppointment.supervisor),
     // معلومات الحالة السريرية (nested Case object)
     case: safeValue(apiAppointment.case, null),
     case_title: (apiAppointment.case && apiAppointment.case.title) ? apiAppointment.case.title : "-",

@@ -256,66 +256,107 @@ function UniversityAppointmentsContent() {
             </div>
           )}
 
-          {/* Table */}
+          {/* Table - نفس ستايل جداول المشرفين والطلاب */}
           {!loading && (
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border-2 border-sky-200/50 dark:border-dark-lighter shadow-2xl">
               <table
-                className={`w-full text-sm text-slate-900 dark:text-slate-200 min-w-[900px] ${
+                className={`w-full text-sm text-slate-900 dark:text-slate-200 min-w-[1000px] ${
                   isRtl ? "text-right" : "text-left"
                 }`}
                 dir={isRtl ? "rtl" : "ltr"}
               >
-                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-gradient-to-r from-sky-700 via-sky-600 to-sky-700 dark:from-dark-lighter dark:via-dark-light dark:to-dark-lighter text-white">
                   <tr>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">{t("Appointments.patient") || "المريض"}</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">{t("Appointments.student") || "الطالب"}</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">{t("Appointments.case") || "الحالة المرتبطة"}</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">{t("Appointments.date") || "تاريخ الموعد"}</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">{t("Appointments.status") || "الحالة"}</th>
-                    <th className="px-6 py-4 font-bold text-slate-900 dark:text-white">{t("Appointments.actions") || "الإجراءات"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.patient") || "المريض"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.student") || "الطالب"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.supervisor") || "المشرف"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.case") || "الحالة المرتبطة"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.date") || "التاريخ والوقت"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.location") || "الموقع"}</th>
+                    <th className="px-6 py-4 font-semibold">{t("Appointments.status") || "الحالة"}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredAppointments && filteredAppointments.length > 0 ? (
-                    filteredAppointments.map((apt, idx) => (
-                      <motion.tr
-                        key={apt.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2, delay: idx * 0.02 }}
-                        className={`${
-                          idx % 2 === 0
-                            ? "bg-white dark:bg-dark-light"
-                            : "bg-slate-50/50 dark:bg-slate-800/50"
-                        } border-b border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200`}
-                      >
-                        <td className="px-6 py-4 font-medium">{apt.patient_name || "-"}</td>
-                        <td className="px-6 py-4 font-medium">{apt.student_name || "-"}</td>
-                        <td className="px-6 py-4 font-medium">{apt.supervisor_name || "-"}</td>
-                        <td className="px-6 py-4 font-medium">{apt.case_title || "-"}</td>
-                        <td className="px-6 py-4 font-medium">
-                          {apt.appointment_date || apt.start_datetime
-                            ? new Date(apt.appointment_date || apt.start_datetime).toLocaleDateString("ar-SA", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "-"}
-                        </td>
-                        <td className="px-6 py-4">{getStatusBadge(apt.status)}</td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleViewDetails(apt.id)}
-                            className={`px-4 py-2 bg-sky-600 hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-700 text-white rounded-lg transition-all duration-200 flex items-center gap-1.5 text-sm font-medium shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
-                          >
-                            <Eye size={16} />
-                            {t("Appointments.viewDetails") || "عرض التفاصيل"}
-                          </button>
-                        </td>
-                      </motion.tr>
-                    ))
+                    filteredAppointments.map((apt, idx) => {
+                      const patientEmail = apt.patient?.email || null;
+                      const studentEmail = apt.student?.email || null;
+                      const supervisorEmail = apt.supervisor?.email || null;
+
+                      const dateValue = apt.appointment_date || apt.start_datetime || apt.scheduled_at;
+
+                      return (
+                        <motion.tr
+                          key={apt.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: idx * 0.02 }}
+                          className={`${
+                            idx % 2 === 0
+                              ? "bg-sky-50/50 dark:bg-dark-light/30"
+                              : "bg-white dark:bg-dark-light"
+                          } border-b border-sky-200/50 dark:border-dark-lighter hover:bg-gradient-to-r hover:from-sky-100/50 hover:to-sky-200/50 dark:hover:from-dark-lighter transition-all duration-300`}
+                        >
+                          {/* المريض */}
+                          <td className="px-6 py-4">
+                            <div className="font-semibold">{apt.patient_name || "-"}</div>
+                            {patientEmail && (
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                {patientEmail}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* الطالب */}
+                          <td className="px-6 py-4">
+                            <div className="font-semibold">{apt.student_name || "-"}</div>
+                            {studentEmail && (
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                {studentEmail}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* المشرف */}
+                          <td className="px-6 py-4">
+                            <div className="font-semibold">{apt.supervisor_name || "-"}</div>
+                            {supervisorEmail && (
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                {supervisorEmail}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* الحالة المرتبطة */}
+                          <td className="px-6 py-4">
+                            <div className="font-semibold">{apt.case_title || "-"}</div>
+                          </td>
+
+                          {/* التاريخ والوقت */}
+                          <td className="px-6 py-4">
+                            {dateValue
+                              ? new Date(dateValue).toLocaleString("ar-SA", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : "-"}
+                          </td>
+
+                          {/* الموقع */}
+                          <td className="px-6 py-4">
+                            {apt.location || "-"}
+                          </td>
+
+                          {/* الحالة */}
+                          <td className="px-6 py-4">
+                            {getStatusBadge(apt.status)}
+                          </td>
+                        </motion.tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td
@@ -331,7 +372,7 @@ function UniversityAppointmentsContent() {
             </div>
           )}
 
-          {/* Mobile Cards */}
+          {/* Mobile Cards (بدون زر عرض التفاصيل لمدير الجامعة) */}
           {!loading && (
             <div className="sm:hidden grid gap-4 mt-6">
               {filteredAppointments && filteredAppointments.length > 0 ? (
@@ -362,14 +403,12 @@ function UniversityAppointmentsContent() {
                           : "-"}
                       </p>
                     </div>
-                    <div className="mb-4">{getStatusBadge(apt.status)}</div>
-                    <button
-                      onClick={() => handleViewDetails(apt.id)}
-                      className={`w-full px-4 py-2.5 bg-sky-600 hover:bg-sky-700 dark:bg-sky-600 dark:hover:bg-sky-700 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold text-sm shadow-sm hover:shadow-md ${isRtl ? "flex-row-reverse" : ""}`}
-                    >
-                      <Eye size={16} />
-                      {t("Appointments.viewDetails") || "عرض التفاصيل"}
-                    </button>
+                    <div className="mb-2">{getStatusBadge(apt.status)}</div>
+                    {apt.location && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-semibold">الموقع:</span> {apt.location}
+                      </p>
+                    )}
                   </motion.div>
                 ))
               ) : (

@@ -644,15 +644,18 @@ function SupervisorsPageContent() {
               <thead className="bg-gradient-to-r from-sky-700 via-sky-600 to-sky-700 dark:from-dark-lighter dark:via-dark-light dark:to-dark-lighter text-white">
                 <tr>
                   <th className="px-6 py-4 font-semibold">البريد الإلكتروني</th>
-                  <th className="px-6 py-4 font-semibold">الجامعة</th>
-                  <th className="px-6 py-4 font-semibold">القسم</th>
-                  <th className="px-6 py-4 font-semibold">المنصب</th>
+                  <th className="px-6 py-4 font-semibold">اسم المستخدم</th>
+                  <th className="px-6 py-4 font-semibold">العنوان</th>
                   <th className="px-6 py-4 font-semibold">رقم الهاتف</th>
+                  <th className="px-6 py-4 font-semibold">المنصب</th>
                   <th className="px-6 py-4 font-semibold">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSupervisors.map((supervisor, idx) => {
+                  // استخراج اسم المستخدم من البريد الإلكتروني
+                  const username = supervisor.email ? supervisor.email.split("@")[0] : "-";
+                  
                   return (
                     <motion.tr
                       key={supervisor.user_id || supervisor.id}
@@ -666,10 +669,10 @@ function SupervisorsPageContent() {
                       } border-b border-sky-200/50 dark:border-dark-lighter hover:bg-gradient-to-r hover:from-sky-100/50 hover:to-sky-200/50 dark:hover:from-dark-lighter transition-all duration-300`}
                     >
                       <td className="px-6 py-4 font-medium">{supervisor.email || "-"}</td>
-                      <td className="px-6 py-4">{supervisor.university_name || "-"}</td>
-                      <td className="px-6 py-4">{supervisor.department || "-"}</td>
-                      <td className="px-6 py-4">{supervisor.position || "-"}</td>
+                      <td className="px-6 py-4">{username}</td>
+                      <td className="px-6 py-4">{supervisor.address || "-"}</td>
                       <td className="px-6 py-4">{supervisor.phone_number || "-"}</td>
+                      <td className="px-6 py-4">{supervisor.position || "-"}</td>
                       <td className="px-6 py-4">
                         <div className={`flex items-center gap-2 ${isRtl ? "justify-start" : "justify-end"}`}>
                           <button

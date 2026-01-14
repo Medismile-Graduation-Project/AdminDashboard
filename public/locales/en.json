@@ -9,7 +9,7 @@
     "sessions": "Sessions",
     "reports": "Downloadable Reports",
     "instructions": "Supervisor Instructions",
-    "evaluations": "Patient Evaluations",
+    "evaluations": "Student Evaluations",
     "content": "Content Management",
     "patients": "Patients",
     "appointments": "Appointments",
@@ -290,9 +290,9 @@
     "send_note": "Send Notes"
   },
   "reviews": {
-    "title": "Patient Reviews",
-    "description": "Manage and track all evaluations",
-    "total": "Total Reviews",
+    "title": "Student Evaluations",
+    "description": "Manage and track all student evaluations",
+    "total": "Total Evaluations",
     "average": "Average Rating",
     "new": "New Reviews",
     "reviewed": "Reviewed",
