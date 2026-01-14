@@ -199,7 +199,16 @@ export default function Navbar() {
         {currentUser && (
           <div className={`flex items-center gap-3 flex-shrink-0 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
             {/* Search */}
-            <div className="relative">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                const searchInput = e.target.querySelector('input');
+                if (searchInput && searchInput.value.trim()) {
+                  router.push(`/search?q=${encodeURIComponent(searchInput.value.trim())}`);
+                }
+              }}
+              className="relative"
+            >
               <input
                 type="text"
                 placeholder={t("Navbar.searchPlaceholder") || "بحث..."}
@@ -209,7 +218,7 @@ export default function Navbar() {
                      focus:border-sky-500 dark:focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 
                      w-[240px] text-sm transition-all duration-200 text-start"
               />
-            </div>
+            </form>
 
             {/* تبديل الوضع الليلي/النهاري */}
             <div className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -372,7 +381,17 @@ export default function Navbar() {
               {currentUser && (
                 <div className="px-3 py-3">
                   {/* Search */}
-                  <div className="mb-3">
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const searchInput = e.target.querySelector('input');
+                      if (searchInput && searchInput.value.trim()) {
+                        router.push(`/search?q=${encodeURIComponent(searchInput.value.trim())}`);
+                        setMobileMenu(false);
+                      }
+                    }}
+                    className="mb-3"
+                  >
                     <input
                       type="text"
                       placeholder={t("Navbar.searchPlaceholder") || "بحث..."}
@@ -380,7 +399,7 @@ export default function Navbar() {
                         text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none 
                         focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 text-sm text-start transition-all duration-200"
                     />
-                  </div>
+                  </form>
 
                   {/* Menu Items - أفقي */}
                   <div className={`flex items-center gap-2 overflow-x-auto pb-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>

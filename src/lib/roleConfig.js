@@ -22,6 +22,7 @@ import {
   Activity,
   BookOpen,
   Paperclip,
+  Search,
 } from "lucide-react";
 
 /**
@@ -33,6 +34,12 @@ export const menuItems = [
     nameEn: "Home",
     href: "/",
     icon: Home,
+  },
+  {
+    name: "البحث الموحد",
+    nameEn: "Unified Search",
+    href: "/search",
+    icon: Search,
   },
   {
     name: "إدارة المستخدمين",
