@@ -309,10 +309,13 @@ function EvaluationDetailsInner() {
               {evaluation.target_name && (
                 <div>
                   <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                    الهدف
+                    {evaluation.target_type === "case" ? "الحالة السريرية" :
+                     evaluation.target_type === "appointment" ? "الموعد" :
+                     evaluation.target_type === "session" ? "الجلسة" :
+                     "الهدف"}
                   </h3>
                   <div className="flex items-center gap-2">
-                    <p className="text-base text-slate-900 dark:text-white">
+                    <p className="text-base text-slate-900 dark:text-white font-medium">
                       {evaluation.target_name}
                     </p>
                     {evaluation.target_type && (

@@ -13,6 +13,7 @@ import {
 } from "../../../services/evaluationsApi";
 import { fetchStudents } from "../../../services/studentsApi";
 import { fetchSupervisors } from "../../../services/supervisorsApi";
+import { fetchCaseById } from "../../../services/casesApi";
 
 /**
  * دالة مساعدة لاستخراج اسم المستخدم من User object
@@ -275,7 +276,7 @@ export const fetchEvaluationsAsync = createAsyncThunk(
 /**
  * جلب تفاصيل تقييم محدد
  * GET /api/evaluations/<id>/
- * مع جلب أسماء الطلاب والمشرفين من المعرفات
+ * مع جلب أسماء الطلاب والمشرفين والحالات السريرية من المعرفات
  */
 export const fetchEvaluationByIdAsync = createAsyncThunk(
   "evaluations/fetchEvaluationById",
@@ -321,6 +322,28 @@ export const fetchEvaluationByIdAsync = createAsyncThunk(
       } catch (err) {
         // إذا فشل جلب الطلاب/المشرفين، نكمل بدونهم
         console.warn("Failed to fetch students/supervisors for name mapping:", err);
+      }
+      
+      // إذا كان التقييم مرتبط بحالة سريرية ولم يكن case object موجود، نجلب اسم الحالة
+      // التحقق من أن case ليس object (قد يكون UUID string)
+      const caseId = data?.target_id || data?.case_id || (data?.case && typeof data.case === "string" ? data.case : null);
+      if (data && (data.target_type === "case" || caseId) && (!data.case || typeof data.case !== "object")) {
+        if (caseId && typeof caseId === "string") {
+          try {
+            const caseData = await fetchCaseById(caseId);
+            // إضافة case object إلى بيانات التقييم
+            if (caseData && caseData.title) {
+              data.case = {
+                id: caseId,
+                title: caseData.title,
+                name: caseData.title,
+              };
+            }
+          } catch (err) {
+            // إذا فشل جلب الحالة، نكمل بدونها
+            console.warn("Failed to fetch case details for evaluation:", err);
+          }
+        }
       }
       
       return mapEvaluationFromApi(data, studentsMap, supervisorsMap);
