@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Star, Loader2, Send, CheckCircle } from "lucide-react";
+import { Star, Loader2, Send, CheckCircle, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
@@ -18,6 +18,7 @@ import {
 import AnimatedWrapper from "@/components/AnimatedWrapper";
 import toast from "react-hot-toast";
 import RoleGuard from "@/components/RoleGuard";
+import { useRtl } from "@/hooks/useRtl";
 
 export default function EvaluationsPage() {
   return (
@@ -29,6 +30,7 @@ export default function EvaluationsPage() {
 
 function EvaluationsContent() {
   const { t, i18n } = useTranslation();
+  const isRtl = useRtl();
   const dispatch = useDispatch();
   const evaluationsState = useSelector((state) => state.evaluations);
   const reviews = evaluationsState?.reviews || [];
@@ -134,28 +136,28 @@ function EvaluationsContent() {
       <div className="p-4 sm:p-6 min-h-screen bg-sky-50 dark:bg-slate-900"></div>
     );
 
-  const isRtl = i18n?.language === "ar";
-
   return (
     <AnimatedWrapper>
       <div
-        className={`p-4 sm:p-6 lg:p-8 min-h-screen ${
+        className={`p-4 sm:p-6 lg:p-8 min-h-screen bg-sky-50 dark:bg-dark ${
           isRtl ? "text-right" : "text-left"
         }`}
       >
-        <div className="max-w-[1400px] mx-auto">
+        <div className="max-w-[1400px] mx-auto space-y-6">
           {/* العنوان */}
-          <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
-              {t("reviews.title")}
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
-              {t("reviews.description")}
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2">
+                {t("reviews.title")}
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base">
+                {t("reviews.description")}
+              </p>
+            </div>
           </div>
 
           {/* الإحصائيات */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -203,50 +205,55 @@ function EvaluationsContent() {
           </div>
 
           {/* الفلاتر */}
-          <div className={`flex flex-col md:flex-row gap-3 mb-6 ${isRtl ? "md:flex-row-reverse" : ""}`}>
-            <input
-              type="text"
-              placeholder={t("reviews.searchPlaceholder")}
-              value={search}
-              onChange={(e) => dispatch(setSearch(e.target.value))}
-              className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 outline-none bg-white dark:bg-dark-light 
-                text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
-            />
-            <select
-              value={evaluatorTypeFilter}
-              onChange={(e) => dispatch(setEvaluatorTypeFilter(e.target.value))}
-              className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
-                focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
-            >
-              <option value="all">{t("reviews.evaluatorTypes.all")}</option>
-              <option value="patient">{t("reviews.evaluatorTypes.patient")}</option>
-              <option value="supervisor">{t("reviews.evaluatorTypes.supervisor")}</option>
-              <option value="student">{t("reviews.evaluatorTypes.student")}</option>
-              <option value="university">{t("reviews.evaluatorTypes.university")}</option>
-              <option value="admin">{t("reviews.evaluatorTypes.admin")}</option>
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => dispatch(setStatusFilter(e.target.value))}
-              className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
-                focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
-            >
-              <option value="all">{t("reviews.all")}</option>
-              <option value="created">تم الإنشاء</option>
-              <option value="adjusted">تم التعديل</option>
-              <option value="finalized">مقرار</option>
-              {/* للتوافق مع النظام القديم */}
-              <option value="draft">{t("reviews.statuses.draft")}</option>
-              <option value="submitted">{t("reviews.statuses.submitted")}</option>
-              <option value="final">{t("reviews.statuses.final")}</option>
-            </select>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => dispatch(setDateFilter(e.target.value))}
-              className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
-                focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
-            />
+          <div className="bg-white dark:bg-dark-light rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div className={`flex flex-col md:flex-row gap-3 ${isRtl ? "md:flex-row-reverse" : ""}`}>
+              <div className="relative flex-1">
+                <Search className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${isRtl ? "right-3" : "left-3"}`} size={18} />
+                <input
+                  type="text"
+                  placeholder={t("reviews.searchPlaceholder")}
+                  value={search}
+                  onChange={(e) => dispatch(setSearch(e.target.value))}
+                  className={`w-full ${isRtl ? "pr-10 pl-4" : "pl-10 pr-4"} border border-slate-300 dark:border-slate-600 rounded-lg py-2.5 outline-none bg-white dark:bg-dark-light 
+                    text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200`}
+                />
+              </div>
+              <select
+                value={evaluatorTypeFilter}
+                onChange={(e) => dispatch(setEvaluatorTypeFilter(e.target.value))}
+                className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
+                  focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
+              >
+                <option value="all">{t("reviews.evaluatorTypes.all")}</option>
+                <option value="patient">{t("reviews.evaluatorTypes.patient")}</option>
+                <option value="supervisor">{t("reviews.evaluatorTypes.supervisor")}</option>
+                <option value="student">{t("reviews.evaluatorTypes.student")}</option>
+                <option value="university">{t("reviews.evaluatorTypes.university")}</option>
+                <option value="admin">{t("reviews.evaluatorTypes.admin")}</option>
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => dispatch(setStatusFilter(e.target.value))}
+                className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
+                  focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
+              >
+                <option value="all">{t("reviews.all")}</option>
+                <option value="created">تم الإنشاء</option>
+                <option value="adjusted">تم التعديل</option>
+                <option value="finalized">مقرار</option>
+                {/* للتوافق مع النظام القديم */}
+                <option value="draft">{t("reviews.statuses.draft")}</option>
+                <option value="submitted">{t("reviews.statuses.submitted")}</option>
+                <option value="final">{t("reviews.statuses.final")}</option>
+              </select>
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => dispatch(setDateFilter(e.target.value))}
+                className="border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 bg-white dark:bg-dark-light text-slate-900 dark:text-white 
+                  focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-200"
+              />
+            </div>
           </div>
 
           {/* Loading State */}
