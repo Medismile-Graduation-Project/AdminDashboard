@@ -186,4 +186,133 @@ html {
   }
 }
 
+/* Scrollbar Styling - Light Mode */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgb(240 249 255); /* sky-50 */
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgb(186 230 253); /* sky-300 */
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(125 211 252); /* sky-400 */
+  }
+
+  /* Firefox Scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(186 230 253) rgb(240 249 255); /* sky-300 sky-50 */
+  }
+}
+
+/* Scrollbar Styling - Dark Mode */
+@layer base {
+  html.dark ::-webkit-scrollbar-track {
+    background: rgb(30 41 59); /* dark-light */
+    border-radius: 4px;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb {
+    background: rgb(71 85 105); /* slate-600 */
+    border-radius: 4px;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb:hover {
+    background: rgb(100 116 139); /* slate-500 */
+  }
+
+  /* Firefox Scrollbar - Dark Mode */
+  html.dark * {
+    scrollbar-color: rgb(71 85 105) rgb(30 41 59); /* slate-600 dark-light */
+  }
+}
+
+/* Text Selection Colors - Light Mode */
+@layer base {
+  ::selection {
+    background-color: rgb(186 230 253); /* sky-300 */
+    color: rgb(12 74 110); /* sky-900 */
+  }
+
+  ::-moz-selection {
+    background-color: rgb(186 230 253); /* sky-300 */
+    color: rgb(12 74 110); /* sky-900 */
+  }
+}
+
+/* Text Selection Colors - Dark Mode */
+@layer base {
+  html.dark ::selection {
+    background-color: rgb(14 165 233); /* sky-500 */
+    color: rgb(255 255 255); /* white */
+  }
+
+  html.dark ::-moz-selection {
+    background-color: rgb(14 165 233); /* sky-500 */
+    color: rgb(255 255 255); /* white */
+  }
+}
+
+/* Form Elements - Dark Mode Enhancements */
+@layer base {
+  html.dark select {
+    background-color: rgb(30 41 59); /* dark-light */
+    color: rgb(224 242 254); /* sky-100 */
+    border-color: rgb(51 65 85); /* dark-lighter */
+  }
+
+  html.dark select:focus {
+    border-color: rgb(56 189 248); /* sky-400 */
+    outline: none;
+    ring: 2px;
+    ring-color: rgb(56 189 248 / 0.2); /* sky-400/20 */
+  }
+
+  html.dark textarea {
+    background-color: rgb(30 41 59); /* dark-light */
+    color: rgb(224 242 254); /* sky-100 */
+    border-color: rgb(51 65 85); /* dark-lighter */
+  }
+
+  html.dark textarea:focus {
+    border-color: rgb(56 189 248); /* sky-400 */
+    outline: none;
+    ring: 2px;
+    ring-color: rgb(56 189 248 / 0.2); /* sky-400/20 */
+  }
+
+  html.dark textarea::placeholder {
+    color: rgb(100 116 139); /* slate-500 */
+  }
+
+  html.dark input[type="checkbox"],
+  html.dark input[type="radio"] {
+    accent-color: rgb(14 165 233); /* sky-500 */
+  }
+
+  html.dark input[type="file"] {
+    color: rgb(224 242 254); /* sky-100 */
+  }
+
+  html.dark input[type="file"]::file-selector-button {
+    background-color: rgb(30 41 59); /* dark-light */
+    color: rgb(224 242 254); /* sky-100 */
+    border-color: rgb(51 65 85); /* dark-lighter */
+  }
+
+  html.dark input[type="file"]::file-selector-button:hover {
+    background-color: rgb(51 65 85); /* dark-lighter */
+  }
+}
+
 /* تم إزالة media queries للأحجام - نعتمد على Tailwind فقط */

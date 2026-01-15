@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
-import { Menu, X, Bell } from "lucide-react";
+import { Menu, X, Bell, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ToggleTheme from "./ToggleTheme";
+import SearchDropdown from "./SearchDropdown";
 // 🔕 الإشعارات معلقة مؤقتاً
 // import NotificationBell from "./notifications/NotificationBell";
 import { logoutAsync } from "../redux/features/auth/authSlice";
@@ -37,6 +38,9 @@ export default function Navbar() {
   const [currentUser, setCurrentUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchRef = useRef(null);
 
 
   useEffect(() => setMounted(true), []);
@@ -67,6 +71,9 @@ export default function Navbar() {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSearchDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -198,27 +205,47 @@ export default function Navbar() {
 
         {currentUser && (
           <div className={`flex items-center gap-3 flex-shrink-0 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
-            {/* Search */}
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                const searchInput = e.target.querySelector('input');
-                if (searchInput && searchInput.value.trim()) {
-                  router.push(`/search?q=${encodeURIComponent(searchInput.value.trim())}`);
-                }
-              }}
-              className="relative"
-            >
-              <input
-                type="text"
-                placeholder={t("Navbar.searchPlaceholder") || "بحث..."}
-                className="px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600
-                     bg-white dark:bg-dark-light
-                     placeholder-slate-400 dark:placeholder-slate-500 text-slate-900 dark:text-white focus:outline-none 
-                     focus:border-sky-500 dark:focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 
-                     w-[240px] text-sm transition-all duration-200 text-start"
-              />
-            </form>
+            {/* Search with Dropdown */}
+            <div ref={searchRef} className="relative">
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (searchQuery.trim()) {
+                    router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                    setShowSearchDropdown(false);
+                  }
+                }}
+                className="relative"
+              >
+                <Search className={`absolute top-1/2 transform -translate-y-1/2 ${isRtl ? "right-3" : "left-3"} text-slate-400`} size={18} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchDropdown(e.target.value.trim().length > 0);
+                  }}
+                  onFocus={() => {
+                    if (searchQuery.trim().length > 0) {
+                      setShowSearchDropdown(true);
+                    }
+                  }}
+                  placeholder={t("Navbar.searchPlaceholder") || "بحث..."}
+                  className={`${isRtl ? "pr-10 pl-4" : "pl-10 pr-4"} py-2.5 rounded-lg border border-slate-200 dark:border-slate-600
+                       bg-white dark:bg-dark-light
+                       placeholder-slate-400 dark:placeholder-slate-500 text-slate-900 dark:text-white focus:outline-none 
+                       focus:border-sky-500 dark:focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 
+                       w-[240px] text-sm transition-all duration-200 text-start`}
+                />
+              </form>
+              {showSearchDropdown && searchQuery.trim() && (
+                <SearchDropdown 
+                  query={searchQuery} 
+                  onClose={() => setShowSearchDropdown(false)}
+                  maxResults={5}
+                />
+              )}
+            </div>
 
             {/* تبديل الوضع الليلي/النهاري */}
             <div className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -381,25 +408,46 @@ export default function Navbar() {
               {currentUser && (
                 <div className="px-3 py-3">
                   {/* Search */}
-                  <form 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const searchInput = e.target.querySelector('input');
-                      if (searchInput && searchInput.value.trim()) {
-                        router.push(`/search?q=${encodeURIComponent(searchInput.value.trim())}`);
-                        setMobileMenu(false);
-                      }
-                    }}
-                    className="mb-3"
-                  >
-                    <input
-                      type="text"
-                      placeholder={t("Navbar.searchPlaceholder") || "بحث..."}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-dark-light 
-                        text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none 
-                        focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 text-sm text-start transition-all duration-200"
-                    />
-                  </form>
+                  <div className="mb-3 relative">
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (searchQuery.trim()) {
+                          router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                          setMobileMenu(false);
+                          setShowSearchDropdown(false);
+                        }
+                      }}
+                    >
+                      <Search className={`absolute top-1/2 transform -translate-y-1/2 ${isRtl ? "right-3" : "left-3"} text-slate-400`} size={18} />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setShowSearchDropdown(e.target.value.trim().length > 0);
+                        }}
+                        onFocus={() => {
+                          if (searchQuery.trim().length > 0) {
+                            setShowSearchDropdown(true);
+                          }
+                        }}
+                        placeholder={t("Navbar.searchPlaceholder") || "بحث..."}
+                        className={`${isRtl ? "pr-10 pl-3" : "pl-10 pr-3"} w-full py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-dark-light 
+                          text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none 
+                          focus:ring-2 focus:ring-sky-500/20 dark:focus:ring-sky-400/20 focus:border-sky-500 dark:focus:border-sky-400 text-sm text-start transition-all duration-200`}
+                      />
+                    </form>
+                    {showSearchDropdown && searchQuery.trim() && (
+                      <div className="absolute top-full left-0 right-0 mt-1 z-50">
+                        <SearchDropdown 
+                          query={searchQuery} 
+                          onClose={() => setShowSearchDropdown(false)}
+                          maxResults={3}
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   {/* Menu Items - أفقي */}
                   <div className={`flex items-center gap-2 overflow-x-auto pb-2 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>

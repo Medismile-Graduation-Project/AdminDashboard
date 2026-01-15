@@ -1,7 +1,7 @@
 import "./globals.css";
 import AppLayout from "../components/AppLayout";
 import ReduxProvider from "../components/ReduxProvider";
-import { Toaster } from "react-hot-toast";
+import ToasterConfig from "../components/ToasterConfig";
 
 export const metadata = {
   title: "MediSmile - لوحة التحكم",
@@ -35,7 +35,7 @@ export default function RootLayout({ children }) {
       >
         <ReduxProvider>
           <AppLayout>{children}</AppLayout>
-          <Toaster position="top-center" />
+          <ToasterConfig />
         </ReduxProvider>
       </body>
     </html>

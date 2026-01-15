@@ -35,8 +35,12 @@ export default function PageLoader({ loading, hasSidebar }) {
           key="loader"
           dir={isRtl ? "rtl" : "ltr"}
           className={`fixed inset-y-0 left-0 right-0 flex flex-col items-center justify-center
-                     z-[9999] bg-gradient-to-br from-blue-900/45 via-blue-700/40 to-indigo-900/45 
-                     backdrop-blur-[6px] ${sidebarOffsetClass}`}
+                     z-[9999] bg-gradient-to-br 
+                     from-blue-900/45 dark:from-slate-900/90 
+                     via-blue-700/40 dark:via-slate-800/80 
+                     to-indigo-900/45 dark:to-slate-900/90 
+                     backdrop-blur-[6px] dark:backdrop-blur-[8px]
+                     ${sidebarOffsetClass}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -66,7 +70,7 @@ export default function PageLoader({ loading, hasSidebar }) {
 
           {/* نبض خفيف تحت النص */}
           <motion.div
-            className="mt-4 w-8 h-8 rounded-full bg-white/30"
+            className="mt-4 w-8 h-8 rounded-full bg-white/30 dark:bg-white/20"
             animate={{
               scale: [1, 1.2, 1],
               opacity: [0.5, 1, 0.5],

@@ -16,7 +16,7 @@ import {
   ArrowRight,
   X
 } from "lucide-react";
-import { unifiedSearch } from "@/lib/searchUtils";
+import { unifiedSearch, highlightMatchReact } from "@/lib/searchUtils";
 import { fetchStudentsAsync } from "@/redux/features/students/studentsSlice";
 import { fetchSupervisorsAsync } from "@/redux/features/supervisors/supervisorsSlice";
 import { fetchCases } from "@/redux/features/clinicalCases/clinicalCasesSlice";
@@ -264,6 +264,7 @@ function SearchContent() {
                   type="student"
                   router={router}
                   isRtl={isRtl}
+                  query={searchQuery}
                 />
               )}
 
@@ -277,6 +278,7 @@ function SearchContent() {
                   type="supervisor"
                   router={router}
                   isRtl={isRtl}
+                  query={searchQuery}
                 />
               )}
 
@@ -290,6 +292,7 @@ function SearchContent() {
                   type="case"
                   router={router}
                   isRtl={isRtl}
+                  query={searchQuery}
                 />
               )}
 
@@ -303,6 +306,7 @@ function SearchContent() {
                   type="appointment"
                   router={router}
                   isRtl={isRtl}
+                  query={searchQuery}
                 />
               )}
 
@@ -316,6 +320,7 @@ function SearchContent() {
                   type="evaluation"
                   router={router}
                   isRtl={isRtl}
+                  query={searchQuery}
                 />
               )}
             </div>
@@ -327,7 +332,7 @@ function SearchContent() {
 }
 
 // مكون عرض قسم النتائج
-function ResultsSection({ title, icon: Icon, count, items, type, router, isRtl }) {
+function ResultsSection({ title, icon: Icon, count, items, type, router, isRtl, query }) {
   const getRoute = (item, type) => {
     switch (type) {
       case "student":
@@ -408,11 +413,11 @@ function ResultsSection({ title, icon: Icon, count, items, type, router, isRtl }
             <div className={`flex items-center justify-between ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
               <div className="flex-1">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-1">
-                  {getItemTitle(item, type)}
+                  {highlightMatchReact(getItemTitle(item, type), query)}
                 </h3>
                 {getItemSubtitle(item, type) && (
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {getItemSubtitle(item, type)}
+                    {highlightMatchReact(getItemSubtitle(item, type), query)}
                   </p>
                 )}
               </div>
